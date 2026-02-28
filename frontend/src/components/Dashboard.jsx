@@ -60,20 +60,20 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 					: "Critical";
 	const healthColor =
 		healthScore >= 80
-			? "text-emerald-400"
+			? "text-green-400"
 			: healthScore >= 60
-				? "text-brand-400"
+				? "text-gold-400"
 				: healthScore >= 40
 					? "text-amber-400"
-					: "text-rose-400";
+					: "text-red-400";
 	const healthBg =
 		healthScore >= 80
-			? "bg-emerald-500/10 border-emerald-500/20"
+			? "bg-green-500/8 border-green-500/15"
 			: healthScore >= 60
-				? "bg-brand-500/10 border-brand-500/20"
+				? "bg-gold-500/8 border-gold-500/15"
 				: healthScore >= 40
-					? "bg-amber-500/10 border-amber-500/20"
-					: "bg-rose-500/10 border-rose-500/20";
+					? "bg-amber-500/8 border-amber-500/15"
+					: "bg-red-500/8 border-red-500/15";
 
 	const criticalCount = anomalies.filter(
 		(a) => a.severity === "critical",
@@ -90,7 +90,7 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 	};
 
 	return (
-		<div className="min-h-[calc(100vh-60px)] neural-bg">
+		<div className="min-h-[calc(100vh-60px)]">
 			<div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6">
 				{/* ── Executive Summary ── */}
 				<div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 mb-6">
@@ -108,16 +108,16 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 							{alertTotal > 0 && (
 								<button
 									onClick={() => setActiveTab("alerts")}
-									className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/20 hover:bg-rose-500/15 transition-colors"
+									className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/8 border border-red-500/10 hover:bg-red-500/12 transition-colors"
 								>
-									<AlertTriangle size={13} className="text-rose-400" />
-									<span className="text-xs text-rose-400 font-medium">
+									<AlertTriangle size={13} className="text-red-400" />
+									<span className="text-xs text-red-400 font-medium">
 										{alertTotal} alert{alertTotal !== 1 ? "s" : ""}
 									</span>
 								</button>
 							)}
 						</div>
-						<p className="text-sm text-slate-400 leading-relaxed max-w-2xl">
+						<p className="text-sm text-surface-500 leading-relaxed max-w-2xl">
 							{analysis.narrative ||
 								`Analyzed ${rowCount?.toLocaleString()} records across ${schema.columns.length} metrics. ${insights.length} recommendations generated.`}
 						</p>
@@ -125,13 +125,13 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 					<div className="flex items-center gap-2 shrink-0">
 						<button
 							onClick={handleExportPDF}
-							className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold transition-all shadow-lg shadow-brand-600/20"
+							className="btn-primary flex items-center gap-2 text-xs"
 						>
 							<Download size={14} /> Download Report
 						</button>
 						<button
 							onClick={onReset}
-							className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/50 text-slate-300 text-xs font-medium transition-all"
+							className="btn-secondary flex items-center gap-2 text-xs"
 						>
 							<RefreshCcw size={14} /> New Analysis
 						</button>
@@ -139,7 +139,7 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 				</div>
 
 				{/* ── Tabs ── */}
-				<div className="flex items-center gap-1 mb-6 p-1 bg-slate-800/30 rounded-xl overflow-x-auto">
+				<div className="flex items-center gap-1 mb-6 p-1 bg-surface-900/60 rounded-lg border border-surface-800 overflow-x-auto">
 					{TABS.map((tab) => {
 						const Icon = tab.icon;
 						const isActive = activeTab === tab.id;
@@ -147,17 +147,17 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 							<button
 								key={tab.id}
 								onClick={() => setActiveTab(tab.id)}
-								className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${isActive ? "bg-slate-700/70 text-white shadow-sm" : "text-slate-500 hover:text-slate-300 hover:bg-slate-800/40"}`}
+								className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${isActive ? "bg-surface-800 text-surface-100 shadow-sm" : "text-surface-500 hover:text-surface-300 hover:bg-surface-800/40"}`}
 							>
 								<Icon size={14} />
 								{tab.label}
 								{tab.id === "alerts" && alertTotal > 0 && (
-									<span className="ml-1 px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 text-[10px] font-bold">
+									<span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400 text-[10px] font-bold">
 										{alertTotal}
 									</span>
 								)}
 								{tab.id === "insights" && insights.length > 0 && (
-									<span className="ml-1 px-1.5 py-0.5 rounded-full bg-brand-500/20 text-brand-400 text-[10px] font-bold">
+									<span className="ml-1 px-1.5 py-0.5 rounded-full bg-gold-500/15 text-gold-400 text-[10px] font-bold">
 										{insights.length}
 									</span>
 								)}
@@ -176,20 +176,20 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 						</div>
 						<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 							{/* Quick Alerts */}
-							<div className="glass rounded-xl p-5">
+							<div className="card p-5">
 								<div className="flex items-center justify-between mb-3">
 									<div className="flex items-center gap-2">
 										<AlertTriangle size={14} className="text-amber-400" />
-										<h3 className="text-sm font-semibold text-white">Alerts</h3>
+										<h3 className="text-sm font-medium text-surface-100">Alerts</h3>
 										{alertTotal > 0 && (
-											<span className="px-1.5 py-0.5 rounded-full bg-rose-500/15 text-rose-400 text-[10px] font-bold">
+											<span className="px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[10px] font-bold">
 												{alertTotal}
 											</span>
 										)}
 									</div>
 									<button
 										onClick={() => setActiveTab("alerts")}
-										className="flex items-center gap-1 text-[11px] text-brand-400 hover:text-brand-300 transition-colors"
+										className="flex items-center gap-1 text-[11px] text-gold-400 hover:text-gold-300 transition-colors"
 									>
 										View All <ChevronRight size={12} />
 									</button>
@@ -198,9 +198,9 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 									<div className="text-center py-6">
 										<ShieldCheck
 											size={24}
-											className="text-emerald-400 mx-auto mb-2"
+											className="text-green-400 mx-auto mb-2"
 										/>
-										<p className="text-xs text-slate-400">
+										<p className="text-xs text-surface-500">
 											All metrics are within normal range
 										</p>
 									</div>
@@ -209,16 +209,16 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 										{anomalies.slice(0, 3).map((a, i) => (
 											<div
 												key={i}
-												className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800/30"
+												className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-800/40"
 											>
 												<div
-													className={`w-2 h-2 rounded-full shrink-0 ${a.severity === "critical" ? "bg-rose-400" : a.severity === "high" ? "bg-amber-400" : "bg-slate-400"}`}
+													className={`w-2 h-2 rounded-full shrink-0 ${a.severity === "critical" ? "bg-red-400" : a.severity === "high" ? "bg-amber-400" : "bg-surface-500"}`}
 												/>
 												<div className="min-w-0 flex-1">
-													<p className="text-xs text-white truncate">
+													<p className="text-xs text-surface-200 truncate">
 														{a.label}
 													</p>
-													<p className="text-[10px] text-slate-500">
+													<p className="text-[10px] text-surface-500">
 														{a.type === "spike"
 															? "Unusually high"
 															: "Unusually low"}{" "}
@@ -231,17 +231,17 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 								)}
 							</div>
 							{/* Quick Recommendations */}
-							<div className="glass rounded-xl p-5">
+							<div className="card p-5">
 								<div className="flex items-center justify-between mb-3">
 									<div className="flex items-center gap-2">
-										<Sparkles size={14} className="text-brand-400" />
-										<h3 className="text-sm font-semibold text-white">
+										<Sparkles size={14} className="text-gold-400" />
+										<h3 className="text-sm font-medium text-surface-100">
 											Top Recommendations
 										</h3>
 									</div>
 									<button
 										onClick={() => setActiveTab("insights")}
-										className="flex items-center gap-1 text-[11px] text-brand-400 hover:text-brand-300 transition-colors"
+										className="flex items-center gap-1 text-[11px] text-gold-400 hover:text-gold-300 transition-colors"
 									>
 										View All <ChevronRight size={12} />
 									</button>
@@ -250,16 +250,16 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 									{insights.slice(0, 3).map((insight, i) => (
 										<div
 											key={insight.id || i}
-											className="flex items-start gap-2 px-3 py-2 rounded-lg bg-slate-800/30"
+											className="flex items-start gap-2 px-3 py-2 rounded-lg bg-surface-800/40"
 										>
 											<div
-												className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${insight.severity === "critical" ? "bg-rose-400" : insight.severity === "high" ? "bg-amber-400" : "bg-brand-400"}`}
+												className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${insight.severity === "critical" ? "bg-red-400" : insight.severity === "high" ? "bg-amber-400" : "bg-gold-400"}`}
 											/>
 											<div>
-												<p className="text-xs text-white leading-snug">
+												<p className="text-xs text-surface-200 leading-snug">
 													{insight.title}
 												</p>
-												<p className="text-[10px] text-slate-500 mt-0.5">
+												<p className="text-[10px] text-surface-500 mt-0.5">
 													{insight.category} ·{" "}
 													{(insight.confidence * 100).toFixed(0)}% confidence
 												</p>
@@ -283,16 +283,16 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 				{activeTab === "predictions" && (
 					<div className="space-y-6 animate-fade-in-up">
 						{/* Prediction summary hero */}
-						<div className="glass rounded-2xl p-6">
+						<div className="card-elevated p-6">
 							<div className="flex items-center gap-3 mb-4">
-								<div className="p-2.5 rounded-xl bg-brand-500/10">
-									<Brain size={20} className="text-brand-400" />
+								<div className="p-2.5 rounded-lg bg-gold-500/10">
+									<Brain size={20} className="text-gold-400" />
 								</div>
 								<div>
-									<h2 className="text-lg font-bold text-white">
+									<h2 className="text-base font-semibold text-surface-100">
 										Future Predictions
 									</h2>
-									<p className="text-xs text-slate-400">
+									<p className="text-xs text-surface-500">
 										AI-powered forecasts based on your historical data patterns
 									</p>
 								</div>
@@ -304,19 +304,19 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 										return (
 											<div
 												key={i}
-												className="rounded-xl bg-slate-800/40 border border-slate-700/30 p-4"
+												className="rounded-lg bg-surface-800/50 border border-surface-700 p-4"
 											>
-												<p className="text-xs text-slate-400 mb-1 truncate">
+												<p className="text-xs text-surface-500 mb-1 truncate">
 													{f.label || f.column}
 												</p>
 												<div className="flex items-end gap-2 mb-2">
-													<span className="text-xl font-bold text-white">
+													<span className="text-xl font-bold text-surface-100">
 														{f.predictions?.[0]?.value != null
 															? formatCompact(f.predictions[0].value)
 															: "—"}
 													</span>
 													<span
-														className={`flex items-center gap-0.5 text-xs font-semibold ${isGrowth ? "text-emerald-400" : "text-rose-400"}`}
+														className={`flex items-center gap-0.5 text-xs font-semibold ${isGrowth ? "text-green-400" : "text-red-400"}`}
 													>
 														{isGrowth ? (
 															<ArrowUpRight size={12} />
@@ -327,15 +327,15 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 													</span>
 												</div>
 												<div className="flex items-center gap-1.5">
-													<div className="flex-1 h-1.5 bg-slate-700/50 rounded-full overflow-hidden">
+													<div className="flex-1 h-1.5 bg-surface-700 rounded-full overflow-hidden">
 														<div
-															className={`h-full rounded-full ${isGrowth ? "bg-emerald-400" : "bg-rose-400"}`}
+															className={`h-full rounded-full ${isGrowth ? "bg-green-400" : "bg-red-400"}`}
 															style={{
 																width: `${Math.min(100, Math.abs(f.r2 || 0) * 100)}%`,
 															}}
 														/>
 													</div>
-													<span className="text-[10px] text-slate-500">
+													<span className="text-[10px] text-surface-500">
 														{((f.r2 || 0) * 100).toFixed(0)}% accuracy
 													</span>
 												</div>

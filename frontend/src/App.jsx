@@ -7,6 +7,7 @@ import RegisterPage from "./pages/RegisterPage";
 import DashboardPage from "./pages/DashboardPage";
 import UploadPage from "./pages/UploadPage";
 import DailyLogPage from "./pages/DailyLogPage";
+import ProfilePage from "./pages/ProfilePage";
 
 function App() {
 	return (
@@ -28,6 +29,7 @@ function App() {
 						<Route path="/" element={<DashboardPage />} />
 						<Route path="/upload" element={<UploadPage />} />
 						<Route path="/daily-log" element={<DailyLogPage />} />
+						<Route path="/profile" element={<ProfilePage />} />
 					</Route>
 
 					{/* Catch-all */}

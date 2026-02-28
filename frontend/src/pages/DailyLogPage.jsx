@@ -40,18 +40,14 @@ const METRIC_FIELDS = [
 		placeholder: "e.g. 4500",
 		prefix: "$",
 		type: "number",
-		color: "text-emerald-400",
-		bg: "bg-emerald-500/10",
 		required: true,
 	},
 	{
 		key: "customers",
-		label: "Customers Served",
+		label: "Customers / Footfall",
 		icon: Users,
 		placeholder: "e.g. 120",
 		type: "number",
-		color: "text-brand-400",
-		bg: "bg-brand-500/10",
 		required: false,
 	},
 	{
@@ -60,8 +56,6 @@ const METRIC_FIELDS = [
 		icon: ShoppingCart,
 		placeholder: "e.g. 85",
 		type: "number",
-		color: "text-violet-400",
-		bg: "bg-violet-500/10",
 		required: false,
 	},
 	{
@@ -71,8 +65,6 @@ const METRIC_FIELDS = [
 		placeholder: "e.g. 2200",
 		prefix: "$",
 		type: "number",
-		color: "text-rose-400",
-		bg: "bg-rose-500/10",
 		required: false,
 	},
 	{
@@ -82,8 +74,6 @@ const METRIC_FIELDS = [
 		placeholder: "e.g. 500",
 		prefix: "$",
 		type: "number",
-		color: "text-amber-400",
-		bg: "bg-amber-500/10",
 		required: false,
 	},
 	{
@@ -92,8 +82,24 @@ const METRIC_FIELDS = [
 		icon: Package,
 		placeholder: "e.g. 340",
 		type: "number",
-		color: "text-cyan-400",
-		bg: "bg-cyan-500/10",
+		required: false,
+	},
+	{
+		key: "avgBasketSize",
+		label: "Avg Basket Size",
+		icon: ShoppingCart,
+		placeholder: "e.g. 28.50",
+		prefix: "$",
+		type: "number",
+		required: false,
+	},
+	{
+		key: "wasteShrinkage",
+		label: "Waste / Shrinkage",
+		icon: Package,
+		placeholder: "e.g. 150",
+		prefix: "$",
+		type: "number",
 		required: false,
 	},
 ];
@@ -264,27 +270,27 @@ export default function DailyLogPage() {
 	};
 
 	return (
-		<div className="min-h-screen py-8 px-4">
+		<div className="min-h-screen py-10 px-6">
 			<div className="max-w-4xl mx-auto">
 				{/* Page header */}
 				<div className="mb-8">
-					<h1 className="text-2xl font-bold text-white mb-1 flex items-center gap-3">
-						<div className="p-2 rounded-xl bg-emerald-500/10">
-							<Calendar size={22} className="text-emerald-400" />
+					<h1 className="text-xl font-semibold text-surface-100 mb-1 flex items-center gap-3">
+						<div className="p-2 rounded-lg bg-gold-500/10">
+							<Calendar size={20} className="text-gold-400" />
 						</div>
 						Daily Business Log
 					</h1>
-					<p className="text-sm text-slate-400 ml-12">
+					<p className="text-sm text-surface-500 ml-12">
 						Track your daily metrics to build powerful trend insights over time.
 					</p>
 				</div>
 
 				{/* ── Entry Form ── */}
-				<div className="glass rounded-2xl p-6 mb-6">
+				<div className="card-elevated p-6 mb-6">
 					{/* Date picker */}
 					<div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
 						<div className="flex-1">
-							<label className="block text-xs font-medium text-slate-400 mb-1.5">
+							<label className="block text-xs font-medium text-surface-400 mb-1.5">
 								Log Date
 							</label>
 							<input
@@ -295,15 +301,15 @@ export default function DailyLogPage() {
 									setSaved(false);
 								}}
 								max={todayISO()}
-								className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/50 text-white text-sm focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 transition-all"
+								className="input-field w-full sm:w-auto"
 							/>
 						</div>
 						{/* CSV Upload */}
 						<div>
-							<label className="block text-xs font-medium text-slate-400 mb-1.5">
+							<label className="block text-xs font-medium text-surface-400 mb-1.5">
 								Or Import CSV
 							</label>
-							<label className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/50 text-slate-300 text-xs font-medium cursor-pointer hover:border-brand-500/30 transition-all">
+							<label className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-800 border border-surface-700 text-surface-300 text-xs font-medium cursor-pointer hover:border-gold-500/30 transition-all">
 								{csvUploading ? (
 									<Loader2 size={14} className="animate-spin" />
 								) : (
@@ -321,19 +327,19 @@ export default function DailyLogPage() {
 					</div>
 
 					{/* Metric fields */}
-					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
 						{METRIC_FIELDS.map((field) => {
 							const Icon = field.icon;
 							return (
 								<div key={field.key}>
-									<label className="flex items-center gap-1.5 text-xs font-medium text-slate-400 mb-1.5">
-										<Icon size={12} className={field.color} />
+									<label className="flex items-center gap-1.5 text-xs font-medium text-surface-400 mb-1.5">
+										<Icon size={12} strokeWidth={1.5} className="text-surface-500" />
 										{field.label}
-										{field.required && <span className="text-rose-400">*</span>}
+										{field.required && <span className="text-red-400">*</span>}
 									</label>
 									<div className="relative">
 										{field.prefix && (
-											<span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">
+											<span className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-500 text-sm">
 												{field.prefix}
 											</span>
 										)}
@@ -346,7 +352,7 @@ export default function DailyLogPage() {
 											onChange={(e) =>
 												handleFieldChange(field.key, e.target.value)
 											}
-											className={`w-full ${field.prefix ? "pl-7" : "pl-3"} pr-3 py-2.5 rounded-xl bg-slate-800/60 border border-slate-700/50 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 transition-all`}
+											className={`input-field w-full ${field.prefix ? "pl-7" : ""}`}
 										/>
 									</div>
 								</div>
@@ -356,7 +362,7 @@ export default function DailyLogPage() {
 
 					{/* Notes */}
 					<div className="mb-6">
-						<label className="block text-xs font-medium text-slate-400 mb-1.5">
+						<label className="block text-xs font-medium text-surface-400 mb-1.5">
 							Notes (optional)
 						</label>
 						<textarea
@@ -367,13 +373,13 @@ export default function DailyLogPage() {
 								setNotes(e.target.value);
 								setSaved(false);
 							}}
-							className="w-full px-4 py-3 rounded-xl bg-slate-800/60 border border-slate-700/50 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-brand-500/50 focus:ring-1 focus:ring-brand-500/20 transition-all resize-none"
+							className="input-field w-full resize-none"
 						/>
 					</div>
 
 					{/* Error */}
 					{error && (
-						<div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm mb-4">
+						<div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-500/8 border border-red-500/10 text-red-400 text-sm mb-4">
 							<AlertCircle size={14} />
 							{error}
 						</div>
@@ -384,54 +390,54 @@ export default function DailyLogPage() {
 						<button
 							onClick={handleSave}
 							disabled={saving}
-							className="flex items-center gap-2 px-6 py-3 rounded-xl bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white text-sm font-semibold transition-all shadow-lg shadow-brand-600/20"
+							className="btn-primary flex items-center gap-2"
 						>
 							{saving ? (
-								<Loader2 size={16} className="animate-spin" />
+								<Loader2 size={15} className="animate-spin" />
 							) : (
-								<Save size={16} />
+								<Save size={15} />
 							)}
 							{saving ? "Saving…" : "Save Log Entry"}
 						</button>
 						{saved && (
-							<span className="flex items-center gap-1.5 text-emerald-400 text-sm font-medium animate-fade-in-up">
-								<CheckCircle2 size={16} /> Saved successfully!
+							<span className="flex items-center gap-1.5 text-green-400 text-sm font-medium animate-fade-in-up">
+								<CheckCircle2 size={15} /> Saved successfully!
 							</span>
 						)}
 					</div>
 				</div>
 
 				{/* ── Log History ── */}
-				<div className="glass rounded-2xl overflow-hidden">
+				<div className="card overflow-hidden">
 					<button
 						onClick={() => setShowHistory(!showHistory)}
-						className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-800/20 transition-colors"
+						className="w-full flex items-center justify-between px-6 py-4 hover:bg-surface-800/40 transition-colors"
 					>
 						<div className="flex items-center gap-2">
-							<h2 className="text-sm font-semibold text-white">
+							<h2 className="text-sm font-medium text-surface-100">
 								Recent Entries
 							</h2>
-							<span className="px-2 py-0.5 rounded-full bg-slate-700/50 text-slate-400 text-[10px] font-bold">
+							<span className="px-2 py-0.5 rounded-full bg-surface-800 text-surface-400 text-[10px] font-bold">
 								{logs.length}
 							</span>
 						</div>
 						{showHistory ? (
-							<ChevronUp size={16} className="text-slate-500" />
+							<ChevronUp size={16} className="text-surface-500" />
 						) : (
-							<ChevronDown size={16} className="text-slate-500" />
+							<ChevronDown size={16} className="text-surface-500" />
 						)}
 					</button>
 
 					{showHistory && (
-						<div className="border-t border-slate-800/50">
+						<div className="border-t border-surface-800">
 							{loadingLogs ? (
 								<div className="flex items-center justify-center py-12">
-									<Loader2 size={20} className="text-brand-400 animate-spin" />
+									<Loader2 size={20} className="text-gold-400 animate-spin" />
 								</div>
 							) : logs.length === 0 ? (
 								<div className="text-center py-12">
-									<Plus size={24} className="text-slate-600 mx-auto mb-2" />
-									<p className="text-sm text-slate-500">
+									<Plus size={24} className="text-surface-600 mx-auto mb-2" />
+									<p className="text-sm text-surface-500">
 										No entries yet. Start logging today!
 									</p>
 								</div>
@@ -439,26 +445,26 @@ export default function DailyLogPage() {
 								<div className="overflow-x-auto">
 									<table className="w-full text-sm">
 										<thead>
-											<tr className="border-b border-slate-800/50">
-												<th className="text-left px-6 py-3 text-xs font-medium text-slate-500">
+											<tr className="border-b border-surface-800">
+												<th className="text-left px-6 py-3 text-xs font-medium text-surface-500">
 													Date
 												</th>
-												<th className="text-right px-4 py-3 text-xs font-medium text-slate-500">
+												<th className="text-right px-4 py-3 text-xs font-medium text-surface-500">
 													Revenue
 												</th>
-												<th className="text-right px-4 py-3 text-xs font-medium text-slate-500 hidden sm:table-cell">
+												<th className="text-right px-4 py-3 text-xs font-medium text-surface-500 hidden sm:table-cell">
 													Customers
 												</th>
-												<th className="text-right px-4 py-3 text-xs font-medium text-slate-500 hidden md:table-cell">
+												<th className="text-right px-4 py-3 text-xs font-medium text-surface-500 hidden md:table-cell">
 													Orders
 												</th>
-												<th className="text-right px-4 py-3 text-xs font-medium text-slate-500 hidden lg:table-cell">
+												<th className="text-right px-4 py-3 text-xs font-medium text-surface-500 hidden lg:table-cell">
 													Expenses
 												</th>
-												<th className="text-right px-4 py-3 text-xs font-medium text-slate-500 hidden lg:table-cell">
+												<th className="text-right px-4 py-3 text-xs font-medium text-surface-500 hidden lg:table-cell">
 													Marketing
 												</th>
-												<th className="px-4 py-3 text-xs font-medium text-slate-500">
+												<th className="px-4 py-3 text-xs font-medium text-surface-500">
 													Notes
 												</th>
 												<th className="px-4 py-3"></th>
@@ -468,39 +474,39 @@ export default function DailyLogPage() {
 											{logs.map((log) => (
 												<tr
 													key={log.id}
-													className="border-b border-slate-800/30 hover:bg-slate-800/20 transition-colors"
+													className="border-b border-surface-800/50 hover:bg-surface-800/30 transition-colors"
 												>
-													<td className="px-6 py-3 text-white font-medium whitespace-nowrap">
+													<td className="px-6 py-3 text-surface-100 font-medium whitespace-nowrap">
 														{log.date}
 													</td>
-													<td className="text-right px-4 py-3 text-emerald-400 font-medium">
+													<td className="text-right px-4 py-3 text-gold-400 font-medium">
 														{log.revenue != null
 															? `$${Number(log.revenue).toLocaleString()}`
 															: "—"}
 													</td>
-													<td className="text-right px-4 py-3 text-slate-300 hidden sm:table-cell">
+													<td className="text-right px-4 py-3 text-surface-300 hidden sm:table-cell">
 														{log.customers ?? "—"}
 													</td>
-													<td className="text-right px-4 py-3 text-slate-300 hidden md:table-cell">
+													<td className="text-right px-4 py-3 text-surface-300 hidden md:table-cell">
 														{log.orders ?? "—"}
 													</td>
-													<td className="text-right px-4 py-3 text-rose-400 hidden lg:table-cell">
+													<td className="text-right px-4 py-3 text-surface-400 hidden lg:table-cell">
 														{log.expenses != null
 															? `$${Number(log.expenses).toLocaleString()}`
 															: "—"}
 													</td>
-													<td className="text-right px-4 py-3 text-amber-400 hidden lg:table-cell">
+													<td className="text-right px-4 py-3 text-surface-400 hidden lg:table-cell">
 														{log.marketingSpend != null
 															? `$${Number(log.marketingSpend).toLocaleString()}`
 															: "—"}
 													</td>
-													<td className="px-4 py-3 text-slate-500 text-xs max-w-[120px] truncate">
+													<td className="px-4 py-3 text-surface-500 text-xs max-w-[120px] truncate">
 														{log.notes || "—"}
 													</td>
 													<td className="px-4 py-3">
 														<button
 															onClick={() => handleDelete(log.id)}
-															className="p-1.5 rounded-lg hover:bg-rose-500/10 text-slate-600 hover:text-rose-400 transition-all"
+															className="p-1.5 rounded-lg hover:bg-red-500/10 text-surface-600 hover:text-red-400 transition-all"
 															title="Delete entry"
 														>
 															<Trash2 size={13} />
@@ -517,15 +523,15 @@ export default function DailyLogPage() {
 				</div>
 
 				{/* CSV format hint */}
-				<div className="mt-6 glass rounded-xl p-4">
-					<h3 className="text-xs font-semibold text-slate-400 mb-2">
+				<div className="mt-6 card p-4">
+					<h3 className="text-xs font-medium text-surface-400 mb-2">
 						CSV Import Format
 					</h3>
-					<p className="text-[11px] text-slate-500 font-mono leading-relaxed">
+					<p className="text-[11px] text-surface-500 font-mono leading-relaxed">
 						date, revenue, customers, orders, expenses, marketingSpend,
-						inventory, notes
+						inventory, avgBasketSize, wasteShrinkage, notes
 						<br />
-						2025-01-15, 4500, 120, 85, 2200, 500, 340, "Big sale day"
+						2025-01-15, 4500, 120, 85, 2200, 500, 340, 28.50, 150, "Big sale day"
 					</p>
 				</div>
 			</div>

@@ -16,12 +16,12 @@ import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
 	// TODO: Replace with your Firebase project config
-	apiKey: "YOUR_API_KEY",
-	authDomain: "YOUR_PROJECT.firebaseapp.com",
-	projectId: "YOUR_PROJECT_ID",
-	storageBucket: "YOUR_PROJECT.appspot.com",
-	messagingSenderId: "YOUR_SENDER_ID",
-	appId: "YOUR_APP_ID",
+	apiKey: "AIzaSyD51bOYTkWqehZMaz1NDqjSZtb2roHMZOs",
+	authDomain: "aria-agent-5df34.firebaseapp.com",
+	projectId: "aria-agent-5df34",
+	storageBucket: "aria-agent-5df34.firebasestorage.app",
+	messagingSenderId: "532315178894",
+	appId: "1:532315178894:web:0e344ce66840702af0c6df",
 };
 
 const app = initializeApp(firebaseConfig);

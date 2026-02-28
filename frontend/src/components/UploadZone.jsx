@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
 	Upload,
 	FileSpreadsheet,
-	Sparkles,
 	ArrowRight,
 	BarChart3,
 	TrendingUp,
@@ -51,35 +50,25 @@ export default function UploadZone({ onFileSelect, onDemoLoad }) {
 	};
 
 	return (
-		<div className="min-h-[calc(100vh-60px)] flex items-center justify-center neural-bg">
-			<div className="max-w-xl w-full mx-4">
+		<div className="min-h-[calc(100vh-60px)] flex items-center justify-center">
+			<div className="max-w-md w-full mx-4">
 				{/* Hero */}
 				<div className="text-center mb-10 animate-fade-in-up">
-					<div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 mb-6">
-						<Sparkles size={12} className="text-brand-400" />
-						<span className="text-xs text-brand-300 font-medium">
-							Smart Business Analytics
-						</span>
-					</div>
-					<h2 className="text-3xl font-bold text-white mb-3 tracking-tight">
-						Understand Your Business
-						<span className="bg-gradient-to-r from-brand-400 to-violet-400 bg-clip-text text-transparent">
-							{" "}
-							Better
-						</span>
+					<h2 className="text-2xl font-semibold text-surface-100 mb-3 tracking-tight">
+						Import Your Business Data
 					</h2>
-					<p className="text-slate-400 text-sm max-w-md mx-auto leading-relaxed">
-						Upload your business data and get clear insights, forecasts, and
-						recommendations — no technical skills needed.
+					<p className="text-surface-500 text-sm max-w-sm mx-auto leading-relaxed">
+						Upload your sales, expenses, or inventory data and get clear
+						insights, forecasts, and recommendations.
 					</p>
 				</div>
 
 				{/* Upload Zone */}
 				<div
-					className={`relative rounded-2xl border-2 border-dashed transition-all duration-300 p-10 text-center cursor-pointer group ${
+					className={`relative rounded-xl border-2 border-dashed transition-all duration-300 p-10 text-center cursor-pointer group ${
 						isDragging
-							? "border-brand-400 bg-brand-500/10 scale-[1.02]"
-							: "border-slate-700 hover:border-slate-500 bg-slate-900/30 hover:bg-slate-800/30"
+							? "border-gold-400 bg-gold-500/5 scale-[1.02]"
+							: "border-surface-700 hover:border-surface-600 bg-surface-900/40 hover:bg-surface-800/30"
 					}`}
 					onDragEnter={handleDragIn}
 					onDragLeave={handleDragOut}
@@ -96,28 +85,29 @@ export default function UploadZone({ onFileSelect, onDemoLoad }) {
 					/>
 
 					<div
-						className={`w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center transition-all ${
+						className={`w-12 h-12 rounded-lg mx-auto mb-4 flex items-center justify-center transition-all ${
 							isDragging
-								? "bg-brand-500/20 scale-110"
-								: "bg-slate-800 group-hover:bg-slate-700"
+								? "bg-gold-500/15 scale-110"
+								: "bg-surface-800 group-hover:bg-surface-700"
 						}`}
 					>
 						<Upload
-							size={22}
-							className={`transition-colors ${isDragging ? "text-brand-400" : "text-slate-400 group-hover:text-slate-300"}`}
+							size={20}
+							strokeWidth={1.5}
+							className={`transition-colors ${isDragging ? "text-gold-400" : "text-surface-400 group-hover:text-surface-300"}`}
 						/>
 					</div>
 
-					<p className="text-white font-medium mb-1">
+					<p className="text-surface-200 font-medium mb-1 text-sm">
 						{isDragging ? "Release to upload" : "Drop your file here"}
 					</p>
-					<p className="text-slate-500 text-sm">or click to browse</p>
-					<p className="text-slate-600 text-[11px] mt-2">
+					<p className="text-surface-500 text-xs">or click to browse</p>
+					<p className="text-surface-600 text-[11px] mt-2">
 						Supports CSV and Excel files · Up to 50MB
 					</p>
 
 					{error && (
-						<div className="mt-4 px-4 py-2 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm">
+						<div className="mt-4 px-4 py-2 rounded-lg bg-red-500/8 border border-red-500/10 text-red-400 text-sm">
 							{error}
 						</div>
 					)}
@@ -127,16 +117,16 @@ export default function UploadZone({ onFileSelect, onDemoLoad }) {
 				<div className="mt-6 text-center">
 					<button
 						onClick={onDemoLoad}
-						className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800/70 hover:bg-slate-700/70 border border-slate-700/50 hover:border-slate-600/50 text-sm text-slate-300 hover:text-white transition-all group"
+						className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-surface-800 hover:bg-surface-700 border border-surface-700 hover:border-surface-600 text-sm text-surface-300 hover:text-surface-100 transition-all group"
 					>
-						<FileSpreadsheet size={14} className="text-brand-400" />
+						<FileSpreadsheet size={14} className="text-gold-500" />
 						Try with sample data
 						<ArrowRight
 							size={14}
-							className="text-slate-500 group-hover:text-brand-400 group-hover:translate-x-0.5 transition-all"
+							className="text-surface-500 group-hover:text-gold-400 group-hover:translate-x-0.5 transition-all"
 						/>
 					</button>
-					<p className="text-[10px] text-slate-600 mt-2">
+					<p className="text-[10px] text-surface-600 mt-2">
 						36 months of business metrics — revenue, customers, marketing &amp;
 						more
 					</p>
@@ -150,28 +140,32 @@ export default function UploadZone({ onFileSelect, onDemoLoad }) {
 					{[
 						{
 							icon: BarChart3,
-							label: "Performance Metrics",
-							desc: "KPIs, trends & patterns",
+							label: "Performance",
+							desc: "KPIs & trend analysis",
 						},
 						{
 							icon: TrendingUp,
 							label: "Forecasts",
-							desc: "Where your numbers are heading",
+							desc: "Where numbers are heading",
 						},
 						{
 							icon: ShieldCheck,
-							label: "Recommendations",
+							label: "Actions",
 							desc: "What to do next",
 						},
 					].map((item, i) => (
-						<div key={i} className="glass-light rounded-xl p-3 text-center">
-							<div className="w-8 h-8 rounded-lg bg-brand-500/10 flex items-center justify-center mx-auto mb-2">
-								<item.icon size={14} className="text-brand-400" />
+						<div key={i} className="card p-3 text-center">
+							<div className="w-8 h-8 rounded-lg bg-surface-800 flex items-center justify-center mx-auto mb-2">
+								<item.icon
+									size={14}
+									className="text-surface-400"
+									strokeWidth={1.5}
+								/>
 							</div>
-							<p className="text-xs font-medium text-slate-300 mb-0.5">
+							<p className="text-xs font-medium text-surface-300 mb-0.5">
 								{item.label}
 							</p>
-							<p className="text-[10px] text-slate-500">{item.desc}</p>
+							<p className="text-[10px] text-surface-500">{item.desc}</p>
 						</div>
 					))}
 				</div>

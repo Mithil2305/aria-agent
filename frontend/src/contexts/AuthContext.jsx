@@ -6,7 +6,7 @@ import {
 	onAuthStateChanged,
 	updateProfile,
 } from "firebase/auth";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "../firebase";
 
 const AuthContext = createContext(null);
@@ -45,14 +45,19 @@ export function AuthProvider({ children }) {
 	const register = async (email, password, businessName, ownerName) => {
 		const cred = await createUserWithEmailAndPassword(auth, email, password);
 		await updateProfile(cred.user, { displayName: ownerName });
-		await setDoc(doc(db, "users", cred.user.uid), {
+		const profile = {
 			email,
 			ownerName,
 			businessName,
+			businessType: "",
+			phone: "",
+			address: "",
+			currency: "USD",
 			createdAt: serverTimestamp(),
 			plan: "free",
-		});
-		setUserProfile({ email, ownerName, businessName, plan: "free" });
+		};
+		await setDoc(doc(db, "users", cred.user.uid), profile);
+		setUserProfile(profile);
 		return cred.user;
 	};
 
@@ -72,6 +77,18 @@ export function AuthProvider({ children }) {
 		return user.getIdToken();
 	};
 
+	const updateUserProfile = async (updates) => {
+		if (!user) return;
+		await updateDoc(doc(db, "users", user.uid), {
+			...updates,
+			updatedAt: serverTimestamp(),
+		});
+		if (updates.ownerName) {
+			await updateProfile(user, { displayName: updates.ownerName });
+		}
+		setUserProfile((prev) => ({ ...prev, ...updates }));
+	};
+
 	return (
 		<AuthContext.Provider
 			value={{
@@ -82,6 +99,7 @@ export function AuthProvider({ children }) {
 				login,
 				logout,
 				getIdToken,
+				updateUserProfile,
 			}}
 		>
 			{children}

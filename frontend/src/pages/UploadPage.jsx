@@ -83,7 +83,7 @@ export default function UploadPage() {
 	return (
 		<div className="min-h-screen">
 			{error && (
-				<div className="max-w-2xl mx-auto mt-4 px-4 py-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm text-center">
+				<div className="max-w-2xl mx-auto mt-4 px-4 py-3 rounded-lg bg-red-500/8 border border-red-500/10 text-red-400 text-sm text-center">
 					{error}
 				</div>
 			)}
