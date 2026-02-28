@@ -16,55 +16,55 @@ import {
 const TYPE_CONFIG = {
 	trend: {
 		icon: TrendingUp,
-		color: "text-brand-400",
-		bg: "bg-brand-500/10",
-		border: "border-brand-500/20",
+		color: "text-gold-600",
+		bg: "bg-gold-50",
+		border: "border-gold-200",
 		label: "Trend",
 	},
 	risk: {
 		icon: ShieldAlert,
-		color: "text-rose-400",
-		bg: "bg-rose-500/10",
-		border: "border-rose-500/20",
+		color: "text-red-500",
+		bg: "bg-red-50",
+		border: "border-red-200",
 		label: "Risk",
 	},
 	anomaly: {
 		icon: AlertTriangle,
-		color: "text-amber-400",
-		bg: "bg-amber-500/10",
-		border: "border-amber-500/20",
+		color: "text-amber-500",
+		bg: "bg-amber-50",
+		border: "border-amber-200",
 		label: "Alert",
 	},
 	correlation: {
 		icon: Link2,
-		color: "text-violet-400",
-		bg: "bg-violet-500/10",
-		border: "border-violet-500/20",
+		color: "text-surface-500",
+		bg: "bg-surface-100",
+		border: "border-surface-300",
 		label: "Link",
 	},
 	forecast: {
 		icon: Brain,
-		color: "text-cyan-400",
-		bg: "bg-cyan-500/10",
-		border: "border-cyan-500/20",
+		color: "text-gold-600",
+		bg: "bg-gold-50",
+		border: "border-gold-200",
 		label: "Forecast",
 	},
 	schema: {
 		icon: Layers,
-		color: "text-slate-400",
-		bg: "bg-slate-500/10",
-		border: "border-slate-700/30",
+		color: "text-surface-500",
+		bg: "bg-surface-100",
+		border: "border-surface-300",
 		label: "Data",
 	},
 };
 
 const PRIORITY_MAP = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
 const PRIORITY_COLORS = {
-	critical: "bg-rose-500/10 text-rose-400 border-rose-500/20",
-	high: "bg-amber-500/10 text-amber-400 border-amber-500/20",
-	medium: "bg-slate-500/10 text-slate-400 border-slate-700/30",
-	low: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-	info: "bg-brand-500/10 text-brand-400 border-brand-500/20",
+	critical: "bg-red-50 text-red-500 border-red-200",
+	high: "bg-amber-50 text-amber-500 border-amber-200",
+	medium: "bg-surface-100 text-surface-500 border-surface-300",
+	low: "bg-green-50 text-green-600 border-green-200",
+	info: "bg-gold-50 text-gold-600 border-gold-200",
 };
 const PRIORITY_LABELS = {
 	critical: "Urgent",
@@ -99,17 +99,17 @@ export default function InsightPanel({ insights }) {
 	).length;
 
 	return (
-		<div className="glass rounded-xl p-5">
+		<div className="card p-5">
 			<div className="flex items-center justify-between mb-4">
 				<div className="flex items-center gap-3">
-					<div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500/20 to-violet-500/20 flex items-center justify-center">
-						<Sparkles size={14} className="text-brand-400" />
+					<div className="w-8 h-8 rounded-lg bg-gold-50 flex items-center justify-center">
+						<Sparkles size={14} className="text-gold-600" />
 					</div>
 					<div>
-						<h3 className="text-sm font-semibold text-white">
+						<h3 className="text-sm font-medium text-surface-900">
 							Recommendations
 						</h3>
-						<p className="text-[11px] text-slate-500">
+						<p className="text-[11px] text-surface-500">
 							{actionable > 0
 								? `${actionable} action${actionable !== 1 ? "s" : ""} recommended now`
 								: `${insights.length} insights for your review`}
@@ -120,9 +120,9 @@ export default function InsightPanel({ insights }) {
 
 			{/* Quick action banner for critical items */}
 			{actionable > 0 && (
-				<div className="flex items-center gap-2 mb-4 px-3 py-2.5 rounded-xl bg-amber-500/5 border border-amber-500/10">
-					<Rocket size={13} className="text-amber-400 shrink-0" />
-					<p className="text-[11px] text-amber-300">
+				<div className="flex items-center gap-2 mb-4 px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200">
+					<Rocket size={13} className="text-amber-500 shrink-0" />
+					<p className="text-[11px] text-amber-600">
 						<span className="font-semibold">
 							{actionable} item{actionable !== 1 ? "s" : ""}
 						</span>{" "}
@@ -177,13 +177,13 @@ function FilterChip({ label, count, active, onClick }) {
 			onClick={onClick}
 			className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-medium transition-all ${
 				active
-					? "bg-brand-500/20 text-brand-300 border border-brand-500/30"
-					: "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50 border border-transparent"
+					? "bg-gold-50 text-gold-600 border border-gold-200"
+					: "text-surface-500 hover:text-surface-700 hover:bg-surface-50 border border-transparent"
 			}`}
 		>
 			{label}
 			<span
-				className={`px-1 py-0.5 rounded text-[9px] ${active ? "bg-brand-500/30" : "bg-slate-800"}`}
+				className={`px-1 py-0.5 rounded text-[9px] ${active ? "bg-gold-100" : "bg-surface-100"}`}
 			>
 				{count}
 			</span>
@@ -200,8 +200,8 @@ function InsightCard({ insight, index, expanded, onToggle }) {
 
 	return (
 		<div
-			className={`rounded-xl border transition-all animate-fade-in-up opacity-0 ${config.border} ${
-				expanded ? config.bg : "hover:bg-slate-800/20"
+			className={`rounded-lg border transition-all animate-fade-in-up opacity-0 ${config.border} ${
+				expanded ? config.bg : "hover:bg-surface-50"
 			}`}
 			style={{ animationDelay: `${index * 40}ms` }}
 		>
@@ -222,35 +222,32 @@ function InsightCard({ insight, index, expanded, onToggle }) {
 						>
 							{priorityLabel}
 						</span>
-						<span className="text-[9px] text-slate-600">{config.label}</span>
+						<span className="text-[9px] text-surface-600">{config.label}</span>
 					</div>
-					<p className="text-xs font-medium text-white leading-snug">
+					<p className="text-xs font-medium text-surface-900 leading-snug">
 						{insight.title}
 					</p>
 				</div>
 
-				<div className="mt-1 text-slate-500">
+				<div className="mt-1 text-surface-500">
 					{expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
 				</div>
 			</button>
 
 			{expanded && (
 				<div className="px-4 pb-4 pl-14 space-y-3">
-					<p className="text-[11px] text-slate-400 leading-relaxed">
+					<p className="text-[11px] text-surface-500 leading-relaxed">
 						{insight.description}
 					</p>
 
 					{insight.recommendation && (
-						<div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-brand-500/5 border border-brand-500/10">
-							<ArrowRight
-								size={10}
-								className="text-brand-400 mt-0.5 shrink-0"
-							/>
+						<div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-gold-50 border border-gold-200">
+							<ArrowRight size={10} className="text-gold-600 mt-0.5 shrink-0" />
 							<div>
-								<p className="text-[10px] text-brand-500 font-semibold mb-0.5">
+								<p className="text-[10px] text-gold-600 font-semibold mb-0.5">
 									What to do
 								</p>
-								<p className="text-[11px] text-brand-300 leading-relaxed">
+								<p className="text-[11px] text-gold-700 leading-relaxed">
 									{insight.recommendation}
 								</p>
 							</div>

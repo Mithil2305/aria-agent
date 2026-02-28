@@ -54,7 +54,7 @@ export default function UploadZone({ onFileSelect, onDemoLoad }) {
 			<div className="max-w-md w-full mx-4">
 				{/* Hero */}
 				<div className="text-center mb-10 animate-fade-in-up">
-					<h2 className="text-2xl font-semibold text-surface-100 mb-3 tracking-tight">
+					<h2 className="text-2xl font-semibold text-surface-900 mb-3 tracking-tight">
 						Import Your Business Data
 					</h2>
 					<p className="text-surface-500 text-sm max-w-sm mx-auto leading-relaxed">
@@ -67,8 +67,8 @@ export default function UploadZone({ onFileSelect, onDemoLoad }) {
 				<div
 					className={`relative rounded-xl border-2 border-dashed transition-all duration-300 p-10 text-center cursor-pointer group ${
 						isDragging
-							? "border-gold-400 bg-gold-500/5 scale-[1.02]"
-							: "border-surface-700 hover:border-surface-600 bg-surface-900/40 hover:bg-surface-800/30"
+							? "border-gold-500 bg-gold-50 scale-[1.02]"
+							: "border-surface-300 hover:border-surface-400 bg-surface-100 hover:bg-surface-50"
 					}`}
 					onDragEnter={handleDragIn}
 					onDragLeave={handleDragOut}
@@ -87,27 +87,27 @@ export default function UploadZone({ onFileSelect, onDemoLoad }) {
 					<div
 						className={`w-12 h-12 rounded-lg mx-auto mb-4 flex items-center justify-center transition-all ${
 							isDragging
-								? "bg-gold-500/15 scale-110"
-								: "bg-surface-800 group-hover:bg-surface-700"
+								? "bg-gold-100 scale-110"
+								: "bg-surface-200 group-hover:bg-surface-300"
 						}`}
 					>
 						<Upload
 							size={20}
 							strokeWidth={1.5}
-							className={`transition-colors ${isDragging ? "text-gold-400" : "text-surface-400 group-hover:text-surface-300"}`}
+							className={`transition-colors ${isDragging ? "text-gold-600" : "text-surface-500 group-hover:text-surface-600"}`}
 						/>
 					</div>
 
-					<p className="text-surface-200 font-medium mb-1 text-sm">
+					<p className="text-surface-700 font-medium mb-1 text-sm">
 						{isDragging ? "Release to upload" : "Drop your file here"}
 					</p>
 					<p className="text-surface-500 text-xs">or click to browse</p>
-					<p className="text-surface-600 text-[11px] mt-2">
+					<p className="text-surface-400 text-[11px] mt-2">
 						Supports CSV and Excel files · Up to 50MB
 					</p>
 
 					{error && (
-						<div className="mt-4 px-4 py-2 rounded-lg bg-red-500/8 border border-red-500/10 text-red-400 text-sm">
+						<div className="mt-4 px-4 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
 							{error}
 						</div>
 					)}
@@ -117,16 +117,16 @@ export default function UploadZone({ onFileSelect, onDemoLoad }) {
 				<div className="mt-6 text-center">
 					<button
 						onClick={onDemoLoad}
-						className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-surface-800 hover:bg-surface-700 border border-surface-700 hover:border-surface-600 text-sm text-surface-300 hover:text-surface-100 transition-all group"
+						className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-surface-100 hover:bg-surface-200 border border-surface-300 hover:border-surface-400 text-sm text-surface-600 hover:text-surface-900 transition-all group"
 					>
-						<FileSpreadsheet size={14} className="text-gold-500" />
+						<FileSpreadsheet size={14} className="text-gold-600" />
 						Try with sample data
 						<ArrowRight
 							size={14}
-							className="text-surface-500 group-hover:text-gold-400 group-hover:translate-x-0.5 transition-all"
+							className="text-surface-400 group-hover:text-gold-600 group-hover:translate-x-0.5 transition-all"
 						/>
 					</button>
-					<p className="text-[10px] text-surface-600 mt-2">
+					<p className="text-[10px] text-surface-400 mt-2">
 						36 months of business metrics — revenue, customers, marketing &amp;
 						more
 					</p>
@@ -155,14 +155,14 @@ export default function UploadZone({ onFileSelect, onDemoLoad }) {
 						},
 					].map((item, i) => (
 						<div key={i} className="card p-3 text-center">
-							<div className="w-8 h-8 rounded-lg bg-surface-800 flex items-center justify-center mx-auto mb-2">
+							<div className="w-8 h-8 rounded-lg bg-surface-100 flex items-center justify-center mx-auto mb-2">
 								<item.icon
 									size={14}
-									className="text-surface-400"
+									className="text-surface-500"
 									strokeWidth={1.5}
 								/>
 							</div>
-							<p className="text-xs font-medium text-surface-300 mb-0.5">
+							<p className="text-xs font-medium text-surface-700 mb-0.5">
 								{item.label}
 							</p>
 							<p className="text-[10px] text-surface-500">{item.desc}</p>

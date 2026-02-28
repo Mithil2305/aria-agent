@@ -2,9 +2,28 @@
 Layer 6: AI Insight & Reasoning Engine
 Generates human-readable insights, narratives, severity-ranked recommendations,
 and business context from the full analytics pipeline output.
+Optionally uses Google Gemini API for AI-powered strategy generation.
 """
 
+import os
+import json
 from datetime import datetime
+
+
+# ---------------------------------------------------------------------------
+# Optional: Gemini AI integration
+# ---------------------------------------------------------------------------
+_gemini_available = False
+_gemini_client = None
+try:
+    from google import genai
+
+    api_key = os.environ.get("GEMINI_API_KEY", "")
+    if api_key:
+        _gemini_client = genai.Client(api_key=api_key)
+        _gemini_available = True
+except ImportError:
+    pass
 
 
 def generate_insights(
@@ -22,6 +41,13 @@ def generate_insights(
     insights.extend(_correlation_insights(decisions.get("correlations", [])))
     insights.extend(_risk_insights(decisions.get("risk_scores", [])))
     insights.extend(_quality_insights(schema))
+    insights.extend(_growth_strategy_insights(analytics, predictions, decisions))
+    insights.extend(_revenue_opportunity_insights(analytics, predictions))
+
+    # AI-powered strategy insights (Gemini)
+    ai_insights = _gemini_strategy_insights(schema, analytics, predictions, decisions)
+    if ai_insights:
+        insights.extend(ai_insights)
 
     # Deduplicate by title
     seen = set()
@@ -293,6 +319,311 @@ def _quality_insights(schema: dict) -> list:
         ))
 
     return insights
+
+
+# ------------------------------------------------------------------ #
+#  Growth & Strategy Insights                                          #
+# ------------------------------------------------------------------ #
+
+def _growth_strategy_insights(analytics: dict, predictions: dict, decisions: dict) -> list:
+    """Generate actionable growth and strategy insights from KPIs, forecasts, and correlations."""
+    insights = []
+    kpis = analytics.get("kpis", [])
+    forecasts = predictions.get("forecasts", [])
+    correlations = decisions.get("correlations", [])
+
+    # Identify top growing KPIs as growth opportunities
+    growing_kpis = sorted(
+        [k for k in kpis if k.get("growth_rate", k.get("change", 0)) > 0],
+        key=lambda k: k.get("growth_rate", k.get("change", 0)),
+        reverse=True,
+    )
+
+    for kpi in growing_kpis[:3]:
+        name = kpi.get("label", kpi.get("column", ""))
+        growth = kpi.get("growth_rate", kpi.get("change", 0))
+        current = kpi.get("current", kpi.get("mean", 0))
+        insights.append(_make_insight(
+            title=f"Accelerate growth in {name}",
+            description=(
+                f"{name} is already growing at {abs(growth):.1f}% "
+                f"(current: {current:,.0f}). This positive momentum represents a "
+                "strategic opportunity to double down with targeted investments."
+            ),
+            severity="moderate",
+            confidence=0.85,
+            category="growth",
+            metric=name,
+            recommendation=(
+                f"Allocate additional resources to sustain {name} growth. "
+                "Analyse what's driving this metric upward and replicate those conditions. "
+                "Set a stretch target 15-20% above current trajectory."
+            ),
+        ))
+
+    # Declining KPIs as improvement opportunities
+    declining_kpis = sorted(
+        [k for k in kpis if k.get("growth_rate", k.get("change", 0)) < -5],
+        key=lambda k: k.get("growth_rate", k.get("change", 0)),
+    )
+
+    for kpi in declining_kpis[:2]:
+        name = kpi.get("label", kpi.get("column", ""))
+        decline = abs(kpi.get("growth_rate", kpi.get("change", 0)))
+        insights.append(_make_insight(
+            title=f"Recovery opportunity: {name}",
+            description=(
+                f"{name} has declined by {decline:.1f}%. Reversing this trend "
+                "could significantly impact overall business performance."
+            ),
+            severity="high",
+            confidence=0.82,
+            category="opportunity",
+            metric=name,
+            recommendation=(
+                f"Conduct root-cause analysis on the {name} decline. "
+                "Implement a 30-day recovery plan with weekly checkpoints. "
+                "Consider competitive benchmarking to identify gaps."
+            ),
+        ))
+
+    # Forecast-based growth strategies
+    positive_forecasts = [f for f in forecasts if f.get("growth_rate", 0) > 5]
+    for fc in positive_forecasts[:2]:
+        name = fc.get("label", fc.get("column", ""))
+        growth = fc.get("growth_rate", 0)
+        r2 = fc.get("r2", 0)
+        insights.append(_make_insight(
+            title=f"Capitalise on projected {name} growth",
+            description=(
+                f"Forecasting models project {growth:.1f}% growth in {name} "
+                f"(model confidence: {r2*100:.0f}%). Proactive preparation can "
+                "maximise returns from this projected uptrend."
+            ),
+            severity="moderate",
+            confidence=min(0.90, r2),
+            category="growth",
+            metric=name,
+            recommendation=(
+                f"Pre-position inventory and staffing for the projected increase in {name}. "
+                "Develop promotional campaigns timed to coincide with the growth window. "
+                "Monitor weekly to confirm the trend materialises."
+            ),
+        ))
+
+    # Correlation-based strategy (e.g. marketing → revenue link)
+    strong_positive = [c for c in correlations
+                       if c.get("strength") == "strong" and c.get("direction") == "positive"]
+    for corr in strong_positive[:2]:
+        col1 = corr.get("label1", corr.get("col1", ""))
+        col2 = corr.get("label2", corr.get("col2", ""))
+        r = corr.get("correlation", 0)
+        insights.append(_make_insight(
+            title=f"Strategic lever: {col1} drives {col2}",
+            description=(
+                f"A strong positive correlation (r={r:.2f}) exists between {col1} and {col2}. "
+                f"Increasing {col1} is statistically likely to boost {col2}."
+            ),
+            severity="moderate",
+            confidence=0.87,
+            category="growth",
+            metric=corr.get("col1", ""),
+            recommendation=(
+                f"Test a controlled increase in {col1} to measure the impact on {col2}. "
+                "Start with a 10-15% uplift and track results over 2-4 weeks. "
+                "Use A/B testing where possible for statistical rigour."
+            ),
+        ))
+
+    # If no specific growth insights were generated, add generic ones
+    if not insights and kpis:
+        best_kpi = max(kpis, key=lambda k: k.get("current", k.get("mean", 0)), default=None)
+        if best_kpi:
+            name = best_kpi.get("label", best_kpi.get("column", ""))
+            insights.append(_make_insight(
+                title=f"Optimise your top metric: {name}",
+                description=(
+                    f"{name} is your strongest performing metric. Focus on protecting and "
+                    "growing this key driver through systematic optimisation."
+                ),
+                severity="moderate",
+                confidence=0.75,
+                category="growth",
+                metric=name,
+                recommendation=(
+                    f"Set up automated monitoring for {name}. Identify the top 3 factors "
+                    "influencing it and create action plans for each. "
+                    "Aim for a 10% improvement over the next quarter."
+                ),
+            ))
+
+    return insights
+
+
+def _revenue_opportunity_insights(analytics: dict, predictions: dict) -> list:
+    """Generate revenue-specific opportunity insights."""
+    insights = []
+    kpis = analytics.get("kpis", [])
+    forecasts = predictions.get("forecasts", [])
+
+    # Find revenue-related KPIs
+    revenue_kpis = [k for k in kpis if any(
+        term in (k.get("label", k.get("column", ""))).lower()
+        for term in ["revenue", "sales", "income", "profit", "earning"]
+    )]
+
+    for kpi in revenue_kpis[:2]:
+        name = kpi.get("label", kpi.get("column", ""))
+        current = kpi.get("current", kpi.get("mean", 0))
+        growth = kpi.get("growth_rate", kpi.get("change", 0))
+
+        if growth > 0:
+            insights.append(_make_insight(
+                title=f"Revenue momentum: {name} is growing",
+                description=(
+                    f"{name} shows {growth:.1f}% growth with a current value of "
+                    f"${current:,.0f}. This positive trajectory can be amplified with "
+                    "targeted strategies."
+                ),
+                severity="moderate",
+                confidence=0.85,
+                category="opportunity",
+                metric=name,
+                recommendation=(
+                    "Focus on customer retention to compound growth. "
+                    "Consider upselling/cross-selling to increase average transaction value. "
+                    "Invest in the marketing channels with highest ROI."
+                ),
+            ))
+        else:
+            target_recovery = abs(growth) * 1.5
+            insights.append(_make_insight(
+                title=f"Revenue recovery plan needed for {name}",
+                description=(
+                    f"{name} shows a {abs(growth):.1f}% decline. "
+                    f"A targeted recovery plan aiming for +{target_recovery:.1f}% could "
+                    "restore and exceed previous performance levels."
+                ),
+                severity="high",
+                confidence=0.80,
+                category="opportunity",
+                metric=name,
+                recommendation=(
+                    "Launch a promotional campaign to re-engage lapsed customers. "
+                    "Review pricing strategy against competitors. "
+                    "Analyse customer feedback for product/service improvements."
+                ),
+            ))
+
+    # Basket size / order value opportunities
+    basket_kpis = [k for k in kpis if any(
+        term in (k.get("label", k.get("column", ""))).lower()
+        for term in ["basket", "order", "transaction", "avg"]
+    )]
+
+    for kpi in basket_kpis[:1]:
+        name = kpi.get("label", kpi.get("column", ""))
+        current = kpi.get("current", kpi.get("mean", 0))
+        insights.append(_make_insight(
+            title=f"Increase average {name}",
+            description=(
+                f"Current {name} is ${current:,.2f}. Even a 5% improvement would "
+                f"yield approximately ${current * 0.05:,.2f} additional per transaction."
+            ),
+            severity="moderate",
+            confidence=0.80,
+            category="opportunity",
+            metric=name,
+            recommendation=(
+                "Implement bundle pricing or minimum-order incentives. "
+                "Train staff on suggestive selling techniques. "
+                "Use data to identify commonly paired products for cross-sell opportunities."
+            ),
+        ))
+
+    return insights
+
+
+def _gemini_strategy_insights(schema: dict, analytics: dict,
+                               predictions: dict, decisions: dict) -> list:
+    """Use Google Gemini API to generate AI-powered business strategy insights."""
+    if not _gemini_available or not _gemini_client:
+        return []
+
+    try:
+        # Build a concise summary for the AI prompt
+        kpis = analytics.get("kpis", [])
+        forecasts = predictions.get("forecasts", [])
+        correlations = decisions.get("correlations", [])
+
+        kpi_summary = []
+        for k in kpis[:8]:
+            kpi_summary.append({
+                "metric": k.get("label", k.get("column", "")),
+                "current": round(k.get("current", k.get("mean", 0)), 2),
+                "change_pct": round(k.get("growth_rate", k.get("change", 0)), 2),
+                "trend": k.get("trend", "stable"),
+            })
+
+        forecast_summary = []
+        for f in forecasts[:4]:
+            forecast_summary.append({
+                "metric": f.get("label", f.get("column", "")),
+                "growth_rate": round(f.get("growth_rate", 0), 2),
+                "confidence": round(f.get("r2", 0), 2),
+                "trend": f.get("trend", "flat"),
+            })
+
+        prompt = f"""You are a senior business analyst. Based on the following business metrics data, generate exactly 3 actionable strategy recommendations.
+
+KPI Performance:
+{json.dumps(kpi_summary, indent=2)}
+
+Forecast Projections:
+{json.dumps(forecast_summary, indent=2)}
+
+For each recommendation, provide:
+1. A short title (5-10 words)
+2. A description (2-3 sentences explaining the insight)
+3. A specific recommendation (2-3 actionable sentences)
+4. A severity: "high" for urgent items, "moderate" for important ones
+5. A category: must be either "growth" or "opportunity"
+
+Return ONLY a valid JSON array of objects with keys: title, description, recommendation, severity, category
+No markdown, no explanation, just the JSON array."""
+
+        response = _gemini_client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
+        )
+        text = response.text.strip()
+
+        # Clean markdown fences if present
+        if text.startswith("```"):
+            text = text.split("\n", 1)[1] if "\n" in text else text[3:]
+        if text.endswith("```"):
+            text = text[:-3]
+        text = text.strip()
+        if text.startswith("json"):
+            text = text[4:].strip()
+
+        items = json.loads(text)
+        insights = []
+        for item in items[:3]:
+            insights.append(_make_insight(
+                title=item.get("title", "AI Strategy Recommendation"),
+                description=item.get("description", ""),
+                severity=item.get("severity", "moderate"),
+                confidence=0.78,
+                category=item.get("category", "growth"),
+                metric=None,
+                recommendation=item.get("recommendation", ""),
+            ))
+        return insights
+
+    except Exception:
+        # If Gemini fails, return empty — the rule-based insights still work
+        return []
 
 
 # ------------------------------------------------------------------ #

@@ -11,12 +11,12 @@ import {
 } from "recharts";
 
 const COLORS = [
-	"#3381ff",
-	"#8b5cf6",
-	"#06b6d4",
-	"#10b981",
+	"#6366f1",
+	"#22c55e",
 	"#f59e0b",
-	"#f43f5e",
+	"#3b82f6",
+	"#a855f7",
+	"#ef4444",
 ];
 
 export default function TrendCharts({ trends, expanded }) {
@@ -28,13 +28,13 @@ export default function TrendCharts({ trends, expanded }) {
 	const color = COLORS[selectedTrend % COLORS.length];
 
 	return (
-		<div className={`glass rounded-xl p-5 ${expanded ? "col-span-full" : ""}`}>
+		<div className={`card p-5 ${expanded ? "col-span-full" : ""}`}>
 			<div className="flex items-center justify-between mb-5">
 				<div>
-					<h3 className="text-sm font-semibold text-white">
+					<h3 className="text-sm font-medium text-surface-900">
 						Performance Trends
 					</h3>
-					<p className="text-[11px] text-slate-500 mt-0.5">
+					<p className="text-[11px] text-surface-500 mt-0.5">
 						How your metrics changed over time
 					</p>
 				</div>
@@ -45,8 +45,8 @@ export default function TrendCharts({ trends, expanded }) {
 							onClick={() => setSelectedTrend(i)}
 							className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
 								i === selectedTrend
-									? "bg-brand-500/20 text-brand-300 border border-brand-500/30"
-									: "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+									? "bg-gold-50 text-gold-600 border border-gold-200"
+									: "text-surface-500 hover:text-surface-700 hover:bg-surface-100"
 							}`}
 						>
 							{t.label}
@@ -73,16 +73,19 @@ export default function TrendCharts({ trends, expanded }) {
 								<stop offset="95%" stopColor={color} stopOpacity={0} />
 							</linearGradient>
 						</defs>
-						<CartesianGrid strokeDasharray="3 3" stroke="rgba(51,65,85,0.3)" />
+						<CartesianGrid
+							strokeDasharray="3 3"
+							stroke="rgba(229,231,235,0.6)"
+						/>
 						<XAxis
 							dataKey="x"
-							tick={{ fontSize: 10, fill: "#94a3b8" }}
-							axisLine={{ stroke: "#334155" }}
+							tick={{ fontSize: 10, fill: "#9ca3af" }}
+							axisLine={{ stroke: "#e5e7eb" }}
 							tickLine={false}
 							interval="preserveStartEnd"
 						/>
 						<YAxis
-							tick={{ fontSize: 10, fill: "#94a3b8" }}
+							tick={{ fontSize: 10, fill: "#9ca3af" }}
 							axisLine={false}
 							tickLine={false}
 							width={55}
@@ -102,7 +105,7 @@ export default function TrendCharts({ trends, expanded }) {
 								r: 4,
 								stroke: color,
 								strokeWidth: 2,
-								fill: "#0f172a",
+								fill: "#ffffff",
 							}}
 						/>
 						{/* Moving average line */}
@@ -127,14 +130,14 @@ export default function TrendCharts({ trends, expanded }) {
 						className="w-4 h-0.5 rounded"
 						style={{ backgroundColor: color }}
 					/>
-					<span className="text-[10px] text-slate-500">Actual</span>
+					<span className="text-[10px] text-surface-500">Actual</span>
 				</div>
 				<div className="flex items-center gap-1.5">
 					<div
 						className="w-4 h-0.5 rounded opacity-50"
 						style={{ backgroundColor: color, borderTop: "2px dashed" }}
 					/>
-					<span className="text-[10px] text-slate-500">Moving Avg</span>
+					<span className="text-[10px] text-surface-500">Moving Avg</span>
 				</div>
 			</div>
 		</div>
@@ -147,11 +150,13 @@ function CustomTooltip({ active, payload, label }) {
 	const ma = payload.find((p) => p.dataKey === "ma")?.value;
 
 	return (
-		<div className="glass rounded-lg px-3 py-2 shadow-xl border border-slate-700/50">
-			<p className="text-[10px] text-slate-400 mb-1">{label}</p>
-			<p className="text-sm font-semibold text-white">{formatYAxis(val)}</p>
+		<div className="card rounded-lg px-3 py-2 shadow-xl">
+			<p className="text-[10px] text-surface-500 mb-1">{label}</p>
+			<p className="text-sm font-semibold text-surface-900">
+				{formatYAxis(val)}
+			</p>
 			{ma != null && (
-				<p className="text-[10px] text-slate-500 mt-0.5">
+				<p className="text-[10px] text-surface-500 mt-0.5">
 					Avg: {formatYAxis(ma)}
 				</p>
 			)}

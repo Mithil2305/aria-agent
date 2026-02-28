@@ -52,10 +52,10 @@ export default function ForecastPanel({ forecasts, expanded }) {
 				: Target;
 	const trendColor =
 		fc.trend === "upward"
-			? "text-emerald-400"
+			? "text-green-600"
 			: fc.trend === "downward"
-				? "text-rose-400"
-				: "text-slate-400";
+				? "text-red-500"
+				: "text-surface-400";
 	const trendWord =
 		fc.trend === "upward"
 			? "Growing"
@@ -68,13 +68,13 @@ export default function ForecastPanel({ forecasts, expanded }) {
 	const lastActual = fc.historical[fc.historical.length - 1]?.actual || 0;
 
 	return (
-		<div className={`glass rounded-xl p-5 ${expanded ? "col-span-full" : ""}`}>
+		<div className={`card p-5 ${expanded ? "col-span-full" : ""}`}>
 			<div className="flex items-center justify-between mb-4">
 				<div>
-					<h3 className="text-sm font-semibold text-white">
+					<h3 className="text-sm font-medium text-surface-900">
 						{expanded ? "Business Forecast" : "Forecast"}
 					</h3>
-					<p className="text-[11px] text-slate-500 mt-0.5">
+					<p className="text-[11px] text-surface-500 mt-0.5">
 						Where your metrics are heading
 					</p>
 				</div>
@@ -85,8 +85,8 @@ export default function ForecastPanel({ forecasts, expanded }) {
 							onClick={() => setSelected(i)}
 							className={`px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
 								i === selected
-									? "bg-brand-500/20 text-brand-300 border border-brand-500/30"
-									: "text-slate-500 hover:text-slate-300 hover:bg-slate-800/50"
+									? "bg-gold-50 text-gold-600 border border-gold-200"
+									: "text-surface-500 hover:text-surface-700 hover:bg-surface-100"
 							}`}
 						>
 							{f.label}
@@ -114,9 +114,9 @@ export default function ForecastPanel({ forecasts, expanded }) {
 			</div>
 
 			{expanded && lastForecast && (
-				<div className="flex items-center gap-3 mb-4 px-4 py-3 rounded-xl bg-brand-500/5 border border-brand-500/10">
-					<ArrowRight size={14} className="text-brand-400 shrink-0" />
-					<p className="text-xs text-brand-300 leading-relaxed">
+				<div className="flex items-center gap-3 mb-4 px-4 py-3 rounded-lg bg-gold-50 border border-gold-200">
+					<ArrowRight size={14} className="text-gold-600 shrink-0" />
+					<p className="text-xs text-gold-700 leading-relaxed">
 						<span className="font-semibold">{fc.label}</span> is projected to go
 						from <span className="font-semibold">{formatAxis(lastActual)}</span>{" "}
 						to{" "}
@@ -139,20 +139,23 @@ export default function ForecastPanel({ forecasts, expanded }) {
 					>
 						<defs>
 							<linearGradient id="forecastBand" x1="0" y1="0" x2="0" y2="1">
-								<stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.15} />
-								<stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.02} />
+								<stop offset="5%" stopColor="#9ca3af" stopOpacity={0.15} />
+								<stop offset="95%" stopColor="#9ca3af" stopOpacity={0.02} />
 							</linearGradient>
 						</defs>
-						<CartesianGrid strokeDasharray="3 3" stroke="rgba(51,65,85,0.3)" />
+						<CartesianGrid
+							strokeDasharray="3 3"
+							stroke="rgba(229,231,235,0.6)"
+						/>
 						<XAxis
 							dataKey="label"
-							tick={{ fontSize: 10, fill: "#94a3b8" }}
-							axisLine={{ stroke: "#334155" }}
+							tick={{ fontSize: 10, fill: "#9ca3af" }}
+							axisLine={{ stroke: "#e5e7eb" }}
 							tickLine={false}
 							interval="preserveStartEnd"
 						/>
 						<YAxis
-							tick={{ fontSize: 10, fill: "#94a3b8" }}
+							tick={{ fontSize: 10, fill: "#9ca3af" }}
 							axisLine={false}
 							tickLine={false}
 							width={55}
@@ -174,7 +177,7 @@ export default function ForecastPanel({ forecasts, expanded }) {
 						<Line
 							type="monotone"
 							dataKey="actual"
-							stroke="#3381ff"
+							stroke="#6366f1"
 							strokeWidth={2}
 							dot={false}
 							connectNulls={false}
@@ -182,7 +185,7 @@ export default function ForecastPanel({ forecasts, expanded }) {
 						<Line
 							type="monotone"
 							dataKey="predicted"
-							stroke="#8b5cf6"
+							stroke="#9ca3af"
 							strokeWidth={2}
 							strokeDasharray="6 3"
 							dot={false}
@@ -191,7 +194,7 @@ export default function ForecastPanel({ forecasts, expanded }) {
 						<Line
 							type="monotone"
 							dataKey="upper"
-							stroke="#8b5cf6"
+							stroke="#9ca3af"
 							strokeWidth={1}
 							strokeDasharray="3 3"
 							strokeOpacity={0.3}
@@ -201,7 +204,7 @@ export default function ForecastPanel({ forecasts, expanded }) {
 						<Line
 							type="monotone"
 							dataKey="lower"
-							stroke="#8b5cf6"
+							stroke="#9ca3af"
 							strokeWidth={1}
 							strokeDasharray="3 3"
 							strokeOpacity={0.3}
@@ -214,16 +217,16 @@ export default function ForecastPanel({ forecasts, expanded }) {
 
 			<div className="flex items-center gap-6 mt-3 justify-center">
 				<div className="flex items-center gap-1.5">
-					<div className="w-4 h-0.5 bg-brand-500 rounded" />
-					<span className="text-[10px] text-slate-500">Past Data</span>
+					<div className="w-4 h-0.5 bg-gold-500 rounded" />
+					<span className="text-[10px] text-surface-500">Past Data</span>
 				</div>
 				<div className="flex items-center gap-1.5">
-					<div className="w-4 h-0.5 bg-violet-500 rounded opacity-70" />
-					<span className="text-[10px] text-slate-500">Projection</span>
+					<div className="w-4 h-0.5 bg-surface-400 rounded opacity-70" />
+					<span className="text-[10px] text-surface-500">Projection</span>
 				</div>
 				<div className="flex items-center gap-1.5">
-					<div className="w-4 h-3 bg-violet-500/15 rounded" />
-					<span className="text-[10px] text-slate-500">Range</span>
+					<div className="w-4 h-3 bg-surface-300 rounded" />
+					<span className="text-[10px] text-surface-500">Range</span>
 				</div>
 			</div>
 		</div>
@@ -232,11 +235,11 @@ export default function ForecastPanel({ forecasts, expanded }) {
 
 function SummaryCard({ label, value, icon }) {
 	return (
-		<div className="bg-slate-800/40 rounded-lg px-3 py-2.5">
-			<p className="text-[10px] text-slate-500 mb-1">{label}</p>
+		<div className="bg-surface-100 rounded-lg px-3 py-2.5">
+			<p className="text-[10px] text-surface-500 mb-1">{label}</p>
 			<div className="flex items-center gap-1.5">
 				{icon}
-				<span className="text-xs font-semibold text-white">{value}</span>
+				<span className="text-xs font-semibold text-surface-900">{value}</span>
 			</div>
 		</div>
 	);
@@ -245,8 +248,8 @@ function SummaryCard({ label, value, icon }) {
 function ForecastTooltip({ active, payload, label }) {
 	if (!active || !payload?.length) return null;
 	return (
-		<div className="glass rounded-lg px-3 py-2 shadow-xl border border-slate-700/50">
-			<p className="text-[10px] text-slate-400 mb-1">{label}</p>
+		<div className="card rounded-lg px-3 py-2 shadow-xl">
+			<p className="text-[10px] text-surface-500 mb-1">{label}</p>
 			{payload
 				.filter((p) => p.value != null)
 				.map((p, i) => (
@@ -255,7 +258,7 @@ function ForecastTooltip({ active, payload, label }) {
 							className="w-1.5 h-1.5 rounded-full"
 							style={{ background: p.stroke || p.color }}
 						/>
-						<span className="text-[10px] text-slate-400">
+						<span className="text-[10px] text-surface-500">
 							{p.dataKey === "actual"
 								? "Actual"
 								: p.dataKey === "predicted"
@@ -265,7 +268,7 @@ function ForecastTooltip({ active, payload, label }) {
 										: "Low est."}
 							:
 						</span>
-						<span className="text-xs font-medium text-white">
+						<span className="text-xs font-medium text-surface-900">
 							{formatAxis(p.value)}
 						</span>
 					</div>

@@ -36,7 +36,7 @@ def _generate_forecasts(df: pd.DataFrame, schema: dict) -> list:
     forecasts = []
     for col in numeric_cols[:4]:
         series = _to_numeric(df[col]).dropna()
-        if len(series) < 5:
+        if len(series) < 3:
             continue
 
         values = series.values.astype(float)
@@ -48,15 +48,16 @@ def _generate_forecasts(df: pd.DataFrame, schema: dict) -> list:
         model.fit(x, values)
         r2_linear = model.score(x, values)
 
-        # Try polynomial (degree 2) for better fit
-        poly = PolynomialFeatures(degree=2)
-        x_poly = poly.fit_transform(x)
-        model_poly = LinearRegression()
-        model_poly.fit(x_poly, values)
-        r2_poly = model_poly.score(x_poly, values)
-
-        # Use poly if significantly better
-        use_poly = r2_poly > r2_linear + 0.05
+        # Try polynomial (degree 2) for better fit — only if enough data points
+        if n >= 5:
+            poly = PolynomialFeatures(degree=2)
+            x_poly = poly.fit_transform(x)
+            model_poly = LinearRegression()
+            model_poly.fit(x_poly, values)
+            r2_poly = model_poly.score(x_poly, values)
+            use_poly = r2_poly > r2_linear + 0.05
+        else:
+            use_poly = False
 
         # Compute residuals for uncertainty estimation
         if use_poly:
@@ -134,7 +135,7 @@ def _detect_anomalies(df: pd.DataFrame, schema: dict) -> list:
 
     for col in numeric_cols:
         series = _to_numeric(df[col]).dropna()
-        if len(series) < 5:
+        if len(series) < 3:
             continue
 
         values = series.values.astype(float)

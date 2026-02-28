@@ -22,6 +22,10 @@ import pickle
 import tempfile
 import os
 import numpy as np
+import pandas as pd
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from engine.data_ingestion import ingest_file, generate_sample_data
 from engine.schema_intelligence import analyze_schema
@@ -30,6 +34,28 @@ from engine.predictive_engine import compute_predictions
 from engine.decision_engine import compute_decisions
 from engine.insight_engine import generate_insights
 from engine.report_generator import generate_pdf_report
+
+from pydantic import BaseModel
+from typing import List, Optional
+
+
+class DailyLogEntry(BaseModel):
+    date: str
+    revenue: Optional[float] = None
+    customers: Optional[float] = None
+    orders: Optional[float] = None
+    expenses: Optional[float] = None
+    marketingSpend: Optional[float] = None
+    inventory: Optional[float] = None
+    avgBasketSize: Optional[float] = None
+    wasteShrinkage: Optional[float] = None
+    notes: Optional[str] = None
+
+
+class DailyLogsPayload(BaseModel):
+    logs: List[DailyLogEntry]
+    filename: Optional[str] = "daily_logs.csv"
+
 
 # ---------------------------------------------------------------------------
 # Firebase Admin SDK (optional – works without it for local development)
@@ -65,11 +91,20 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173", "http://localhost:4173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Ensure unhandled exceptions still return proper CORS-friendly JSON."""
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)},
+    )
 
 # ---------------------------------------------------------------------------
 # Firebase Auth — optional bearer token verification
@@ -119,19 +154,27 @@ session_store: dict = _load_session()
 
 
 def _sanitize(obj):
-    """Recursively convert numpy types to native Python types for JSON serialization."""
+    """Recursively convert numpy/pandas types to JSON-safe Python types."""
     if isinstance(obj, dict):
         return {k: _sanitize(v) for k, v in obj.items()}
-    if isinstance(obj, list):
+    if isinstance(obj, (list, tuple)):
         return [_sanitize(v) for v in obj]
     if isinstance(obj, (np.integer,)):
         return int(obj)
-    if isinstance(obj, (np.floating,)):
+    if isinstance(obj, (np.floating, float)):
+        if np.isnan(obj) or np.isinf(obj):
+            return None
         return float(obj)
     if isinstance(obj, (np.bool_,)):
         return bool(obj)
     if isinstance(obj, np.ndarray):
-        return obj.tolist()
+        return _sanitize(obj.tolist())
+    if isinstance(obj, (pd.Timestamp,)):
+        return obj.isoformat() if pd.notna(obj) else None
+    if hasattr(obj, 'isoformat'):
+        return obj.isoformat()
+    if isinstance(obj, (pd.Series, pd.DataFrame)):
+        return _sanitize(obj.to_dict())
     return obj
 
 
@@ -203,25 +246,28 @@ async def run_full_analysis(uid: str = Depends(get_current_user)):
     data = session_store["raw_data"]
     filename = session_store["filename"]
 
-    # Layer 2: Schema Intelligence
-    schema = analyze_schema(data)
+    try:
+        # Layer 2: Schema Intelligence
+        schema = analyze_schema(data)
 
-    # Layer 3: Analytics & Modeling
-    analytics = compute_analytics(data, schema)
+        # Layer 3: Analytics & Modeling
+        analytics = compute_analytics(data, schema)
 
-    # Layer 4: Predictive Intelligence
-    predictions = compute_predictions(data, schema)
+        # Layer 4: Predictive Intelligence
+        predictions = compute_predictions(data, schema)
 
-    # Layer 5: Decision Intelligence
-    decisions = compute_decisions(data, schema)
+        # Layer 5: Decision Intelligence
+        decisions = compute_decisions(data, schema)
 
-    # Layer 6: AI Reasoning
-    insights = generate_insights(
-        schema=schema,
-        analytics=analytics,
-        predictions=predictions,
-        decisions=decisions,
-    )
+        # Layer 6: AI Reasoning
+        insights = generate_insights(
+            schema=schema,
+            analytics=analytics,
+            predictions=predictions,
+            decisions=decisions,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Analysis pipeline error: {str(e)}")
 
     # Cache for report generation
     session_store["analysis"] = {
@@ -250,6 +296,68 @@ async def run_full_analysis(uid: str = Depends(get_current_user)):
         "narrative": insights["narrative"],
         "severity_summary": insights["severity_summary"],
     }))
+
+
+@app.post("/api/upload-logs")
+async def upload_daily_logs(payload: DailyLogsPayload, uid: str = Depends(get_current_user)):
+    """
+    Accept daily log entries from the frontend, convert to a DataFrame,
+    and store in session so /api/analyze can process them.
+    """
+    try:
+        if not payload.logs or len(payload.logs) == 0:
+            raise HTTPException(status_code=400, detail="No log entries provided.")
+
+        # Convert logs to DataFrame
+        records = []
+        for log in payload.logs:
+            row = {"date": log.date}
+            if log.revenue is not None:
+                row["revenue"] = log.revenue
+            if log.customers is not None:
+                row["customers"] = log.customers
+            if log.orders is not None:
+                row["orders"] = log.orders
+            if log.expenses is not None:
+                row["expenses"] = log.expenses
+            if log.marketingSpend is not None:
+                row["marketing_spend"] = log.marketingSpend
+            if log.inventory is not None:
+                row["inventory"] = log.inventory
+            if log.avgBasketSize is not None:
+                row["avg_basket_size"] = log.avgBasketSize
+            if log.wasteShrinkage is not None:
+                row["waste_shrinkage"] = log.wasteShrinkage
+            records.append(row)
+
+        df = pd.DataFrame(records)
+
+        # Parse date column
+        df["date"] = pd.to_datetime(df["date"], errors="coerce")
+        df = df.dropna(subset=["date"]).sort_values("date").reset_index(drop=True)
+
+        if len(df) == 0:
+            raise HTTPException(status_code=400, detail="No valid date entries found.")
+
+        filename = payload.filename or "daily_logs.csv"
+
+        session_store["raw_data"] = df
+        session_store["filename"] = filename
+        session_store["row_count"] = len(df)
+        session_store["col_count"] = len(df.columns)
+        _save_session(session_store)
+
+        return JSONResponse(content=_sanitize({
+            "status": "success",
+            "filename": filename,
+            "row_count": len(df),
+            "col_count": len(df.columns),
+            "columns": list(df.columns),
+        }))
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.get("/api/report")

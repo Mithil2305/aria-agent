@@ -87,7 +87,7 @@ export default function ProfilePage() {
 			<div className="max-w-2xl mx-auto">
 				{/* Header */}
 				<div className="mb-8">
-					<h1 className="text-xl font-semibold text-surface-100 mb-1">
+					<h1 className="text-xl font-semibold text-surface-900 mb-1">
 						Profile Settings
 					</h1>
 					<p className="text-sm text-surface-500">
@@ -98,19 +98,17 @@ export default function ProfilePage() {
 				{/* Avatar + email */}
 				<div className="card-elevated p-6 mb-6">
 					<div className="flex items-center gap-4">
-						<div className="w-16 h-16 rounded-full bg-surface-800 border border-surface-700/50 flex items-center justify-center">
-							<span className="text-lg font-semibold text-surface-400">
+						<div className="w-16 h-16 rounded-full bg-surface-100 border border-surface-300 flex items-center justify-center">
+							<span className="text-lg font-semibold text-surface-500">
 								{initials}
 							</span>
 						</div>
 						<div>
-							<p className="text-base font-medium text-surface-100">
+							<p className="text-base font-medium text-surface-900">
 								{form.ownerName || "Your Name"}
 							</p>
-							<p className="text-sm text-surface-500">
-								{user?.email}
-							</p>
-							<span className="inline-block mt-1.5 px-2 py-0.5 rounded text-[10px] font-medium bg-gold-500/10 text-gold-400 uppercase tracking-wider">
+							<p className="text-sm text-surface-500">{user?.email}</p>
+							<span className="inline-block mt-1.5 px-2 py-0.5 rounded text-[10px] font-medium bg-gold-50 text-gold-600 uppercase tracking-wider">
 								{userProfile?.plan || "Free"} Plan
 							</span>
 						</div>
@@ -119,21 +117,21 @@ export default function ProfilePage() {
 
 				{/* Form */}
 				<div className="card-elevated p-6 space-y-5">
-					<h2 className="text-sm font-medium text-surface-300 mb-4">
+					<h2 className="text-sm font-medium text-surface-600 mb-4">
 						Business Details
 					</h2>
 
 					{error && (
-						<div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-500/8 border border-red-500/10">
-							<AlertCircle size={14} className="text-red-400 shrink-0" />
-							<p className="text-sm text-red-400">{error}</p>
+						<div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-50 border border-red-200">
+							<AlertCircle size={14} className="text-red-600 shrink-0" />
+							<p className="text-sm text-red-600">{error}</p>
 						</div>
 					)}
 
 					<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 						{/* Owner Name */}
 						<div>
-							<label className="flex items-center gap-1.5 text-xs font-medium text-surface-400 mb-1.5">
+							<label className="flex items-center gap-1.5 text-xs font-medium text-surface-500 mb-1.5">
 								<User size={12} strokeWidth={1.5} />
 								Owner Name
 							</label>
@@ -148,7 +146,7 @@ export default function ProfilePage() {
 
 						{/* Business Name */}
 						<div>
-							<label className="flex items-center gap-1.5 text-xs font-medium text-surface-400 mb-1.5">
+							<label className="flex items-center gap-1.5 text-xs font-medium text-surface-500 mb-1.5">
 								<Building2 size={12} strokeWidth={1.5} />
 								Business Name
 							</label>
@@ -163,7 +161,7 @@ export default function ProfilePage() {
 
 						{/* Business Type */}
 						<div>
-							<label className="flex items-center gap-1.5 text-xs font-medium text-surface-400 mb-1.5">
+							<label className="flex items-center gap-1.5 text-xs font-medium text-surface-500 mb-1.5">
 								<Store size={12} strokeWidth={1.5} />
 								Business Type
 							</label>
@@ -183,7 +181,7 @@ export default function ProfilePage() {
 
 						{/* Currency */}
 						<div>
-							<label className="flex items-center gap-1.5 text-xs font-medium text-surface-400 mb-1.5">
+							<label className="flex items-center gap-1.5 text-xs font-medium text-surface-500 mb-1.5">
 								<DollarSign size={12} strokeWidth={1.5} />
 								Currency
 							</label>
@@ -202,7 +200,7 @@ export default function ProfilePage() {
 
 						{/* Phone */}
 						<div>
-							<label className="flex items-center gap-1.5 text-xs font-medium text-surface-400 mb-1.5">
+							<label className="flex items-center gap-1.5 text-xs font-medium text-surface-500 mb-1.5">
 								<Phone size={12} strokeWidth={1.5} />
 								Phone
 							</label>
@@ -217,7 +215,7 @@ export default function ProfilePage() {
 
 						{/* Address */}
 						<div>
-							<label className="flex items-center gap-1.5 text-xs font-medium text-surface-400 mb-1.5">
+							<label className="flex items-center gap-1.5 text-xs font-medium text-surface-500 mb-1.5">
 								<MapPin size={12} strokeWidth={1.5} />
 								Location
 							</label>
@@ -257,14 +255,12 @@ export default function ProfilePage() {
 
 				{/* Account info */}
 				<div className="card p-5 mt-6">
-					<h3 className="text-xs font-medium text-surface-400 mb-3">
-						Account
-					</h3>
+					<h3 className="text-xs font-medium text-surface-500 mb-3">Account</h3>
 					<div className="flex items-center gap-2 text-sm text-surface-500">
 						<Mail size={14} strokeWidth={1.5} />
 						<span>{user?.email}</span>
 					</div>
-					<p className="text-[11px] text-surface-600 mt-2">
+					<p className="text-[11px] text-surface-400 mt-2">
 						Member since{" "}
 						{userProfile?.createdAt?.toDate
 							? userProfile.createdAt.toDate().toLocaleDateString()

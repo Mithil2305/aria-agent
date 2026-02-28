@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import Dashboard from "../components/Dashboard";
 import { useAuth } from "../contexts/AuthContext";
 import {
-	Upload,
 	TrendingUp,
 	Target,
 	Lightbulb,
@@ -42,7 +41,7 @@ export default function DashboardPage() {
 		sessionStorage.removeItem("aria_analysis");
 		sessionStorage.removeItem("aria_rowCount");
 		setAnalysis(null);
-		navigate("/upload");
+		navigate("/analyse");
 	};
 
 	// ── If we have analysis data, show the full dashboard ──
@@ -67,7 +66,7 @@ export default function DashboardPage() {
 			<div className="max-w-4xl mx-auto">
 				{/* Hero greeting */}
 				<div className="mb-12 animate-fade-in-up">
-					<h1 className="text-2xl font-semibold text-surface-100 mb-2">
+					<h1 className="text-2xl font-semibold text-surface-900 mb-2">
 						{greeting}
 					</h1>
 					<p className="text-surface-500 text-sm max-w-lg">
@@ -88,59 +87,58 @@ export default function DashboardPage() {
 						className="group card-hover p-6 text-left"
 					>
 						<div className="flex items-center gap-3 mb-3">
-							<div className="p-2.5 rounded-lg bg-gold-500/10">
-								<Calendar size={20} className="text-gold-400" />
+							<div className="p-2.5 rounded-lg bg-gold-50">
+								<Calendar size={20} className="text-gold-600" />
 							</div>
 							<div>
-								<h3 className="text-base font-medium text-surface-100">
+								<h3 className="text-base font-medium text-surface-900">
 									Daily Log Entry
 								</h3>
-								<p className="text-xs text-surface-500">
+								<p className="text-xs text-surface-400">
 									Revenue, customers, expenses
 								</p>
 							</div>
 						</div>
-						<p className="text-sm text-surface-400 mb-4">
+						<p className="text-sm text-surface-500 mb-4">
 							Record today's sales, footfall, expenses, and inventory — watch
 							your business trends build over time.
 						</p>
-						<span className="flex items-center gap-1 text-xs text-gold-400 font-medium group-hover:gap-2 transition-all">
+						<span className="flex items-center gap-1 text-xs text-gold-600 font-medium group-hover:gap-2 transition-all">
 							Log Today <ArrowRight size={14} />
 						</span>
 					</button>
 
-					{/* Secondary: Upload */}
+					{/* Secondary: Analyse */}
 					<button
-						onClick={() => navigate("/upload")}
+						onClick={() => navigate("/analyse")}
 						className="group card-hover p-6 text-left"
 					>
 						<div className="flex items-center gap-3 mb-3">
-							<div className="p-2.5 rounded-lg bg-surface-800">
-								<Upload size={20} className="text-surface-400" />
+							<div className="p-2.5 rounded-lg bg-surface-100">
+								<BarChart3 size={20} className="text-surface-500" />
 							</div>
 							<div>
-								<h3 className="text-base font-medium text-surface-100">
-									Import Data
+								<h3 className="text-base font-medium text-surface-900">
+									Analyse & Predict
 								</h3>
-								<p className="text-xs text-surface-500">CSV or Excel files</p>
+								<p className="text-xs text-surface-400">
+									AI-powered forecasting
+								</p>
 							</div>
 						</div>
-						<p className="text-sm text-surface-400 mb-4">
-							Upload historical business data for comprehensive analysis, trend
-							detection, and actionable forecasts.
+						<p className="text-sm text-surface-500 mb-4">
+							Run analysis on your daily logs or upload a CSV to get forecasts,
+							anomaly detection, and growth recommendations.
 						</p>
-						<span className="flex items-center gap-1 text-xs text-surface-400 font-medium group-hover:gap-2 transition-all">
-							Get Started <ArrowRight size={14} />
+						<span className="flex items-center gap-1 text-xs text-surface-500 font-medium group-hover:gap-2 transition-all">
+							Start Analysis <ArrowRight size={14} />
 						</span>
 					</button>
 				</div>
 
 				{/* Feature highlights */}
-				<div
-					className="animate-fade-in-up"
-					style={{ animationDelay: "160ms" }}
-				>
-					<h2 className="text-xs font-medium text-surface-500 uppercase tracking-wider mb-5">
+				<div className="animate-fade-in-up" style={{ animationDelay: "160ms" }}>
+					<h2 className="text-xs font-medium text-surface-400 uppercase tracking-wider mb-5">
 						What You'll Unlock
 					</h2>
 					<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -169,19 +167,17 @@ export default function DashboardPage() {
 							const Icon = feature.icon;
 							return (
 								<div key={feature.label} className="card p-4 text-center">
-									<div className="inline-flex p-2.5 rounded-lg bg-surface-800 mb-3">
+									<div className="inline-flex p-2.5 rounded-lg bg-surface-100 mb-3">
 										<Icon
 											size={17}
-											className="text-surface-400"
+											className="text-surface-500"
 											strokeWidth={1.5}
 										/>
 									</div>
-									<h3 className="text-sm font-medium text-surface-200 mb-0.5">
+									<h3 className="text-sm font-medium text-surface-800 mb-0.5">
 										{feature.label}
 									</h3>
-									<p className="text-[11px] text-surface-500">
-										{feature.desc}
-									</p>
+									<p className="text-[11px] text-surface-400">{feature.desc}</p>
 								</div>
 							);
 						})}
@@ -190,7 +186,7 @@ export default function DashboardPage() {
 
 				{/* Subtle branding */}
 				<div className="mt-16 text-center">
-					<div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-900/60 border border-surface-800">
+					<div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-200 border border-surface-300">
 						<Sparkles size={11} className="text-gold-500" />
 						<span className="text-[11px] text-surface-500">
 							Powered by ARIA Decision Intelligence

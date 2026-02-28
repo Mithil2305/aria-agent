@@ -42,6 +42,21 @@ export async function runAnalysis(token) {
 	return normalizeAnalysis(data);
 }
 
+// ──────────────────── Daily Logs → Analysis ────────────────────
+
+export async function uploadDailyLogs(
+	logs,
+	token,
+	filename = "daily_logs.csv",
+) {
+	const { data } = await API.post(
+		"/api/upload-logs",
+		{ logs, filename },
+		{ headers: { "Content-Type": "application/json", ...authHeaders(token) } },
+	);
+	return data;
+}
+
 // ──────────────────── PDF Report ────────────────────
 
 export async function downloadReport(token) {
@@ -151,8 +166,16 @@ function normalizeKPI(k) {
 }
 
 function normalizeForecast(f) {
+	// Map backend "forecast" array to "predictions" for Dashboard compatibility
+	const forecastPoints = f.forecast || [];
+	const predictions = forecastPoints.map((pt) => ({
+		...pt,
+		value: pt.predicted ?? pt.value ?? 0,
+	}));
+
 	return {
 		...f,
+		predictions,
 		growthRate: f.growth_rate ?? f.growthRate ?? 0,
 		modelType: f.model_type ?? f.modelType ?? "linear",
 		residualStd: f.residual_std ?? f.residualStd ?? 0,

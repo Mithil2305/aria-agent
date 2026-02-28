@@ -37,14 +37,14 @@ export default function LoginPage() {
 	};
 
 	return (
-		<div className="min-h-screen bg-surface-950 flex items-center justify-center px-4">
+		<div className="min-h-screen bg-surface-100 flex items-center justify-center px-4">
 			<div className="w-full max-w-sm">
 				{/* Brand */}
 				<div className="text-center mb-10 animate-fade-in-up">
-					<h1 className="text-2xl font-semibold text-surface-100 tracking-tight">
+					<h1 className="text-2xl font-semibold text-surface-900 tracking-tight">
 						ARIA
 					</h1>
-					<p className="text-xs text-surface-500 mt-1 tracking-wide uppercase">
+					<p className="text-xs text-surface-400 mt-1 tracking-wide uppercase">
 						Business Intelligence
 					</p>
 				</div>
@@ -56,21 +56,23 @@ export default function LoginPage() {
 					style={{ animationDelay: "80ms" }}
 				>
 					<div className="text-center mb-2">
-						<h2 className="text-lg font-medium text-surface-100">Welcome back</h2>
-						<p className="text-sm text-surface-500 mt-0.5">
+						<h2 className="text-lg font-medium text-surface-900">
+							Welcome back
+						</h2>
+						<p className="text-sm text-surface-400 mt-0.5">
 							Sign in to your account
 						</p>
 					</div>
 
 					{error && (
-						<div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-500/8 border border-red-500/10">
-							<AlertCircle size={14} className="text-red-400 shrink-0" />
-							<p className="text-sm text-red-400">{error}</p>
+						<div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-50 border border-red-200">
+							<AlertCircle size={14} className="text-red-500 shrink-0" />
+							<p className="text-sm text-red-600">{error}</p>
 						</div>
 					)}
 
 					<div>
-						<label className="flex items-center gap-1.5 text-xs font-medium text-surface-400 mb-1.5">
+						<label className="flex items-center gap-1.5 text-xs font-medium text-surface-600 mb-1.5">
 							<Mail size={12} strokeWidth={1.5} />
 							Email
 						</label>
@@ -85,7 +87,7 @@ export default function LoginPage() {
 					</div>
 
 					<div>
-						<label className="flex items-center gap-1.5 text-xs font-medium text-surface-400 mb-1.5">
+						<label className="flex items-center gap-1.5 text-xs font-medium text-surface-600 mb-1.5">
 							<Lock size={12} strokeWidth={1.5} />
 							Password
 						</label>
@@ -104,19 +106,17 @@ export default function LoginPage() {
 						disabled={loading}
 						className="btn-primary w-full flex items-center justify-center gap-2"
 					>
-						{loading ? (
-							<Loader2 size={15} className="animate-spin" />
-						) : null}
+						{loading ? <Loader2 size={15} className="animate-spin" /> : null}
 						{loading ? "Signing in…" : "Sign In"}
 						{!loading && <ArrowRight size={15} />}
 					</button>
 				</form>
 
-				<p className="text-center text-sm text-surface-500 mt-6">
+				<p className="text-center text-sm text-surface-400 mt-6">
 					Don't have an account?{" "}
 					<Link
 						to="/register"
-						className="text-gold-400 hover:text-gold-300 font-medium transition-colors"
+						className="text-gold-600 hover:text-gold-700 font-medium transition-colors"
 					>
 						Create one free
 					</Link>

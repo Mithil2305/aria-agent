@@ -22,7 +22,7 @@ import { useAuth } from "../contexts/AuthContext";
 import {
 	collection,
 	doc,
-	setDoc,
+	addDoc,
 	getDocs,
 	deleteDoc,
 	query,
@@ -169,14 +169,16 @@ export default function DailyLogPage() {
 				}
 			}
 
-			await setDoc(doc(db, "users", user.uid, "dailyLogs", date), {
+			await addDoc(collection(db, "users", user.uid, "dailyLogs"), {
 				date,
 				...cleanData,
 				notes: notes.trim() || null,
-				updatedAt: serverTimestamp(),
+				createdAt: serverTimestamp(),
 			});
 
 			setSaved(true);
+			setFormData({});
+			setNotes("");
 			setTimeout(() => setSaved(false), 3000);
 			loadLogs();
 		} catch {
@@ -229,7 +231,7 @@ export default function DailyLogPage() {
 				const rowDate = cols[dateIdx];
 				if (!rowDate) continue;
 
-				const entry = { date: rowDate, updatedAt: serverTimestamp() };
+				const entry = { date: rowDate, createdAt: serverTimestamp() };
 				for (const field of METRIC_FIELDS) {
 					const idx = headers.findIndex(
 						(h) =>
@@ -250,7 +252,7 @@ export default function DailyLogPage() {
 					entry.notes = cols[notesIdx];
 				}
 
-				await setDoc(doc(db, "users", user.uid, "dailyLogs", rowDate), entry);
+				await addDoc(collection(db, "users", user.uid, "dailyLogs"), entry);
 				imported++;
 			}
 
@@ -274,9 +276,9 @@ export default function DailyLogPage() {
 			<div className="max-w-4xl mx-auto">
 				{/* Page header */}
 				<div className="mb-8">
-					<h1 className="text-xl font-semibold text-surface-100 mb-1 flex items-center gap-3">
-						<div className="p-2 rounded-lg bg-gold-500/10">
-							<Calendar size={20} className="text-gold-400" />
+					<h1 className="text-xl font-semibold text-surface-900 mb-1 flex items-center gap-3">
+						<div className="p-2 rounded-lg bg-gold-50">
+							<Calendar size={20} className="text-gold-600" />
 						</div>
 						Daily Business Log
 					</h1>
@@ -309,7 +311,7 @@ export default function DailyLogPage() {
 							<label className="block text-xs font-medium text-surface-400 mb-1.5">
 								Or Import CSV
 							</label>
-							<label className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-800 border border-surface-700 text-surface-300 text-xs font-medium cursor-pointer hover:border-gold-500/30 transition-all">
+							<label className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-100 border border-surface-300 text-surface-600 text-xs font-medium cursor-pointer hover:border-gold-200 transition-all">
 								{csvUploading ? (
 									<Loader2 size={14} className="animate-spin" />
 								) : (
@@ -333,9 +335,13 @@ export default function DailyLogPage() {
 							return (
 								<div key={field.key}>
 									<label className="flex items-center gap-1.5 text-xs font-medium text-surface-400 mb-1.5">
-										<Icon size={12} strokeWidth={1.5} className="text-surface-500" />
+										<Icon
+											size={12}
+											strokeWidth={1.5}
+											className="text-surface-500"
+										/>
 										{field.label}
-										{field.required && <span className="text-red-400">*</span>}
+										{field.required && <span className="text-red-500">*</span>}
 									</label>
 									<div className="relative">
 										{field.prefix && (
@@ -379,7 +385,7 @@ export default function DailyLogPage() {
 
 					{/* Error */}
 					{error && (
-						<div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-500/8 border border-red-500/10 text-red-400 text-sm mb-4">
+						<div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm mb-4">
 							<AlertCircle size={14} />
 							{error}
 						</div>
@@ -400,7 +406,7 @@ export default function DailyLogPage() {
 							{saving ? "Saving…" : "Save Log Entry"}
 						</button>
 						{saved && (
-							<span className="flex items-center gap-1.5 text-green-400 text-sm font-medium animate-fade-in-up">
+							<span className="flex items-center gap-1.5 text-green-600 text-sm font-medium animate-fade-in-up">
 								<CheckCircle2 size={15} /> Saved successfully!
 							</span>
 						)}
@@ -411,13 +417,13 @@ export default function DailyLogPage() {
 				<div className="card overflow-hidden">
 					<button
 						onClick={() => setShowHistory(!showHistory)}
-						className="w-full flex items-center justify-between px-6 py-4 hover:bg-surface-800/40 transition-colors"
+						className="w-full flex items-center justify-between px-6 py-4 hover:bg-surface-50 transition-colors"
 					>
 						<div className="flex items-center gap-2">
-							<h2 className="text-sm font-medium text-surface-100">
+							<h2 className="text-sm font-medium text-surface-900">
 								Recent Entries
 							</h2>
-							<span className="px-2 py-0.5 rounded-full bg-surface-800 text-surface-400 text-[10px] font-bold">
+							<span className="px-2 py-0.5 rounded-full bg-surface-100 text-surface-500 text-[10px] font-bold">
 								{logs.length}
 							</span>
 						</div>
@@ -429,10 +435,10 @@ export default function DailyLogPage() {
 					</button>
 
 					{showHistory && (
-						<div className="border-t border-surface-800">
+						<div className="border-t border-surface-300">
 							{loadingLogs ? (
 								<div className="flex items-center justify-center py-12">
-									<Loader2 size={20} className="text-gold-400 animate-spin" />
+									<Loader2 size={20} className="text-gold-600 animate-spin" />
 								</div>
 							) : logs.length === 0 ? (
 								<div className="text-center py-12">
@@ -445,7 +451,7 @@ export default function DailyLogPage() {
 								<div className="overflow-x-auto">
 									<table className="w-full text-sm">
 										<thead>
-											<tr className="border-b border-surface-800">
+											<tr className="border-b border-surface-300">
 												<th className="text-left px-6 py-3 text-xs font-medium text-surface-500">
 													Date
 												</th>
@@ -474,28 +480,28 @@ export default function DailyLogPage() {
 											{logs.map((log) => (
 												<tr
 													key={log.id}
-													className="border-b border-surface-800/50 hover:bg-surface-800/30 transition-colors"
+													className="border-b border-surface-200 hover:bg-surface-50 transition-colors"
 												>
-													<td className="px-6 py-3 text-surface-100 font-medium whitespace-nowrap">
+													<td className="px-6 py-3 text-surface-900 font-medium whitespace-nowrap">
 														{log.date}
 													</td>
-													<td className="text-right px-4 py-3 text-gold-400 font-medium">
+													<td className="text-right px-4 py-3 text-gold-600 font-medium">
 														{log.revenue != null
 															? `$${Number(log.revenue).toLocaleString()}`
 															: "—"}
 													</td>
-													<td className="text-right px-4 py-3 text-surface-300 hidden sm:table-cell">
+													<td className="text-right px-4 py-3 text-surface-600 hidden sm:table-cell">
 														{log.customers ?? "—"}
 													</td>
-													<td className="text-right px-4 py-3 text-surface-300 hidden md:table-cell">
+													<td className="text-right px-4 py-3 text-surface-600 hidden md:table-cell">
 														{log.orders ?? "—"}
 													</td>
-													<td className="text-right px-4 py-3 text-surface-400 hidden lg:table-cell">
+													<td className="text-right px-4 py-3 text-surface-500 hidden lg:table-cell">
 														{log.expenses != null
 															? `$${Number(log.expenses).toLocaleString()}`
 															: "—"}
 													</td>
-													<td className="text-right px-4 py-3 text-surface-400 hidden lg:table-cell">
+													<td className="text-right px-4 py-3 text-surface-500 hidden lg:table-cell">
 														{log.marketingSpend != null
 															? `$${Number(log.marketingSpend).toLocaleString()}`
 															: "—"}
@@ -506,7 +512,7 @@ export default function DailyLogPage() {
 													<td className="px-4 py-3">
 														<button
 															onClick={() => handleDelete(log.id)}
-															className="p-1.5 rounded-lg hover:bg-red-500/10 text-surface-600 hover:text-red-400 transition-all"
+															className="p-1.5 rounded-lg hover:bg-red-50 text-surface-400 hover:text-red-500 transition-all"
 															title="Delete entry"
 														>
 															<Trash2 size={13} />
@@ -531,7 +537,8 @@ export default function DailyLogPage() {
 						date, revenue, customers, orders, expenses, marketingSpend,
 						inventory, avgBasketSize, wasteShrinkage, notes
 						<br />
-						2025-01-15, 4500, 120, 85, 2200, 500, 340, 28.50, 150, "Big sale day"
+						2025-01-15, 4500, 120, 85, 2200, 500, 340, 28.50, 150, "Big sale
+						day"
 					</p>
 				</div>
 			</div>

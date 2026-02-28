@@ -96,23 +96,23 @@ export default function ProcessingView({ onComplete, fileName, rowCount }) {
 	}, []);
 
 	return (
-		<div className="min-h-[calc(100vh-60px)] flex items-center justify-center neural-bg">
+		<div className="min-h-[calc(100vh-60px)] flex items-center justify-center bg-surface-100">
 			<div className="max-w-lg w-full mx-4">
 				<div className="text-center mb-10">
 					<div className="relative inline-block mb-6">
-						<div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-500/20 to-violet-500/20 border border-brand-500/30 flex items-center justify-center">
-							<Brain size={32} className="text-brand-400 animate-pulse" />
+						<div className="w-20 h-20 rounded-xl bg-surface-100 border border-surface-300 flex items-center justify-center">
+							<Brain size={32} className="text-gold-600 animate-pulse" />
 						</div>
 						<div
-							className="absolute inset-0 rounded-2xl bg-brand-500/10 animate-ping"
+							className="absolute inset-0 rounded-xl bg-gold-50 animate-ping"
 							style={{ animationDuration: "2s" }}
 						/>
 					</div>
 
-					<h2 className="text-xl font-bold text-white mb-2">
+					<h2 className="text-xl font-bold text-surface-900 mb-2">
 						Analyzing Your Data
 					</h2>
-					<p className="text-slate-400 text-sm">
+					<p className="text-surface-500 text-sm">
 						{fileName && <>{fileName} · </>}
 						{rowCount ? `${rowCount.toLocaleString()} records` : "Processing…"}
 					</p>
@@ -121,14 +121,14 @@ export default function ProcessingView({ onComplete, fileName, rowCount }) {
 				{/* Progress Bar */}
 				<div className="mb-8">
 					<div className="flex justify-between items-center mb-2">
-						<span className="text-xs text-slate-400">Progress</span>
-						<span className="text-xs text-brand-400 font-mono">
+						<span className="text-xs text-surface-500">Progress</span>
+						<span className="text-xs text-gold-600 font-mono">
 							{Math.round(progress)}%
 						</span>
 					</div>
-					<div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+					<div className="h-1.5 bg-surface-200 rounded-full overflow-hidden">
 						<div
-							className="h-full bg-gradient-to-r from-brand-500 to-violet-500 rounded-full transition-all duration-200"
+							className="h-full bg-gold-500 rounded-full transition-all duration-200"
 							style={{ width: `${progress}%` }}
 						/>
 					</div>
@@ -143,41 +143,41 @@ export default function ProcessingView({ onComplete, fileName, rowCount }) {
 						return (
 							<div
 								key={idx}
-								className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
+								className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-300 ${
 									isActive
-										? "glass glow-brand"
+										? "card border-gold-200"
 										: isComplete
-											? "bg-emerald-500/5 border border-emerald-500/10"
-											: "bg-slate-900/20 border border-transparent"
+											? "bg-green-50 border border-green-200"
+											: "bg-surface-50 border border-transparent"
 								}`}
 							>
 								<div
 									className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
 										isActive
-											? "bg-brand-500/20"
+											? "bg-gold-50"
 											: isComplete
-												? "bg-emerald-500/10"
-												: "bg-slate-800/50"
+												? "bg-green-50"
+												: "bg-surface-100"
 									}`}
 								>
 									{isComplete ? (
-										<CheckCircle2 size={14} className="text-emerald-400" />
+										<CheckCircle2 size={14} className="text-green-500" />
 									) : isActive ? (
-										<Loader size={14} className="text-brand-400 animate-spin" />
+										<Loader size={14} className="text-gold-600 animate-spin" />
 									) : (
-										<stage.icon size={14} className="text-slate-600" />
+										<stage.icon size={14} className="text-surface-600" />
 									)}
 								</div>
 
 								<div className="flex-1 min-w-0">
 									<p
-										className={`text-xs font-medium ${isActive ? "text-white" : isComplete ? "text-emerald-300" : "text-slate-600"}`}
+										className={`text-xs font-medium ${isActive ? "text-surface-900" : isComplete ? "text-green-600" : "text-surface-400"}`}
 									>
 										{stage.label}
 									</p>
 									{(isActive || isComplete) && (
 										<p
-											className={`text-[10px] ${isActive ? "text-slate-400" : "text-slate-600"} truncate`}
+											className={`text-[10px] ${isActive ? "text-surface-500" : "text-surface-400"} truncate`}
 										>
 											{isComplete ? "Done" : stage.desc}
 										</p>

@@ -60,20 +60,20 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 					: "Critical";
 	const healthColor =
 		healthScore >= 80
-			? "text-green-400"
+			? "text-green-600"
 			: healthScore >= 60
-				? "text-gold-400"
+				? "text-gold-600"
 				: healthScore >= 40
-					? "text-amber-400"
-					: "text-red-400";
+					? "text-amber-600"
+					: "text-red-600";
 	const healthBg =
 		healthScore >= 80
-			? "bg-green-500/8 border-green-500/15"
+			? "bg-green-50 border-green-200"
 			: healthScore >= 60
-				? "bg-gold-500/8 border-gold-500/15"
+				? "bg-indigo-50 border-indigo-200"
 				: healthScore >= 40
-					? "bg-amber-500/8 border-amber-500/15"
-					: "bg-red-500/8 border-red-500/15";
+					? "bg-amber-50 border-amber-200"
+					: "bg-red-50 border-red-200";
 
 	const criticalCount = anomalies.filter(
 		(a) => a.severity === "critical",
@@ -108,10 +108,10 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 							{alertTotal > 0 && (
 								<button
 									onClick={() => setActiveTab("alerts")}
-									className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/8 border border-red-500/10 hover:bg-red-500/12 transition-colors"
+									className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 hover:bg-red-100 transition-colors"
 								>
-									<AlertTriangle size={13} className="text-red-400" />
-									<span className="text-xs text-red-400 font-medium">
+									<AlertTriangle size={13} className="text-red-500" />
+									<span className="text-xs text-red-600 font-medium">
 										{alertTotal} alert{alertTotal !== 1 ? "s" : ""}
 									</span>
 								</button>
@@ -139,7 +139,7 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 				</div>
 
 				{/* ── Tabs ── */}
-				<div className="flex items-center gap-1 mb-6 p-1 bg-surface-900/60 rounded-lg border border-surface-800 overflow-x-auto">
+				<div className="flex items-center gap-1 mb-6 p-1 bg-surface-100 rounded-lg border border-surface-300 overflow-x-auto">
 					{TABS.map((tab) => {
 						const Icon = tab.icon;
 						const isActive = activeTab === tab.id;
@@ -147,17 +147,17 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 							<button
 								key={tab.id}
 								onClick={() => setActiveTab(tab.id)}
-								className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${isActive ? "bg-surface-800 text-surface-100 shadow-sm" : "text-surface-500 hover:text-surface-300 hover:bg-surface-800/40"}`}
+								className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-xs font-medium transition-all whitespace-nowrap ${isActive ? "bg-white text-surface-900 shadow-sm border border-surface-300" : "text-surface-500 hover:text-surface-700 hover:bg-white/60"}`}
 							>
 								<Icon size={14} />
 								{tab.label}
 								{tab.id === "alerts" && alertTotal > 0 && (
-									<span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-500/15 text-red-400 text-[10px] font-bold">
+									<span className="ml-1 px-1.5 py-0.5 rounded-full bg-red-50 text-red-500 text-[10px] font-bold">
 										{alertTotal}
 									</span>
 								)}
 								{tab.id === "insights" && insights.length > 0 && (
-									<span className="ml-1 px-1.5 py-0.5 rounded-full bg-gold-500/15 text-gold-400 text-[10px] font-bold">
+									<span className="ml-1 px-1.5 py-0.5 rounded-full bg-gold-50 text-gold-600 text-[10px] font-bold">
 										{insights.length}
 									</span>
 								)}
@@ -179,17 +179,19 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 							<div className="card p-5">
 								<div className="flex items-center justify-between mb-3">
 									<div className="flex items-center gap-2">
-										<AlertTriangle size={14} className="text-amber-400" />
-										<h3 className="text-sm font-medium text-surface-100">Alerts</h3>
+										<AlertTriangle size={14} className="text-amber-500" />
+										<h3 className="text-sm font-medium text-surface-900">
+											Alerts
+										</h3>
 										{alertTotal > 0 && (
-											<span className="px-1.5 py-0.5 rounded-full bg-red-500/10 text-red-400 text-[10px] font-bold">
+											<span className="px-1.5 py-0.5 rounded-full bg-red-50 text-red-500 text-[10px] font-bold">
 												{alertTotal}
 											</span>
 										)}
 									</div>
 									<button
 										onClick={() => setActiveTab("alerts")}
-										className="flex items-center gap-1 text-[11px] text-gold-400 hover:text-gold-300 transition-colors"
+										className="flex items-center gap-1 text-[11px] text-gold-600 hover:text-gold-700 transition-colors"
 									>
 										View All <ChevronRight size={12} />
 									</button>
@@ -198,7 +200,7 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 									<div className="text-center py-6">
 										<ShieldCheck
 											size={24}
-											className="text-green-400 mx-auto mb-2"
+											className="text-green-500 mx-auto mb-2"
 										/>
 										<p className="text-xs text-surface-500">
 											All metrics are within normal range
@@ -209,13 +211,13 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 										{anomalies.slice(0, 3).map((a, i) => (
 											<div
 												key={i}
-												className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-800/40"
+												className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-100"
 											>
 												<div
-													className={`w-2 h-2 rounded-full shrink-0 ${a.severity === "critical" ? "bg-red-400" : a.severity === "high" ? "bg-amber-400" : "bg-surface-500"}`}
+													className={`w-2 h-2 rounded-full shrink-0 ${a.severity === "critical" ? "bg-red-500" : a.severity === "high" ? "bg-amber-500" : "bg-surface-400"}`}
 												/>
 												<div className="min-w-0 flex-1">
-													<p className="text-xs text-surface-200 truncate">
+													<p className="text-xs text-surface-700 truncate">
 														{a.label}
 													</p>
 													<p className="text-[10px] text-surface-500">
@@ -234,14 +236,14 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 							<div className="card p-5">
 								<div className="flex items-center justify-between mb-3">
 									<div className="flex items-center gap-2">
-										<Sparkles size={14} className="text-gold-400" />
-										<h3 className="text-sm font-medium text-surface-100">
+										<Sparkles size={14} className="text-gold-600" />
+										<h3 className="text-sm font-medium text-surface-900">
 											Top Recommendations
 										</h3>
 									</div>
 									<button
 										onClick={() => setActiveTab("insights")}
-										className="flex items-center gap-1 text-[11px] text-gold-400 hover:text-gold-300 transition-colors"
+										className="flex items-center gap-1 text-[11px] text-gold-600 hover:text-gold-700 transition-colors"
 									>
 										View All <ChevronRight size={12} />
 									</button>
@@ -250,13 +252,13 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 									{insights.slice(0, 3).map((insight, i) => (
 										<div
 											key={insight.id || i}
-											className="flex items-start gap-2 px-3 py-2 rounded-lg bg-surface-800/40"
+											className="flex items-start gap-2 px-3 py-2 rounded-lg bg-surface-100"
 										>
 											<div
-												className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${insight.severity === "critical" ? "bg-red-400" : insight.severity === "high" ? "bg-amber-400" : "bg-gold-400"}`}
+												className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${insight.severity === "critical" ? "bg-red-500" : insight.severity === "high" ? "bg-amber-500" : "bg-gold-500"}`}
 											/>
 											<div>
-												<p className="text-xs text-surface-200 leading-snug">
+												<p className="text-xs text-surface-700 leading-snug">
 													{insight.title}
 												</p>
 												<p className="text-[10px] text-surface-500 mt-0.5">
@@ -285,11 +287,11 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 						{/* Prediction summary hero */}
 						<div className="card-elevated p-6">
 							<div className="flex items-center gap-3 mb-4">
-								<div className="p-2.5 rounded-lg bg-gold-500/10">
-									<Brain size={20} className="text-gold-400" />
+								<div className="p-2.5 rounded-lg bg-gold-50">
+									<Brain size={20} className="text-gold-600" />
 								</div>
 								<div>
-									<h2 className="text-base font-semibold text-surface-100">
+									<h2 className="text-base font-semibold text-surface-900">
 										Future Predictions
 									</h2>
 									<p className="text-xs text-surface-500">
@@ -304,19 +306,19 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 										return (
 											<div
 												key={i}
-												className="rounded-lg bg-surface-800/50 border border-surface-700 p-4"
+												className="rounded-lg bg-surface-100 border border-surface-300 p-4"
 											>
 												<p className="text-xs text-surface-500 mb-1 truncate">
 													{f.label || f.column}
 												</p>
 												<div className="flex items-end gap-2 mb-2">
-													<span className="text-xl font-bold text-surface-100">
+													<span className="text-xl font-bold text-surface-900">
 														{f.predictions?.[0]?.value != null
 															? formatCompact(f.predictions[0].value)
 															: "—"}
 													</span>
 													<span
-														className={`flex items-center gap-0.5 text-xs font-semibold ${isGrowth ? "text-green-400" : "text-red-400"}`}
+														className={`flex items-center gap-0.5 text-xs font-semibold ${isGrowth ? "text-green-600" : "text-red-500"}`}
 													>
 														{isGrowth ? (
 															<ArrowUpRight size={12} />
@@ -327,9 +329,9 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 													</span>
 												</div>
 												<div className="flex items-center gap-1.5">
-													<div className="flex-1 h-1.5 bg-surface-700 rounded-full overflow-hidden">
+													<div className="flex-1 h-1.5 bg-surface-200 rounded-full overflow-hidden">
 														<div
-															className={`h-full rounded-full ${isGrowth ? "bg-green-400" : "bg-red-400"}`}
+															className={`h-full rounded-full ${isGrowth ? "bg-green-500" : "bg-red-500"}`}
 															style={{
 																width: `${Math.min(100, Math.abs(f.r2 || 0) * 100)}%`,
 															}}
@@ -352,16 +354,16 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 				{activeTab === "strategy" && (
 					<div className="space-y-6 animate-fade-in-up">
 						{/* Revenue Strategy */}
-						<div className="glass rounded-2xl p-6">
+						<div className="card-elevated p-6">
 							<div className="flex items-center gap-3 mb-6">
-								<div className="p-2.5 rounded-xl bg-emerald-500/10">
-									<DollarSign size={20} className="text-emerald-400" />
+								<div className="p-2.5 rounded-lg bg-gold-50">
+									<DollarSign size={20} className="text-gold-600" />
 								</div>
 								<div>
-									<h2 className="text-lg font-bold text-white">
+									<h2 className="text-base font-semibold text-surface-900">
 										Revenue Growth Strategy
 									</h2>
-									<p className="text-xs text-slate-400">
+									<p className="text-xs text-surface-500">
 										Data-driven recommendations to increase your revenue
 									</p>
 								</div>
@@ -370,9 +372,9 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 							{/* Top revenue drivers */}
 							<div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 								{/* Growth Opportunities */}
-								<div className="rounded-xl bg-slate-800/30 border border-slate-700/30 p-5">
-									<h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-										<Zap size={14} className="text-amber-400" />
+								<div className="rounded-lg bg-surface-100 border border-surface-300 p-5">
+									<h3 className="text-sm font-medium text-surface-900 mb-4 flex items-center gap-2">
+										<Zap size={14} className="text-gold-600" />
 										Growth Opportunities
 									</h3>
 									<div className="space-y-3">
@@ -387,18 +389,18 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 											.map((insight, i) => (
 												<div
 													key={i}
-													className="flex items-start gap-3 p-3 rounded-lg bg-slate-800/40"
+													className="flex items-start gap-3 p-3 rounded-lg bg-surface-50"
 												>
-													<div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
-														<span className="text-[10px] font-bold text-emerald-400">
+													<div className="w-6 h-6 rounded-full bg-gold-50 flex items-center justify-center shrink-0 mt-0.5">
+														<span className="text-[10px] font-bold text-gold-600">
 															{i + 1}
 														</span>
 													</div>
 													<div>
-														<p className="text-xs text-white font-medium">
+														<p className="text-xs text-surface-700 font-medium">
 															{insight.title}
 														</p>
-														<p className="text-[11px] text-slate-400 mt-0.5">
+														<p className="text-[11px] text-surface-500 mt-0.5">
 															{insight.description?.slice(0, 100)}
 														</p>
 													</div>
@@ -410,7 +412,7 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 												i.category === "opportunity" ||
 												i.type === "growth",
 										).length === 0 && (
-											<p className="text-xs text-slate-500 text-center py-4">
+											<p className="text-xs text-surface-500 text-center py-4">
 												Upload more data to reveal growth opportunities
 											</p>
 										)}
@@ -418,9 +420,9 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 								</div>
 
 								{/* Revenue Metrics */}
-								<div className="rounded-xl bg-slate-800/30 border border-slate-700/30 p-5">
-									<h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-										<BarChart size={14} className="text-brand-400" />
+								<div className="rounded-lg bg-surface-100 border border-surface-300 p-5">
+									<h3 className="text-sm font-medium text-surface-900 mb-4 flex items-center gap-2">
+										<BarChart size={14} className="text-surface-400" />
 										Key Revenue Metrics
 									</h3>
 									<div className="space-y-3">
@@ -429,22 +431,22 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 											return (
 												<div
 													key={i}
-													className="flex items-center justify-between p-3 rounded-lg bg-slate-800/40"
+													className="flex items-center justify-between p-3 rounded-lg bg-surface-50"
 												>
 													<div className="flex items-center gap-2 min-w-0">
 														<div
-															className={`w-2 h-2 rounded-full ${isUp ? "bg-emerald-400" : "bg-rose-400"}`}
+															className={`w-2 h-2 rounded-full ${isUp ? "bg-green-500" : "bg-red-500"}`}
 														/>
-														<span className="text-xs text-slate-300 truncate">
+														<span className="text-xs text-surface-600 truncate">
 															{kpi.label}
 														</span>
 													</div>
 													<div className="flex items-center gap-3">
-														<span className="text-sm font-bold text-white">
+														<span className="text-sm font-bold text-surface-900">
 															{formatCompact(kpi.current)}
 														</span>
 														<span
-															className={`text-[11px] font-semibold ${isUp ? "text-emerald-400" : "text-rose-400"}`}
+															className={`text-[11px] font-semibold ${isUp ? "text-green-600" : "text-red-500"}`}
 														>
 															{isUp ? "+" : ""}
 															{kpi.change}%
@@ -460,9 +462,9 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 
 						{/* Forecasted Revenue Potential */}
 						{forecasts.length > 0 && (
-							<div className="glass rounded-2xl p-6">
-								<h3 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-									<Target size={14} className="text-violet-400" />
+							<div className="card-elevated p-6">
+								<h3 className="text-sm font-medium text-surface-900 mb-4 flex items-center gap-2">
+									<Target size={14} className="text-gold-600" />
 									Revenue Forecast Potential
 								</h3>
 								<div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -472,15 +474,15 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 										.map((f, i) => (
 											<div
 												key={i}
-												className="rounded-xl bg-gradient-to-br from-emerald-500/5 to-brand-500/5 border border-emerald-500/10 p-4 text-center"
+												className="rounded-lg bg-green-50 border border-green-200 p-4 text-center"
 											>
-												<p className="text-[11px] text-slate-400 mb-1">
+												<p className="text-[11px] text-surface-500 mb-1">
 													{f.label || f.column}
 												</p>
-												<p className="text-2xl font-bold text-emerald-400">
+												<p className="text-2xl font-bold text-green-600">
 													+{(f.growthRate || 0).toFixed(1)}%
 												</p>
-												<p className="text-[10px] text-slate-500 mt-1">
+												<p className="text-[10px] text-surface-500 mt-1">
 													projected growth
 												</p>
 											</div>
@@ -494,29 +496,29 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 				{activeTab === "improvements" && (
 					<div className="space-y-6 animate-fade-in-up">
 						{/* Business Health Overview */}
-						<div className="glass rounded-2xl p-6">
+						<div className="card-elevated p-6">
 							<div className="flex items-center gap-3 mb-6">
-								<div className="p-2.5 rounded-xl bg-amber-500/10">
-									<Lightbulb size={20} className="text-amber-400" />
+								<div className="p-2.5 rounded-lg bg-amber-50">
+									<Lightbulb size={20} className="text-amber-500" />
 								</div>
 								<div>
-									<h2 className="text-lg font-bold text-white">
+									<h2 className="text-base font-semibold text-surface-900">
 										Business Health & Improvements
 									</h2>
-									<p className="text-xs text-slate-400">
+									<p className="text-xs text-surface-500">
 										Identify areas that need attention and quick wins
 									</p>
 								</div>
 							</div>
 
 							{/* Health score hero */}
-							<div className="flex flex-col sm:flex-row items-center gap-6 mb-6 p-4 rounded-xl bg-slate-800/30">
+							<div className="flex flex-col sm:flex-row items-center gap-6 mb-6 p-4 rounded-lg bg-surface-100">
 								<div className="relative w-24 h-24">
 									<svg className="w-24 h-24 -rotate-90" viewBox="0 0 36 36">
 										<path
 											d="M18 2.0845a 15.9155 15.9155 0 0 1 0 31.831a 15.9155 15.9155 0 0 1 0 -31.831"
 											fill="none"
-											stroke="#1e293b"
+											stroke="#e5e7eb"
 											strokeWidth="3"
 										/>
 										<path
@@ -524,12 +526,12 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 											fill="none"
 											stroke={
 												healthScore >= 80
-													? "#34d399"
+													? "#22c55e"
 													: healthScore >= 60
-														? "#818cf8"
+														? "#6366f1"
 														: healthScore >= 40
-															? "#fbbf24"
-															: "#f87171"
+															? "#f59e0b"
+															: "#ef4444"
 											}
 											strokeWidth="3"
 											strokeDasharray={`${healthScore}, 100`}
@@ -546,7 +548,7 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 									<h3 className={`text-lg font-bold ${healthColor}`}>
 										{healthLabel} Health
 									</h3>
-									<p className="text-sm text-slate-400 mt-1">
+									<p className="text-sm text-surface-500 mt-1">
 										{healthScore >= 80
 											? "Your business metrics are performing well across the board."
 											: healthScore >= 60
@@ -561,8 +563,8 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 							{/* Improvement areas */}
 							<div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 								{/* Critical Issues */}
-								<div className="rounded-xl bg-rose-500/5 border border-rose-500/10 p-5">
-									<h3 className="text-sm font-semibold text-rose-400 mb-3 flex items-center gap-2">
+								<div className="rounded-lg bg-red-50 border border-red-200 p-5">
+									<h3 className="text-sm font-medium text-red-600 mb-3 flex items-center gap-2">
 										<AlertTriangle size={14} /> Needs Immediate Attention
 									</h3>
 									<div className="space-y-2">
@@ -575,14 +577,16 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 											.map((a, i) => (
 												<div
 													key={i}
-													className="flex items-start gap-2 p-2 rounded-lg bg-slate-800/40"
+													className="flex items-start gap-2 p-2 rounded-lg bg-white"
 												>
 													<div
-														className={`w-2 h-2 rounded-full mt-1.5 ${a.severity === "critical" ? "bg-rose-400" : "bg-amber-400"}`}
+														className={`w-2 h-2 rounded-full mt-1.5 ${a.severity === "critical" ? "bg-red-500" : "bg-amber-500"}`}
 													/>
 													<div>
-														<p className="text-xs text-white">{a.label}</p>
-														<p className="text-[10px] text-slate-500">
+														<p className="text-xs text-surface-700">
+															{a.label}
+														</p>
+														<p className="text-[10px] text-surface-500">
 															{Math.abs(a.deviation)}% deviation from normal
 														</p>
 													</div>
@@ -592,8 +596,8 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 											(a) => a.severity === "critical" || a.severity === "high",
 										).length === 0 && (
 											<div className="flex items-center gap-2 py-4 justify-center">
-												<CheckCircle2 size={14} className="text-emerald-400" />
-												<span className="text-xs text-emerald-400">
+												<CheckCircle2 size={14} className="text-green-500" />
+												<span className="text-xs text-green-600">
 													No critical issues found!
 												</span>
 											</div>
@@ -602,25 +606,24 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 								</div>
 
 								{/* Quick Wins */}
-								<div className="rounded-xl bg-emerald-500/5 border border-emerald-500/10 p-5">
-									<h3 className="text-sm font-semibold text-emerald-400 mb-3 flex items-center gap-2">
+								<div className="rounded-lg bg-green-50 border border-green-200 p-5">
+									<h3 className="text-sm font-medium text-green-600 mb-3 flex items-center gap-2">
 										<Sparkles size={14} /> Quick Wins & Recommendations
 									</h3>
 									<div className="space-y-2">
 										{insights.slice(0, 4).map((ins, i) => (
 											<div
 												key={i}
-												className="flex items-start gap-2 p-2 rounded-lg bg-slate-800/40"
+												className="flex items-start gap-2 p-2 rounded-lg bg-white"
 											>
-												<div className="w-5 h-5 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0 mt-0.5">
-													<CheckCircle2
-														size={10}
-														className="text-emerald-400"
-													/>
+												<div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center shrink-0 mt-0.5">
+													<CheckCircle2 size={10} className="text-green-600" />
 												</div>
 												<div>
-													<p className="text-xs text-white">{ins.title}</p>
-													<p className="text-[10px] text-slate-500">
+													<p className="text-xs text-surface-700">
+														{ins.title}
+													</p>
+													<p className="text-[10px] text-surface-500">
 														{(ins.confidence * 100).toFixed(0)}% confidence
 													</p>
 												</div>
@@ -639,16 +642,16 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 				{activeTab === "management" && (
 					<div className="space-y-6 animate-fade-in-up">
 						{/* Executive Summary */}
-						<div className="glass rounded-2xl p-6">
+						<div className="card-elevated p-6">
 							<div className="flex items-center gap-3 mb-6">
-								<div className="p-2.5 rounded-xl bg-violet-500/10">
-									<Users size={20} className="text-violet-400" />
+								<div className="p-2.5 rounded-lg bg-surface-100">
+									<Users size={20} className="text-surface-400" />
 								</div>
 								<div>
-									<h2 className="text-lg font-bold text-white">
+									<h2 className="text-base font-semibold text-surface-900">
 										Management Dashboard
 									</h2>
-									<p className="text-xs text-slate-400">
+									<p className="text-xs text-surface-500">
 										Executive-ready metrics and strategic overview
 									</p>
 								</div>
@@ -656,90 +659,95 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 
 							{/* Top-line metrics */}
 							<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-								<div className="rounded-xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/10 p-4 text-center">
+								<div className="rounded-lg bg-surface-100 border border-surface-300 p-4 text-center">
 									<ShieldCheck
 										size={20}
-										className="text-emerald-400 mx-auto mb-2"
+										className="text-green-500 mx-auto mb-2"
 									/>
-									<p className="text-2xl font-bold text-white">{healthScore}</p>
-									<p className="text-[10px] text-slate-400">Health Score</p>
+									<p className="text-2xl font-bold text-surface-900">
+										{healthScore}
+									</p>
+									<p className="text-[10px] text-surface-500">Health Score</p>
 								</div>
-								<div className="rounded-xl bg-gradient-to-br from-brand-500/10 to-brand-500/5 border border-brand-500/10 p-4 text-center">
+								<div className="rounded-lg bg-surface-100 border border-surface-300 p-4 text-center">
 									<TrendingUp
 										size={20}
-										className="text-brand-400 mx-auto mb-2"
+										className="text-gold-600 mx-auto mb-2"
 									/>
-									<p className="text-2xl font-bold text-white">
+									<p className="text-2xl font-bold text-surface-900">
 										{kpis.filter((k) => k.trend === "rising").length}
 									</p>
-									<p className="text-[10px] text-slate-400">Growing Metrics</p>
+									<p className="text-[10px] text-surface-500">
+										Growing Metrics
+									</p>
 								</div>
-								<div className="rounded-xl bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-500/10 p-4 text-center">
+								<div className="rounded-lg bg-surface-100 border border-surface-300 p-4 text-center">
 									<AlertTriangle
 										size={20}
-										className="text-amber-400 mx-auto mb-2"
+										className="text-amber-500 mx-auto mb-2"
 									/>
-									<p className="text-2xl font-bold text-white">{alertTotal}</p>
-									<p className="text-[10px] text-slate-400">Active Alerts</p>
+									<p className="text-2xl font-bold text-surface-900">
+										{alertTotal}
+									</p>
+									<p className="text-[10px] text-surface-500">Active Alerts</p>
 								</div>
-								<div className="rounded-xl bg-gradient-to-br from-violet-500/10 to-violet-500/5 border border-violet-500/10 p-4 text-center">
-									<Sparkles
-										size={20}
-										className="text-violet-400 mx-auto mb-2"
-									/>
-									<p className="text-2xl font-bold text-white">
+								<div className="rounded-lg bg-surface-100 border border-surface-300 p-4 text-center">
+									<Sparkles size={20} className="text-gold-600 mx-auto mb-2" />
+									<p className="text-2xl font-bold text-surface-900">
 										{insights.length}
 									</p>
-									<p className="text-[10px] text-slate-400">Recommendations</p>
+									<p className="text-[10px] text-surface-500">
+										Recommendations
+									</p>
 								</div>
 							</div>
 
 							{/* Narrative summary */}
-							<div className="rounded-xl bg-slate-800/30 border border-slate-700/30 p-5 mb-6">
-								<h3 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
-									<Clock size={14} className="text-slate-400" />
+							<div className="rounded-lg bg-surface-100 border border-surface-300 p-5 mb-6">
+								<h3 className="text-sm font-medium text-surface-900 mb-2 flex items-center gap-2">
+									<Clock size={14} className="text-surface-400" />
 									Executive Summary
 								</h3>
-								<p className="text-sm text-slate-300 leading-relaxed">
+								<p className="text-sm text-surface-600 leading-relaxed">
 									{analysis.narrative ||
 										`Analysis of ${schema.columns.length} business metrics across your dataset reveals ${kpis.filter((k) => k.trend === "rising").length} growing metrics, ${alertTotal} items requiring attention, and ${insights.length} actionable recommendations. ${healthScore >= 70 ? "Overall business health is strong." : "Several areas need management attention."}`}
 								</p>
 							</div>
 
 							{/* Key decisions table */}
-							<div className="rounded-xl bg-slate-800/30 border border-slate-700/30 overflow-hidden">
-								<div className="px-5 py-3 border-b border-slate-700/30">
-									<h3 className="text-sm font-semibold text-white flex items-center gap-2">
-										<Target size={14} className="text-brand-400" />
+							<div className="rounded-lg bg-surface-100 border border-surface-300 overflow-hidden">
+								<div className="px-5 py-3 border-b border-surface-300">
+									<h3 className="text-sm font-medium text-surface-900 flex items-center gap-2">
+										<Target size={14} className="text-gold-600" />
 										Key Decision Points
 									</h3>
 								</div>
-								<div className="divide-y divide-slate-800/50">
+								<div className="divide-y divide-surface-200">
 									{insights.slice(0, 6).map((ins, i) => (
 										<div
 											key={i}
-											className="flex items-center gap-4 px-5 py-3 hover:bg-slate-800/20 transition-colors"
+											className="flex items-center gap-4 px-5 py-3 hover:bg-surface-50 transition-colors"
 										>
 											<div
-												className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${ins.severity === "critical" ? "bg-rose-500/10" : ins.severity === "high" ? "bg-amber-500/10" : "bg-brand-500/10"}`}
+												className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${ins.severity === "critical" ? "bg-red-50" : ins.severity === "high" ? "bg-amber-50" : "bg-gold-50"}`}
 											>
 												<span
-													className={`text-xs font-bold ${ins.severity === "critical" ? "text-rose-400" : ins.severity === "high" ? "text-amber-400" : "text-brand-400"}`}
+													className={`text-xs font-bold ${ins.severity === "critical" ? "text-red-500" : ins.severity === "high" ? "text-amber-500" : "text-gold-600"}`}
 												>
 													{i + 1}
 												</span>
 											</div>
 											<div className="flex-1 min-w-0">
-												<p className="text-xs text-white font-medium truncate">
+												<p className="text-xs text-surface-700 font-medium truncate">
 													{ins.title}
 												</p>
-												<p className="text-[10px] text-slate-500">
+												<p className="text-[10px] text-surface-500">
 													{ins.category} · {(ins.confidence * 100).toFixed(0)}%
 													confidence
 												</p>
 											</div>
 											<span
-												className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${ins.severity === "critical" ? "bg-rose-500/10 text-rose-400" : ins.severity === "high" ? "bg-amber-500/10 text-amber-400" : "bg-brand-500/10 text-brand-400"}`}
+												className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${ins.severity === "critical" ? "bg-red-50 text-red-500" : ins.severity === "high" ? "bg-amber-50 text-amber-500" : "bg-gold-50 text-gold-600"}`}
 											>
 												{ins.severity === "critical"
 													? "Urgent"
@@ -775,11 +783,11 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 
 				<footer className="mt-12 pb-8 text-center">
 					<div className="flex items-center justify-center gap-2 mb-3">
-						<div className="h-px w-12 bg-slate-800" />
-						<Activity size={10} className="text-slate-700" />
-						<div className="h-px w-12 bg-slate-800" />
+						<div className="h-px w-12 bg-surface-300" />
+						<Activity size={10} className="text-surface-400" />
+						<div className="h-px w-12 bg-surface-300" />
 					</div>
-					<p className="text-[10px] text-slate-600">
+					<p className="text-[10px] text-surface-400">
 						ARIA · Autonomous Decision Intelligence · v1.0
 					</p>
 				</footer>
