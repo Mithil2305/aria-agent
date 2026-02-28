@@ -41,15 +41,43 @@ from typing import List, Optional
 
 class DailyLogEntry(BaseModel):
     date: str
+    # Common fields
     revenue: Optional[float] = None
     customers: Optional[float] = None
-    orders: Optional[float] = None
     expenses: Optional[float] = None
+    # Shared across many types
+    orders: Optional[float] = None
     marketingSpend: Optional[float] = None
     inventory: Optional[float] = None
     avgBasketSize: Optional[float] = None
     wasteShrinkage: Optional[float] = None
+    # Grocery / Retail / Clothing
+    itemsSold: Optional[float] = None
+    inventoryCount: Optional[float] = None
+    unitsSold: Optional[float] = None
+    returnsRefunds: Optional[float] = None
+    onlineSales: Optional[float] = None
+    topProducts: Optional[str] = None
+    outOfStockItems: Optional[str] = None
+    # Restaurant
+    avgOrderValue: Optional[float] = None
+    tablesTurned: Optional[float] = None
+    onlineOrders: Optional[float] = None
+    foodCost: Optional[float] = None
+    tipRevenue: Optional[float] = None
+    topDishes: Optional[str] = None
+    staffCount: Optional[float] = None
+    # Bakery
+    itemsBaked: Optional[float] = None
+    ingredientsCost: Optional[float] = None
+    customOrders: Optional[float] = None
+    # Pharmacy
+    prescriptionsFilled: Optional[float] = None
+    expiredItems: Optional[float] = None
+    # Meta
     notes: Optional[str] = None
+    businessType: Optional[str] = None
+    businessCategory: Optional[str] = None
 
 
 class DailyLogsPayload(BaseModel):
@@ -308,26 +336,42 @@ async def upload_daily_logs(payload: DailyLogsPayload, uid: str = Depends(get_cu
         if not payload.logs or len(payload.logs) == 0:
             raise HTTPException(status_code=400, detail="No log entries provided.")
 
-        # Convert logs to DataFrame
+        # Convert logs to DataFrame — dynamically include all non-None fields
+        # camelCase → snake_case mapping for common analytics column names
+        FIELD_MAP = {
+            "marketingSpend": "marketing_spend",
+            "avgBasketSize": "avg_basket_size",
+            "wasteShrinkage": "waste_shrinkage",
+            "itemsSold": "items_sold",
+            "inventoryCount": "inventory_count",
+            "unitsSold": "units_sold",
+            "returnsRefunds": "returns_refunds",
+            "onlineSales": "online_sales",
+            "topProducts": "top_products",
+            "outOfStockItems": "out_of_stock_items",
+            "avgOrderValue": "avg_order_value",
+            "tablesTurned": "tables_turned",
+            "onlineOrders": "online_orders",
+            "foodCost": "food_cost",
+            "tipRevenue": "tip_revenue",
+            "topDishes": "top_dishes",
+            "staffCount": "staff_count",
+            "itemsBaked": "items_baked",
+            "ingredientsCost": "ingredients_cost",
+            "customOrders": "custom_orders",
+            "prescriptionsFilled": "prescriptions_filled",
+            "expiredItems": "expired_items",
+            "businessType": "business_type",
+            "businessCategory": "business_category",
+        }
+
         records = []
         for log in payload.logs:
             row = {"date": log.date}
-            if log.revenue is not None:
-                row["revenue"] = log.revenue
-            if log.customers is not None:
-                row["customers"] = log.customers
-            if log.orders is not None:
-                row["orders"] = log.orders
-            if log.expenses is not None:
-                row["expenses"] = log.expenses
-            if log.marketingSpend is not None:
-                row["marketing_spend"] = log.marketingSpend
-            if log.inventory is not None:
-                row["inventory"] = log.inventory
-            if log.avgBasketSize is not None:
-                row["avg_basket_size"] = log.avgBasketSize
-            if log.wasteShrinkage is not None:
-                row["waste_shrinkage"] = log.wasteShrinkage
+            log_dict = log.model_dump(exclude_none=True, exclude={"date"})
+            for key, value in log_dict.items():
+                col_name = FIELD_MAP.get(key, key)
+                row[col_name] = value
             records.append(row)
 
         df = pd.DataFrame(records)

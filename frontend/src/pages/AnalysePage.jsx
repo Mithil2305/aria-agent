@@ -104,17 +104,17 @@ export default function AnalysePage() {
 
 			try {
 				const token = await getIdToken();
-				const logPayload = logs.map((log) => ({
-					date: log.date,
-					revenue: log.revenue ?? null,
-					customers: log.customers ?? null,
-					orders: log.orders ?? null,
-					expenses: log.expenses ?? null,
-					marketingSpend: log.marketingSpend ?? null,
-					inventory: log.inventory ?? null,
-					avgBasketSize: log.avgBasketSize ?? null,
-					wasteShrinkage: log.wasteShrinkage ?? null,
-				}));
+
+				// Build payload dynamically — include all non-null fields from each log
+				const SKIP_KEYS = new Set(["id", "createdAt", "notes"]);
+				const logPayload = logs.map((log) => {
+					const entry = {};
+					for (const [key, value] of Object.entries(log)) {
+						if (SKIP_KEYS.has(key) || value === undefined) continue;
+						entry[key] = value ?? null;
+					}
+					return entry;
+				});
 
 				const result = await uploadDailyLogs(logPayload, token);
 				setFileName(result.filename);

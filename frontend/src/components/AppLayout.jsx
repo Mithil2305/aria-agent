@@ -7,7 +7,9 @@ import {
 	LogOut,
 	User,
 	Settings,
+	Package,
 } from "lucide-react";
+import { needsStockManagement } from "../config/businessTypes";
 
 const NAV_ITEMS = [
 	{ to: "/daily-log", icon: ClipboardEdit, label: "Daily Log" },
@@ -52,7 +54,12 @@ export default function AppLayout() {
 					<p className="px-3 pb-2 text-[10px] font-medium text-surface-400 uppercase tracking-wider">
 						Menu
 					</p>
-					{NAV_ITEMS.map((item) => (
+					{[
+						...NAV_ITEMS,
+						...(needsStockManagement(userProfile?.businessType)
+							? [{ to: "/stock", icon: Package, label: "Stock" }]
+							: []),
+					].map((item) => (
 						<NavLink
 							key={item.to}
 							to={item.to}

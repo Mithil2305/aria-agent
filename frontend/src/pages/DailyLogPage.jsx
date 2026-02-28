@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
 	Calendar,
 	DollarSign,
 	Users,
 	ShoppingCart,
 	TrendingUp,
+	TrendingDown,
 	Megaphone,
 	Package,
 	Save,
@@ -17,6 +18,13 @@ import {
 	Loader2,
 	FileSpreadsheet,
 	Plus,
+	Star,
+	Truck,
+	Globe,
+	RotateCcw,
+	ClipboardEdit,
+	Armchair,
+	Store,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -31,85 +39,42 @@ import {
 	serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import {
+	getMetricFields,
+	getBusinessCategory,
+	getCategoryLabel,
+} from "../config/businessTypes";
 
-const METRIC_FIELDS = [
-	{
-		key: "revenue",
-		label: "Revenue",
-		icon: DollarSign,
-		placeholder: "e.g. 4500",
-		prefix: "$",
-		type: "number",
-		required: true,
-	},
-	{
-		key: "customers",
-		label: "Customers / Footfall",
-		icon: Users,
-		placeholder: "e.g. 120",
-		type: "number",
-		required: false,
-	},
-	{
-		key: "orders",
-		label: "Orders / Transactions",
-		icon: ShoppingCart,
-		placeholder: "e.g. 85",
-		type: "number",
-		required: false,
-	},
-	{
-		key: "expenses",
-		label: "Total Expenses",
-		icon: TrendingUp,
-		placeholder: "e.g. 2200",
-		prefix: "$",
-		type: "number",
-		required: false,
-	},
-	{
-		key: "marketingSpend",
-		label: "Marketing Spend",
-		icon: Megaphone,
-		placeholder: "e.g. 500",
-		prefix: "$",
-		type: "number",
-		required: false,
-	},
-	{
-		key: "inventory",
-		label: "Inventory Count",
-		icon: Package,
-		placeholder: "e.g. 340",
-		type: "number",
-		required: false,
-	},
-	{
-		key: "avgBasketSize",
-		label: "Avg Basket Size",
-		icon: ShoppingCart,
-		placeholder: "e.g. 28.50",
-		prefix: "$",
-		type: "number",
-		required: false,
-	},
-	{
-		key: "wasteShrinkage",
-		label: "Waste / Shrinkage",
-		icon: Package,
-		placeholder: "e.g. 150",
-		prefix: "$",
-		type: "number",
-		required: false,
-	},
-];
+// Icon name string → Lucide component map
+const ICON_MAP = {
+	DollarSign,
+	Users,
+	ShoppingCart,
+	TrendingUp,
+	TrendingDown,
+	Megaphone,
+	Package,
+	Save,
+	Star,
+	Truck,
+	Globe,
+	RotateCcw,
+	ClipboardEdit,
+	Armchair,
+	AlertCircle,
+	Trash2,
+	Store,
+};
+function resolveIcon(iconName) {
+	return ICON_MAP[iconName] || Package;
+}
 
 function todayISO() {
 	return new Date().toISOString().split("T")[0];
 }
 
 export default function DailyLogPage() {
-	const { user } = useAuth();
+	const { user, userProfile } = useAuth();
 	const [date, setDate] = useState(todayISO());
 	const [formData, setFormData] = useState({});
 	const [notes, setNotes] = useState("");
@@ -120,6 +85,15 @@ export default function DailyLogPage() {
 	const [loadingLogs, setLoadingLogs] = useState(true);
 	const [showHistory, setShowHistory] = useState(true);
 	const [csvUploading, setCsvUploading] = useState(false);
+
+	// Dynamic fields based on business type
+	const businessType = userProfile?.businessType || "";
+	const category = getBusinessCategory(businessType);
+	const categoryLabel = getCategoryLabel(businessType);
+	const metricFields = useMemo(
+		() => getMetricFields(businessType),
+		[businessType],
+	);
 
 	// Load recent logs from Firestore
 	const loadLogs = useCallback(async () => {
@@ -160,12 +134,16 @@ export default function DailyLogPage() {
 		setSaving(true);
 		setError(null);
 		try {
-			// Numeric values
+			// Clean values per field type
 			const cleanData = {};
-			for (const field of METRIC_FIELDS) {
+			for (const field of metricFields) {
 				const val = formData[field.key];
 				if (val !== undefined && val !== "") {
-					cleanData[field.key] = Number(val);
+					if (field.type === "number") {
+						cleanData[field.key] = Number(val);
+					} else {
+						cleanData[field.key] = val;
+					}
 				}
 			}
 
@@ -173,6 +151,8 @@ export default function DailyLogPage() {
 				date,
 				...cleanData,
 				notes: notes.trim() || null,
+				businessType: businessType || null,
+				businessCategory: category,
 				createdAt: serverTimestamp(),
 			});
 
@@ -231,8 +211,13 @@ export default function DailyLogPage() {
 				const rowDate = cols[dateIdx];
 				if (!rowDate) continue;
 
-				const entry = { date: rowDate, createdAt: serverTimestamp() };
-				for (const field of METRIC_FIELDS) {
+				const entry = {
+					date: rowDate,
+					businessType: businessType || null,
+					businessCategory: category,
+					createdAt: serverTimestamp(),
+				};
+				for (const field of metricFields) {
 					const idx = headers.findIndex(
 						(h) =>
 							h === field.key.toLowerCase() ||
@@ -240,8 +225,12 @@ export default function DailyLogPage() {
 							h.replace(/[\s_]/g, "") === field.key.toLowerCase(),
 					);
 					if (idx !== -1 && cols[idx]) {
-						const val = Number(cols[idx].replace(/[^0-9.-]/g, ""));
-						if (!isNaN(val)) entry[field.key] = val;
+						if (field.type === "number") {
+							const val = Number(cols[idx].replace(/[^0-9.-]/g, ""));
+							if (!isNaN(val)) entry[field.key] = val;
+						} else {
+							entry[field.key] = cols[idx];
+						}
 					}
 				}
 
@@ -287,6 +276,33 @@ export default function DailyLogPage() {
 					</p>
 				</div>
 
+				{/* Business type badge */}
+				{businessType && (
+					<div className="mb-4 flex items-center gap-2">
+						<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-600 text-xs font-medium">
+							<Store size={12} />
+							{categoryLabel}
+						</span>
+						<span className="text-[11px] text-surface-400">
+							Fields customized for your business type
+						</span>
+					</div>
+				)}
+
+				{/* No business type warning */}
+				{!businessType && (
+					<div className="mb-4 flex items-center gap-2 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200">
+						<AlertCircle size={14} className="text-amber-600 shrink-0" />
+						<p className="text-sm text-amber-700">
+							Set your business type in{" "}
+							<a href="/profile" className="underline font-medium">
+								Profile Settings
+							</a>{" "}
+							to get customized log fields for your industry.
+						</p>
+					</div>
+				)}
+
 				{/* ── Entry Form ── */}
 				<div className="card-elevated p-6 mb-6">
 					{/* Date picker */}
@@ -328,10 +344,10 @@ export default function DailyLogPage() {
 						</div>
 					</div>
 
-					{/* Metric fields */}
+					{/* Metric fields — dynamic per business type */}
 					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-						{METRIC_FIELDS.map((field) => {
-							const Icon = field.icon;
+						{metricFields.map((field) => {
+							const Icon = resolveIcon(field.icon);
 							return (
 								<div key={field.key}>
 									<label className="flex items-center gap-1.5 text-xs font-medium text-surface-400 mb-1.5">
@@ -349,17 +365,29 @@ export default function DailyLogPage() {
 												{field.prefix}
 											</span>
 										)}
-										<input
-											type="number"
-											min="0"
-											step="any"
-											placeholder={field.placeholder}
-											value={formData[field.key] ?? ""}
-											onChange={(e) =>
-												handleFieldChange(field.key, e.target.value)
-											}
-											className={`input-field w-full ${field.prefix ? "pl-7" : ""}`}
-										/>
+										{field.type === "text" ? (
+											<input
+												type="text"
+												placeholder={field.placeholder}
+												value={formData[field.key] ?? ""}
+												onChange={(e) =>
+													handleFieldChange(field.key, e.target.value)
+												}
+												className="input-field w-full"
+											/>
+										) : (
+											<input
+												type="number"
+												min="0"
+												step="any"
+												placeholder={field.placeholder}
+												value={formData[field.key] ?? ""}
+												onChange={(e) =>
+													handleFieldChange(field.key, e.target.value)
+												}
+												className={`input-field w-full ${field.prefix ? "pl-7" : ""}`}
+											/>
+										)}
 									</div>
 								</div>
 							);
@@ -455,21 +483,17 @@ export default function DailyLogPage() {
 												<th className="text-left px-6 py-3 text-xs font-medium text-surface-500">
 													Date
 												</th>
-												<th className="text-right px-4 py-3 text-xs font-medium text-surface-500">
-													Revenue
-												</th>
-												<th className="text-right px-4 py-3 text-xs font-medium text-surface-500 hidden sm:table-cell">
-													Customers
-												</th>
-												<th className="text-right px-4 py-3 text-xs font-medium text-surface-500 hidden md:table-cell">
-													Orders
-												</th>
-												<th className="text-right px-4 py-3 text-xs font-medium text-surface-500 hidden lg:table-cell">
-													Expenses
-												</th>
-												<th className="text-right px-4 py-3 text-xs font-medium text-surface-500 hidden lg:table-cell">
-													Marketing
-												</th>
+												{metricFields
+													.filter((f) => f.type === "number")
+													.slice(0, 5)
+													.map((col) => (
+														<th
+															key={col.key}
+															className="text-right px-4 py-3 text-xs font-medium text-surface-500 hidden sm:table-cell"
+														>
+															{col.label}
+														</th>
+													))}
 												<th className="px-4 py-3 text-xs font-medium text-surface-500">
 													Notes
 												</th>
@@ -485,28 +509,22 @@ export default function DailyLogPage() {
 													<td className="px-6 py-3 text-surface-900 font-medium whitespace-nowrap">
 														{log.date}
 													</td>
-													<td className="text-right px-4 py-3 text-gold-600 font-medium">
-														{log.revenue != null
-															? `$${Number(log.revenue).toLocaleString()}`
-															: "—"}
-													</td>
-													<td className="text-right px-4 py-3 text-surface-600 hidden sm:table-cell">
-														{log.customers ?? "—"}
-													</td>
-													<td className="text-right px-4 py-3 text-surface-600 hidden md:table-cell">
-														{log.orders ?? "—"}
-													</td>
-													<td className="text-right px-4 py-3 text-surface-500 hidden lg:table-cell">
-														{log.expenses != null
-															? `$${Number(log.expenses).toLocaleString()}`
-															: "—"}
-													</td>
-													<td className="text-right px-4 py-3 text-surface-500 hidden lg:table-cell">
-														{log.marketingSpend != null
-															? `$${Number(log.marketingSpend).toLocaleString()}`
-															: "—"}
-													</td>
-													<td className="px-4 py-3 text-surface-500 text-xs max-w-[120px] truncate">
+													{metricFields
+														.filter((f) => f.type === "number")
+														.slice(0, 5)
+														.map((col) => (
+															<td
+																key={col.key}
+																className="text-right px-4 py-3 text-surface-600 hidden sm:table-cell"
+															>
+																{log[col.key] != null
+																	? col.prefix
+																		? `${col.prefix}${Number(log[col.key]).toLocaleString()}`
+																		: Number(log[col.key]).toLocaleString()
+																	: "—"}
+															</td>
+														))}
+													<td className="px-4 py-3 text-surface-500 text-xs max-w-30 truncate">
 														{log.notes || "—"}
 													</td>
 													<td className="px-4 py-3">
@@ -534,11 +552,19 @@ export default function DailyLogPage() {
 						CSV Import Format
 					</h3>
 					<p className="text-[11px] text-surface-500 font-mono leading-relaxed">
-						date, revenue, customers, orders, expenses, marketingSpend,
-						inventory, avgBasketSize, wasteShrinkage, notes
+						date,{" "}
+						{metricFields
+							.filter((f) => f.type === "number")
+							.map((f) => f.key)
+							.join(", ")}
+						, notes
 						<br />
-						2025-01-15, 4500, 120, 85, 2200, 500, 340, 28.50, 150, "Big sale
-						day"
+						2025-01-15,{" "}
+						{metricFields
+							.filter((f) => f.type === "number")
+							.map(() => "0")
+							.join(", ")}
+						, &quot;Notes here&quot;
 					</p>
 				</div>
 			</div>

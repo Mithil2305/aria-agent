@@ -9,6 +9,7 @@ import UploadPage from "./pages/UploadPage";
 import DailyLogPage from "./pages/DailyLogPage";
 import ProfilePage from "./pages/ProfilePage";
 import AnalysePage from "./pages/AnalysePage";
+import StockManagementPage from "./pages/StockManagementPage";
 
 function App() {
 	return (
@@ -32,6 +33,7 @@ function App() {
 						<Route path="/daily-log" element={<DailyLogPage />} />
 						<Route path="/profile" element={<ProfilePage />} />
 						<Route path="/analyse" element={<AnalysePage />} />
+						<Route path="/stock" element={<StockManagementPage />} />
 					</Route>
 
 					{/* Catch-all */}
