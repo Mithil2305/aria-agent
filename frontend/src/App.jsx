@@ -10,6 +10,8 @@ import DailyLogPage from "./pages/DailyLogPage";
 import ProfilePage from "./pages/ProfilePage";
 import AnalysePage from "./pages/AnalysePage";
 import StockManagementPage from "./pages/StockManagementPage";
+import IntegrationsPage from "./pages/IntegrationsPage";
+import StrategyAdvisorPage from "./pages/StrategyAdvisorPage";
 
 function App() {
 	return (
@@ -34,6 +36,8 @@ function App() {
 						<Route path="/profile" element={<ProfilePage />} />
 						<Route path="/analyse" element={<AnalysePage />} />
 						<Route path="/stock" element={<StockManagementPage />} />
+						<Route path="/integrations" element={<IntegrationsPage />} />
+						<Route path="/strategy" element={<StrategyAdvisorPage />} />
 					</Route>
 
 					{/* Catch-all */}

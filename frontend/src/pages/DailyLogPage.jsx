@@ -507,7 +507,12 @@ export default function DailyLogPage() {
 													className="border-b border-surface-200 hover:bg-surface-50 transition-colors"
 												>
 													<td className="px-6 py-3 text-surface-900 font-medium whitespace-nowrap">
-														{log.date}
+														<span>{log.date}</span>
+														{log.source && (
+															<span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-500 text-[9px] font-semibold uppercase tracking-wide">
+																via {log.source}
+															</span>
+														)}
 													</td>
 													{metricFields
 														.filter((f) => f.type === "number")

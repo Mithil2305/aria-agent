@@ -8,6 +8,8 @@ import {
 	User,
 	Settings,
 	Package,
+	Plug,
+	Lightbulb,
 } from "lucide-react";
 import { needsStockManagement } from "../config/businessTypes";
 
@@ -15,6 +17,8 @@ const NAV_ITEMS = [
 	{ to: "/daily-log", icon: ClipboardEdit, label: "Daily Log" },
 	{ to: "/", icon: LayoutDashboard, label: "Dashboard", end: true },
 	{ to: "/analyse", icon: BarChart3, label: "Analyse" },
+	{ to: "/strategy", icon: Lightbulb, label: "Strategy Advisor" },
+	{ to: "/integrations", icon: Plug, label: "Integrations" },
 ];
 
 export default function AppLayout() {

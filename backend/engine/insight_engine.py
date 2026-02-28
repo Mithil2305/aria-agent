@@ -11,19 +11,9 @@ from datetime import datetime
 
 
 # ---------------------------------------------------------------------------
-# Optional: Gemini AI integration
+# Optional: AI integration (Gemini → Groq fallback)
 # ---------------------------------------------------------------------------
-_gemini_available = False
-_gemini_client = None
-try:
-    from google import genai
-
-    api_key = os.environ.get("GEMINI_API_KEY", "")
-    if api_key:
-        _gemini_client = genai.Client(api_key=api_key)
-        _gemini_available = True
-except ImportError:
-    pass
+from engine.ai_client import generate_ai_content, is_any_ai_available
 
 
 def generate_insights(
@@ -546,8 +536,8 @@ def _revenue_opportunity_insights(analytics: dict, predictions: dict) -> list:
 
 def _gemini_strategy_insights(schema: dict, analytics: dict,
                                predictions: dict, decisions: dict) -> list:
-    """Use Google Gemini API to generate AI-powered business strategy insights."""
-    if not _gemini_available or not _gemini_client:
+    """Use AI (Gemini → Groq fallback) to generate business strategy insights."""
+    if not is_any_ai_available():
         return []
 
     try:
@@ -592,20 +582,7 @@ For each recommendation, provide:
 Return ONLY a valid JSON array of objects with keys: title, description, recommendation, severity, category
 No markdown, no explanation, just the JSON array."""
 
-        response = _gemini_client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=prompt,
-        )
-        text = response.text.strip()
-
-        # Clean markdown fences if present
-        if text.startswith("```"):
-            text = text.split("\n", 1)[1] if "\n" in text else text[3:]
-        if text.endswith("```"):
-            text = text[:-3]
-        text = text.strip()
-        if text.startswith("json"):
-            text = text[4:].strip()
+        text, provider = generate_ai_content(prompt)
 
         items = json.loads(text)
         insights = []
@@ -622,7 +599,7 @@ No markdown, no explanation, just the JSON array."""
         return insights
 
     except Exception:
-        # If Gemini fails, return empty — the rule-based insights still work
+        # If all AI providers fail, return empty — the rule-based insights still work
         return []
 
 

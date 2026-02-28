@@ -57,6 +57,40 @@ export async function uploadDailyLogs(
 	return data;
 }
 
+// ──────────────────── Integrations ────────────────────
+
+export async function syncIntegration(platformId, connectionId, token) {
+	const { data } = await API.post(
+		"/api/integrations/sync",
+		{ platformId, connectionId },
+		{ headers: { "Content-Type": "application/json", ...authHeaders(token) } },
+	);
+	return data;
+}
+
+// ──────────────────── Strategy Advisor ────────────────────
+
+export async function getStrategyAdvice(
+	dailyLogs,
+	stockEntries,
+	businessType,
+	businessCategory,
+	token,
+) {
+	const { data } = await API.post(
+		"/api/strategy",
+		{
+			dailyLogs,
+			stockEntries,
+			businessType,
+			businessCategory,
+			region: "India",
+		},
+		{ headers: { "Content-Type": "application/json", ...authHeaders(token) } },
+	);
+	return data;
+}
+
 // ──────────────────── PDF Report ────────────────────
 
 export async function downloadReport(token) {
