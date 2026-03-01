@@ -80,3 +80,26 @@ Desktop.ini
 *.bak
 *.tmp
 *.temp
+
+# ========================
+# ML / Datasets / Models
+# ========================
+# Raw datasets (large files — download separately)
+backend/datasets/
+# Processed training data
+backend/ml/data/
+# Model checkpoints & weights
+backend/ml/checkpoints/
+# Hugging Face cache
+.cache/
+huggingface/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.gguf
+
+# Large data files (if placed elsewhere)
+*.parquet
+*.xlsx
+*.arrow

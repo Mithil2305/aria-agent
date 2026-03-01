@@ -10,6 +10,7 @@ import {
 	Package,
 	Plug,
 	Lightbulb,
+	Crown,
 } from "lucide-react";
 import { needsStockManagement } from "../config/businessTypes";
 
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
 	{ to: "/", icon: LayoutDashboard, label: "Dashboard", end: true },
 	{ to: "/analyse", icon: BarChart3, label: "Analyse" },
 	{ to: "/strategy", icon: Lightbulb, label: "Strategy Advisor" },
+	{ to: "/premium", icon: Crown, label: "Premium Analysis" },
 	{ to: "/integrations", icon: Plug, label: "Integrations" },
 ];
 

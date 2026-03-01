@@ -106,6 +106,14 @@ class StrategyRequest(BaseModel):
     region: Optional[str] = "India"  # default region context
 
 
+class PremiumAnalysisRequest(BaseModel):
+    dailyLogs: List[dict]
+    stockEntries: Optional[List[dict]] = None
+    businessType: Optional[str] = None
+    businessCategory: Optional[str] = None
+    region: Optional[str] = "India"
+
+
 # ---------------------------------------------------------------------------
 # Firebase Admin SDK (optional – works without it for local development)
 # ---------------------------------------------------------------------------
@@ -1173,6 +1181,182 @@ Return ONLY valid JSON with the 5 keys above. No markdown, no explanation, no co
         fallback["fallback_reason"] = str(e)
         log.info("✅ [STRATEGY] Rule-based response ready (%.2fs)", _time.time() - t_start)
         return JSONResponse(content=_sanitize(fallback))
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  PREMIUM MONTH-END ANALYSIS (once per calendar month)
+# ═══════════════════════════════════════════════════════════════════════════
+
+@app.post("/api/premium-analysis")
+async def premium_analysis(
+    payload: PremiumAnalysisRequest,
+    uid: str = Depends(get_current_user),
+):
+    """
+    Premium one-time month-end analysis powered by the custom ARIA model.
+    Gate: each user gets exactly ONE premium analysis per calendar month.
+    """
+    import time as _time
+    from datetime import datetime as _dt
+
+    log = logging.getLogger("aria.premium")
+    t_start = _time.time()
+
+    logs = payload.dailyLogs or []
+    stocks = payload.stockEntries or []
+    biz_type = payload.businessType or "General"
+    biz_cat = payload.businessCategory or "general"
+    region = payload.region or "India"
+
+    log.info("━" * 60)
+    log.info("👑 [PREMIUM] Request received")
+    log.info("   ├─ User: %s", (uid[:12] + "…") if uid else "anonymous (local dev)")
+    log.info("   ├─ Business: %s (%s) — %s", biz_type, biz_cat, region)
+    log.info("   ├─ Daily logs: %d entries", len(logs))
+    log.info("   └─ Stock entries: %d entries", len(stocks))
+
+    if not logs:
+        raise HTTPException(
+            status_code=400,
+            detail="No daily logs provided. Log at least a week of data for premium analysis.",
+        )
+
+    # ── Month-end gating via Firestore ──
+    now = _dt.utcnow()
+    month_key = now.strftime("%Y-%m")  # e.g. "2025-07"
+
+    if _firebase_available and uid:
+        try:
+            from firebase_admin import firestore as _fs
+            db = _fs.client()
+            pa_ref = db.collection("users").document(uid).collection("premiumAnalyses").document(month_key)
+            existing = pa_ref.get()
+            if existing.exists:
+                cached = existing.to_dict()
+                log.info("📦 [PREMIUM] Returning cached analysis for %s", month_key)
+                return JSONResponse(content={
+                    "status": "success",
+                    "cached": True,
+                    "month": month_key,
+                    **cached,
+                })
+        except Exception as e:
+            log.warning("⚠  [PREMIUM] Firestore check failed: %s — proceeding anyway", e)
+
+    # ── Build data summaries (same as strategy) ──
+    log_summary = []
+    for l in logs[-30:]:
+        log_summary.append({
+            k: v for k, v in l.items()
+            if k not in ("id", "createdAt", "businessType", "businessCategory")
+            and v is not None and v != ""
+        })
+
+    stock_summary = []
+    for s in stocks[-20:]:
+        stock_summary.append({
+            k: v for k, v in s.items()
+            if k not in ("id", "createdAt") and v is not None and v != ""
+        })
+
+    # ── Compute stats ──
+    revenues = [float(l.get("revenue", 0)) for l in log_summary if l.get("revenue")]
+    expenses = [float(l.get("expenses", 0)) for l in log_summary if l.get("expenses")]
+    customers = [float(l.get("customers", 0)) for l in log_summary if l.get("customers")]
+    orders = [float(l.get("orders", 0)) for l in log_summary if l.get("orders")]
+
+    stats = {
+        "total_entries": len(log_summary),
+        "avg_daily_revenue": sum(revenues) / max(len(revenues), 1),
+        "avg_daily_customers": sum(customers) / max(len(customers), 1),
+        "avg_daily_orders": sum(orders) / max(len(orders), 1),
+        "max_revenue_day": max(revenues) if revenues else 0,
+        "min_revenue_day": min(revenues) if revenues else 0,
+    }
+
+    # ── Run inference ──
+    log.info("🤖 [PREMIUM] Running inference…")
+    try:
+        from ml.inference import generate_premium_analysis
+
+        business_data = {
+            "businessType": biz_type,
+            "businessCategory": biz_cat,
+            "region": region,
+            "stats": stats,
+            "logSummary": log_summary,
+            "stockSummary": stock_summary,
+        }
+
+        result = generate_premium_analysis(business_data)
+    except Exception as e:
+        log.error("❌ [PREMIUM] Inference failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Analysis generation failed: {e}")
+
+    # ── Store in Firestore for caching ──
+    response_data = {
+        "generated_by": result.get("generated_by", "unknown"),
+        "provider_label": result.get("provider_label", "ARIA"),
+        "analysis": result.get("analysis", ""),
+        "generation_time": result.get("generation_time", 0),
+        "generated_at": now.isoformat(),
+        "stats": stats,
+    }
+
+    if _firebase_available and uid:
+        try:
+            from firebase_admin import firestore as _fs
+            db = _fs.client()
+            pa_ref = db.collection("users").document(uid).collection("premiumAnalyses").document(month_key)
+            pa_ref.set(response_data)
+            log.info("💾 [PREMIUM] Cached analysis for %s in Firestore", month_key)
+        except Exception as e:
+            log.warning("⚠  [PREMIUM] Failed to cache in Firestore: %s", e)
+
+    elapsed = _time.time() - t_start
+    log.info("✅ [PREMIUM] Response ready (%.2fs)", elapsed)
+
+    return JSONResponse(content={
+        "status": "success",
+        "cached": False,
+        "month": month_key,
+        **response_data,
+    })
+
+
+@app.get("/api/premium-analysis/status")
+async def premium_analysis_status(uid: str = Depends(get_current_user)):
+    """Check if the user has already used their monthly premium analysis."""
+    from datetime import datetime as _dt
+
+    now = _dt.utcnow()
+    month_key = now.strftime("%Y-%m")
+
+    if not _firebase_available or not uid:
+        return JSONResponse(content={
+            "month": month_key,
+            "used": False,
+            "available": True,
+        })
+
+    try:
+        from firebase_admin import firestore as _fs
+        db = _fs.client()
+        pa_ref = db.collection("users").document(uid).collection("premiumAnalyses").document(month_key)
+        existing = pa_ref.get()
+        return JSONResponse(content={
+            "month": month_key,
+            "used": existing.exists,
+            "available": not existing.exists,
+            "generated_at": existing.to_dict().get("generated_at") if existing.exists else None,
+        })
+    except Exception as e:
+        return JSONResponse(content={
+            "month": month_key,
+            "used": False,
+            "available": True,
+            "error": str(e),
+        })
 
 
 if __name__ == "__main__":

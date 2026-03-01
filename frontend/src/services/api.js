@@ -108,6 +108,36 @@ export async function downloadReport(token) {
 	window.URL.revokeObjectURL(url);
 }
 
+// ──────────────────── Premium Analysis ────────────────────
+
+export async function getPremiumAnalysis(
+	dailyLogs,
+	stockEntries,
+	businessType,
+	businessCategory,
+	token,
+) {
+	const { data } = await API.post(
+		"/api/premium-analysis",
+		{
+			dailyLogs,
+			stockEntries,
+			businessType,
+			businessCategory,
+			region: "India",
+		},
+		{ headers: { "Content-Type": "application/json", ...authHeaders(token) } },
+	);
+	return data;
+}
+
+export async function getPremiumAnalysisStatus(token) {
+	const { data } = await API.get("/api/premium-analysis/status", {
+		headers: authHeaders(token),
+	});
+	return data;
+}
+
 // ──────────────────── Normalization ────────────────────
 
 function normalizeAnalysis(raw) {
