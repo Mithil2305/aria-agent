@@ -299,9 +299,13 @@ def process_orca_math():
     import pandas as pd
 
     df = pd.read_parquet(DATASETS_DIR / "orca-math-word-problems-200k" / "data" / "train-00000-of-00001.parquet")
-    records = []
 
-    for _, row in df.iterrows():
+    # Sample first to avoid iterating 200K rows
+    sample_size = min(len(df), MAX_PER_DATASET["orca_math"])
+    df_sample = df.sample(n=sample_size, random_state=42)
+
+    records = []
+    for _, row in df_sample.iterrows():
         records.append({
             "instruction": "Solve this numerical reasoning problem. Explain your steps clearly.",
             "input": str(row["question"]),

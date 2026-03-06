@@ -4,8 +4,13 @@ ARIA — Premium Analysis Inference Engine
 Loads the fine-tuned ARIA model (LoRA adapter on TinyLlama) and
 generates premium month-end business analysis from user data.
 
-Falls back to the shared AI client (Gemini → Groq) if the local
-model is not available, with a premium-specific prompt.
+This is the EXCLUSIVE premium engine — it does NOT fall back to
+external AI APIs (Gemini / Groq). The premium feature is powered
+entirely by ARIA's own custom-trained model.
+
+If the model is not yet trained, it uses the built-in data-driven
+rule-based engine (which uses statistical analysis on the user's
+actual data — no external API calls).
 """
 
 import os
@@ -180,25 +185,22 @@ def build_premium_prompt(business_data: dict) -> str:
 
 def generate_premium_analysis(business_data: dict) -> dict:
     """
-    Generate premium month-end analysis.
+    Generate premium month-end analysis using ARIA's own model ONLY.
 
-    Tries in order:
-      1. Local fine-tuned ARIA model
-      2. Gemini AI (with premium prompt)
-      3. Groq AI (with premium prompt)
-      4. Enhanced rule-based analysis
+    Chain:
+      1. Local fine-tuned ARIA model (custom trained on curated datasets)
+      2. Data-driven rule-based engine (statistical analysis — no external APIs)
 
-    Returns dict with analysis sections and provider info.
+    This function NEVER calls Gemini, Groq, or any external AI API.
     """
     import time
     t_start = time.time()
 
     prompt, data_text = build_premium_prompt(business_data)
-    provider = "aria_model"
 
     # ── Attempt 1: Local ARIA model ──
     if _load_model():
-        log.info("🤖 Generating premium analysis with ARIA model…")
+        log.info("🤖 Generating premium analysis with ARIA custom model…")
         try:
             raw_output = _generate_with_local_model(prompt)
             elapsed = time.time() - t_start
@@ -212,57 +214,21 @@ def generate_premium_analysis(business_data: dict) -> dict:
                 "generation_time": round(elapsed, 2),
             }
         except Exception as e:
-            log.warning("⚠  ARIA model inference failed: %s", e)
+            log.warning("⚠  ARIA model inference failed: %s — using rule-based engine", e)
 
-    # ── Attempt 2 & 3: Gemini → Groq via shared client ──
-    try:
-        from engine.ai_client import generate_ai_content, is_any_ai_available
+    # ── Fallback: Data-driven rule-based engine (NO external APIs) ──
+    if not _load_model():
+        log.info("📋 ARIA model not trained yet — using data-driven rule-based engine")
+    else:
+        log.info("🔧 Falling back to data-driven rule-based engine…")
 
-        if is_any_ai_available():
-            log.info("🤖 Generating premium analysis with AI provider…")
-
-            ai_prompt = (
-                f"You are ARIA, an expert Indian business analytics AI. "
-                f"Generate a comprehensive PREMIUM month-end business analysis report.\n\n"
-                f"Business Data:\n{data_text}\n\n"
-                f"Generate a detailed report with these sections:\n"
-                f"1. **Executive Summary** — 2-3 sentence overview\n"
-                f"2. **Revenue Performance** — trend analysis with specific numbers\n"
-                f"3. **Profitability Analysis** — expense ratio, margins, profit projections\n"
-                f"4. **Customer Intelligence** — footfall patterns, basket size optimization\n"
-                f"5. **Waste & Shrinkage Report** — current %, savings opportunity\n"
-                f"6. **Competitive Position** — market context for this business type in the region\n"
-                f"7. **Risk Assessment** — top 3 business risks with mitigation strategies\n"
-                f"8. **Growth Opportunities** — top 5 actionable opportunities ranked by impact\n"
-                f"9. **Monthly Action Plan** — week-by-week roadmap with specific targets\n"
-                f"10. **Next Month Forecast** — projected revenue, customer, and profit targets\n\n"
-                f"Use specific numbers from the data. Be actionable, not generic. "
-                f"Context: Indian local market, Tamil Nadu business environment."
-            )
-
-            text, ai_provider = generate_ai_content(ai_prompt)
-            elapsed = time.time() - t_start
-            log.info("✅ AI provider '%s' generated %d chars in %.1fs", ai_provider, len(text), elapsed)
-
-            return {
-                "status": "success",
-                "generated_by": f"{ai_provider}_ai",
-                "provider_label": "Google Gemini" if ai_provider == "gemini" else "Groq (Kimi K2)",
-                "analysis": text,
-                "generation_time": round(elapsed, 2),
-            }
-    except Exception as e:
-        log.warning("⚠  AI providers failed for premium: %s", e)
-
-    # ── Attempt 4: Enhanced rule-based ──
-    log.info("🔧 Generating premium analysis with rule-based engine…")
     analysis = _build_premium_rule_based(business_data, data_text)
     elapsed = time.time() - t_start
 
     return {
         "status": "success",
-        "generated_by": "rule_based",
-        "provider_label": "Data-Driven Analysis",
+        "generated_by": "aria_rule_based",
+        "provider_label": "ARIA Data-Driven Engine",
         "analysis": analysis,
         "generation_time": round(elapsed, 2),
     }

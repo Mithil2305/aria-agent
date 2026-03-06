@@ -39,12 +39,13 @@ CONFIG = {
 
     # Training hyperparameters
     "num_epochs": 3,
-    "per_device_batch_size": 4,
-    "gradient_accumulation_steps": 4,
+    "per_device_batch_size": 2,
+    "gradient_accumulation_steps": 8,
     "learning_rate": 2e-4,
     "warmup_ratio": 0.05,
     "max_seq_length": 1024,
-    "fp16": True,
+    "fp16": False,
+    "bf16": True,
     "logging_steps": 50,
     "save_steps": 500,
     "save_total_limit": 2,
@@ -96,11 +97,10 @@ def main():
         from transformers import (
             AutoModelForCausalLM,
             AutoTokenizer,
-            TrainingArguments,
             BitsAndBytesConfig,
         )
         from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
-        from trl import SFTTrainer
+        from trl import SFTTrainer, SFTConfig
         from datasets import Dataset
     except ImportError as e:
         log.error("❌ Missing dependency: %s", e)
@@ -179,20 +179,29 @@ def main():
     )
 
     model = get_peft_model(model, lora_config)
+
+    # Fix dtype mismatch: ensure NO bfloat16 tensors exist in the model.
+    # Cast all trainable params to float32 for stable training.
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            param.data = param.data.to(torch.float32)
+
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
     total = sum(p.numel() for p in model.parameters())
     log.info("   Trainable params: %s / %s (%.2f%%)", f"{trainable:,}", f"{total:,}", trainable/total*100)
 
     # ── Training arguments ──
     output_dir = str(MODEL_DIR)
-    training_args = TrainingArguments(
+    training_args = SFTConfig(
         output_dir=output_dir,
+        max_length=CONFIG["max_seq_length"],
         num_train_epochs=CONFIG["num_epochs"],
         per_device_train_batch_size=CONFIG["per_device_batch_size"],
         gradient_accumulation_steps=CONFIG["gradient_accumulation_steps"],
         learning_rate=CONFIG["learning_rate"],
         warmup_ratio=CONFIG["warmup_ratio"],
-        fp16=CONFIG["fp16"] and device == "cuda",
+        fp16=False,
+        bf16=CONFIG["bf16"] and device == "cuda",
         logging_steps=CONFIG["logging_steps"],
         save_steps=CONFIG["save_steps"],
         save_total_limit=CONFIG["save_total_limit"],
@@ -201,19 +210,18 @@ def main():
         report_to="none",
         optim="adamw_torch",
         lr_scheduler_type="cosine",
-        group_by_length=True,
         remove_unused_columns=False,
+        dataset_text_field="text",
     )
 
     # ── Trainer ──
     log.info("🏋️ Starting training…")
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         train_dataset=train_dataset,
         eval_dataset=eval_dataset,
         args=training_args,
-        max_seq_length=CONFIG["max_seq_length"],
     )
 
     # ── Train! ──

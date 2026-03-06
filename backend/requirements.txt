@@ -13,3 +13,4 @@ python-dateutil==2.9.0
 pydantic==2.8.0
 firebase-admin==6.6.0
 requests>=2.31.0
+

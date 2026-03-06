@@ -37,26 +37,21 @@ const PROGRESS_STEPS = [
 /* ── Provider badge ──────────────────────────────── */
 function ProviderBadge({ generatedBy, label }) {
 	const isModel = generatedBy === "aria_model";
-	const isAI = generatedBy === "gemini_ai" || generatedBy === "groq_ai";
+	// aria_rule_based = ARIA's own data-driven engine (no external API)
+	const isRuleBased = generatedBy === "aria_rule_based";
 
 	return (
 		<span
 			className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
 				isModel
 					? "bg-purple-50 text-purple-700 border border-purple-200"
-					: isAI
-						? "bg-blue-50 text-blue-700 border border-blue-200"
+					: isRuleBased
+						? "bg-amber-50 text-amber-700 border border-amber-200"
 						: "bg-surface-100 text-surface-600 border border-surface-200"
 			}`}
 		>
-			{isModel ? (
-				<Crown size={12} />
-			) : isAI ? (
-				<Sparkles size={12} />
-			) : (
-				<BarChart3 size={12} />
-			)}
-			{label || "ARIA Analysis"}
+			{isModel ? <Crown size={12} /> : <BarChart3 size={12} />}
+			{label || "ARIA Custom Model"}
 		</span>
 	);
 }
