@@ -194,7 +194,7 @@ export default function PremiumAnalysisPage() {
 	}
 
 	return (
-		<div className="max-w-4xl mx-auto space-y-6">
+		<div className="max-w-4xl mx-auto space-y-6 mt-5">
 			{/* ── Header ──────────────────────────────── */}
 			<div className="flex items-start justify-between">
 				<div>

@@ -1,9 +1,10 @@
 """
-Shared AI Client — Gemini-first, Groq-fallback
+Shared AI Client — Gemini-first, Groq-fallback, Claude-backup
 Provides a single `generate_ai_content(prompt)` function that:
   1. Tries Google Gemini (gemini-2.0-flash)
-  2. On 429 / quota / any failure → falls back to Groq (kimi-k2-instruct)
-  3. Returns (text, provider) or raises if both fail
+  2. On failure → falls back to Groq (kimi-k2-instruct)
+  3. On failure → falls back to Claude (claude-sonnet-4-20250514)
+  4. Returns (text, provider) or raises if all fail
 """
 
 import os
@@ -42,6 +43,25 @@ if _groq_available:
     log.info("🟢 Groq configured (key …%s, model %s)", _GROQ_API_KEY[-6:], _GROQ_MODEL)
 else:
     log.warning("🟡 Groq key not set — skipping")
+
+# ---------------------------------------------------------------------------
+# Claude (Anthropic) setup
+# ---------------------------------------------------------------------------
+_ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+_CLAUDE_MODEL = "claude-sonnet-4-20250514"
+_claude_available = False
+_claude_client = None
+try:
+    import anthropic as _anthropic
+
+    if _ANTHROPIC_API_KEY:
+        _claude_client = _anthropic.Anthropic(api_key=_ANTHROPIC_API_KEY)
+        _claude_available = True
+        log.info("🟢 Claude configured (key …%s, model %s)", _ANTHROPIC_API_KEY[-6:], _CLAUDE_MODEL)
+    else:
+        log.warning("🟡 Anthropic key not set — skipping")
+except ImportError:
+    log.warning("🔴 anthropic not installed — Claude unavailable")
 
 
 def _call_gemini(prompt: str) -> str:
@@ -86,6 +106,26 @@ def _call_groq(prompt: str) -> str:
     return text
 
 
+def _call_claude(prompt: str) -> str:
+    """Call Claude (Anthropic) and return raw text. Raises on any failure."""
+    if not _claude_available or not _claude_client:
+        raise RuntimeError("Claude not configured — set ANTHROPIC_API_KEY env var")
+
+    message = _claude_client.messages.create(
+        model=_CLAUDE_MODEL,
+        max_tokens=4096,
+        messages=[
+            {
+                "role": "user",
+                "content": prompt,
+            },
+        ],
+        system="You are an expert business analytics AI. Always respond with valid JSON only, no markdown fences or extra text.",
+        temperature=0.7,
+    )
+    return message.content[0].text.strip()
+
+
 def _clean_ai_response(text: str) -> str:
     """Strip markdown fences and leading 'json' tag from AI responses."""
     if text.startswith("```"):
@@ -100,13 +140,13 @@ def _clean_ai_response(text: str) -> str:
 
 def generate_ai_content(prompt: str) -> tuple[str, str]:
     """
-    Try Gemini first, fall back to Groq on any failure.
+    Try Gemini first, fall back to Groq, then Claude on any failure.
 
     Returns:
-        (cleaned_text, provider)  where provider is "gemini" or "groq"
+        (cleaned_text, provider)  where provider is "gemini", "groq", or "claude"
 
     Raises:
-        RuntimeError if both providers fail.
+        RuntimeError if all providers fail.
     """
     errors = []
 
@@ -136,11 +176,24 @@ def generate_ai_content(prompt: str) -> tuple[str, str]:
     else:
         log.info("   ⏭  Groq not available — skipping")
 
-    # Both failed
+    # ── Attempt 3: Claude (Anthropic) ──
+    if _claude_available:
+        log.info("   🔄 Trying Claude (%s)…", _CLAUDE_MODEL)
+        try:
+            raw = _call_claude(prompt)
+            log.info("   ✅ Claude responded — %d chars", len(raw))
+            return _clean_ai_response(raw), "claude"
+        except Exception as e:
+            log.warning("   ❌ Claude failed: %s", e)
+            errors.append(f"Claude: {e}")
+    else:
+        log.info("   ⏭  Claude not available — skipping")
+
+    # All failed
     log.error("   🔴 All AI providers failed: %s", "; ".join(errors))
     raise RuntimeError(f"All AI providers failed: {'; '.join(errors)}")
 
 
 def is_any_ai_available() -> bool:
     """Check if at least one AI provider is configured."""
-    return _gemini_available or _groq_available
+    return _gemini_available or _groq_available or _claude_available

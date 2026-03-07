@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
 	Lightbulb,
 	TrendingUp,
@@ -116,10 +116,6 @@ export default function StrategyAdvisorPage() {
 		}
 	}, [user, businessType, category, hasStock, getIdToken]);
 
-	useEffect(() => {
-		generateStrategy();
-	}, [generateStrategy]);
-
 	const TABS = [
 		{ key: "sales", label: "Sales Tips", icon: TrendingUp },
 		{ key: "customers", label: "Customer Strategies", icon: Users },
@@ -153,19 +149,76 @@ export default function StrategyAdvisorPage() {
 							</span>
 						</p>
 					</div>
-					<button
-						onClick={generateStrategy}
-						disabled={loading}
-						className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-600 text-xs font-medium hover:bg-indigo-100 transition-all disabled:opacity-50 shrink-0"
-					>
-						{loading ? (
-							<Loader2 size={13} className="animate-spin" />
-						) : (
-							<RefreshCw size={13} />
-						)}
-						{loading ? "Generating…" : "Regenerate"}
-					</button>
+					{strategy && (
+						<button
+							onClick={generateStrategy}
+							disabled={loading}
+							className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-600 text-xs font-medium hover:bg-indigo-100 transition-all disabled:opacity-50 shrink-0"
+						>
+							{loading ? (
+								<Loader2 size={13} className="animate-spin" />
+							) : (
+								<RefreshCw size={13} />
+							)}
+							{loading ? "Generating…" : "Regenerate"}
+						</button>
+					)}
 				</div>
+
+				{/* Intro card with Analyse button — shown before first run */}
+				{!strategy && !loading && !error && (
+					<div className="mb-6 bg-gradient-to-br from-indigo-50/80 via-purple-50/50 to-white rounded-xl border border-indigo-200/60 p-6">
+						<div className="flex items-start gap-4">
+							<div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
+								<Lightbulb size={22} className="text-white" />
+							</div>
+							<div className="space-y-3 flex-1">
+								<div>
+									<h2 className="text-sm font-semibold text-surface-900">
+										Get Smart Business Recommendations
+									</h2>
+									<p className="text-xs text-surface-500 mt-1 leading-relaxed">
+										ARIA will analyse your daily logs, revenue trends, and stock
+										data to generate personalised strategies — including sales
+										tips, customer acquisition ideas, stock optimisation, and a
+										monthly roadmap tailored for your{" "}
+										<span className="font-medium text-indigo-500">
+											{categoryLabel}
+										</span>{" "}
+										business.
+									</p>
+								</div>
+
+								<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+									{[
+										{ icon: TrendingUp, label: "Sales Tips" },
+										{ icon: Users, label: "Customer Strategies" },
+										{ icon: Package, label: "Stock Analysis" },
+										{ icon: Calendar, label: "Monthly Roadmap" },
+									].map((item) => (
+										<div
+											key={item.label}
+											className="flex items-center gap-2 text-xs text-surface-600"
+										>
+											<item.icon size={14} className="text-indigo-500" />
+											{item.label}
+										</div>
+									))}
+								</div>
+
+								<button
+									onClick={generateStrategy}
+									disabled={loading}
+									className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-sm transition-all"
+								>
+									<Sparkles size={15} />
+									Analyse
+									<ChevronRight size={14} />
+								</button>
+							</div>
+						</div>
+					</div>
+				)}
 
 				{/* Error state */}
 				{error && (
@@ -206,7 +259,9 @@ export default function StrategyAdvisorPage() {
 										? "Google Gemini"
 										: strategy.generated_by === "groq_ai"
 											? "Groq (Kimi K2)"
-											: "AI"}
+											: strategy.generated_by === "claude_ai"
+												? "Claude (Anthropic)"
+												: "AI"}
 								</strong>{" "}
 								— personalised for your business data.
 							</span>
@@ -303,7 +358,9 @@ export default function StrategyAdvisorPage() {
 									? "Powered by Gemini AI"
 									: strategy.generated_by === "groq_ai"
 										? "Powered by Groq AI"
-										: "Data-Driven Analysis"}
+										: strategy.generated_by === "claude_ai"
+											? "Powered by Claude AI"
+											: "Data-Driven Analysis"}
 							</span>
 						</div>
 
