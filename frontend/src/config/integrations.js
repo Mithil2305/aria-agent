@@ -2,15 +2,15 @@
  * Billing Software Integrations Configuration
  *
  * Defines supported POS / billing platforms, their field mappings
- * to ARIA daily log fields, and connection metadata.
+ * to Yukti daily log fields, and connection metadata.
  *
  * Integration flow:
  *   1. User picks a platform on the Integrations page
  *   2. Enters their API key / credentials
- *   3. ARIA stores the encrypted connection in Firestore
+ *   3. Yukti stores the encrypted connection in Firestore
  *   4. Platform can push data via webhook → /api/integrations/webhook/:platform
  *   5. Or user can trigger a manual sync → /api/integrations/sync
- *   6. Incoming data is mapped to ARIA daily-log fields using FIELD_MAP
+ *   6. Incoming data is mapped to Yukti daily-log fields using FIELD_MAP
  *   7. Mapped entries are saved to Firestore `users/{uid}/dailyLogs`
  */
 
@@ -461,7 +461,7 @@ export const PLATFORMS = [
 		name: "Custom Webhook",
 		logo: null,
 		description:
-			"Connect any billing software by sending data to ARIA's webhook endpoint. Ideal for custom or in-house POS systems.",
+			"Connect any billing software by sending data to Yukti's webhook endpoint. Ideal for custom or in-house POS systems.",
 		categories: [
 			"grocery",
 			"restaurant",
@@ -506,21 +506,21 @@ export function getPlatformById(platformId) {
 }
 
 /**
- * Map incoming billing data to ARIA daily log fields using a platform's fieldMap.
+ * Map incoming billing data to Yukti daily log fields using a platform's fieldMap.
  * @param {Object} rawData – key/value pairs from the billing platform
  * @param {string} platformId – platform identifier
- * @returns {Object} mapped data ready for ARIA dailyLog
+ * @returns {Object} mapped data ready for Yukti dailyLog
  */
 export function mapBillingData(rawData, platformId) {
 	const platform = getPlatformById(platformId);
 	if (!platform || !platform.fieldMap) return rawData;
 
 	const mapped = {};
-	for (const [sourceKey, ariaKey] of Object.entries(platform.fieldMap)) {
-		if (ariaKey && rawData[sourceKey] !== undefined) {
-			// If multiple source keys map to the same ARIA key, take the first non-null
-			if (mapped[ariaKey] === undefined) {
-				mapped[ariaKey] = rawData[sourceKey];
+	for (const [sourceKey, yuktiKey] of Object.entries(platform.fieldMap)) {
+		if (yuktiKey && rawData[sourceKey] !== undefined) {
+			// If multiple source keys map to the same Yukti key, take the first non-null
+			if (mapped[yuktiKey] === undefined) {
+				mapped[yuktiKey] = rawData[sourceKey];
 			}
 		}
 	}

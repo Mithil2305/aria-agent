@@ -13,6 +13,7 @@ import StockManagementPage from "./pages/StockManagementPage";
 import IntegrationsPage from "./pages/IntegrationsPage";
 import StrategyAdvisorPage from "./pages/StrategyAdvisorPage";
 import PremiumAnalysisPage from "./pages/PremiumAnalysisPage";
+import LimitsPage from "./pages/LimitsPage";
 
 function App() {
 	return (
@@ -40,6 +41,7 @@ function App() {
 						<Route path="/integrations" element={<IntegrationsPage />} />
 						<Route path="/strategy" element={<StrategyAdvisorPage />} />
 						<Route path="/premium" element={<PremiumAnalysisPage />} />
+						<Route path="/limits" element={<LimitsPage />} />
 					</Route>
 
 					{/* Catch-all */}

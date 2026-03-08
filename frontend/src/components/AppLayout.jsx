@@ -11,6 +11,7 @@ import {
 	Plug,
 	Lightbulb,
 	Crown,
+	Gauge,
 } from "lucide-react";
 import { needsStockManagement } from "../config/businessTypes";
 
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
 	{ to: "/analyse", icon: BarChart3, label: "Analyse" },
 	{ to: "/strategy", icon: Lightbulb, label: "Strategy Advisor" },
 	{ to: "/premium", icon: Crown, label: "Premium Analysis" },
+	{ to: "/limits", icon: Gauge, label: "Usage & Limits" },
 	{ to: "/integrations", icon: Plug, label: "Integrations" },
 ];
 
@@ -46,7 +48,7 @@ export default function AppLayout() {
 				{/* Brand */}
 				<div className="px-6 py-6">
 					<h1 className="text-base font-semibold text-surface-900 tracking-tight">
-						ARIA
+						Yukti
 					</h1>
 					<p className="text-[11px] text-surface-400 mt-0.5">
 						Business Intelligence

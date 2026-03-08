@@ -83,7 +83,7 @@ export default function AnalysePage() {
 			// CSV upload path
 			try {
 				const token = await getIdToken();
-				const result = await uploadFile(csvFile, token);
+				const result = await uploadFile(csvFile, token, user?.uid);
 				setFileName(result.filename);
 				setRowCount(result.row_count);
 				setStage("processing");
@@ -133,7 +133,7 @@ export default function AnalysePage() {
 		try {
 			setError(null);
 			const token = await getIdToken();
-			const result = await runAnalysis(token);
+			const result = await runAnalysis(token, user?.uid);
 
 			if (user) {
 				try {
@@ -148,8 +148,8 @@ export default function AnalysePage() {
 				}
 			}
 
-			sessionStorage.setItem("aria_analysis", JSON.stringify(result));
-			sessionStorage.setItem("aria_rowCount", rowCount.toString());
+			sessionStorage.setItem("yukti_analysis", JSON.stringify(result));
+			sessionStorage.setItem("yukti_rowCount", rowCount.toString());
 			navigate("/");
 		} catch (err) {
 			setError(err.response?.data?.detail || "Analysis failed.");

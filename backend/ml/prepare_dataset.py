@@ -1,5 +1,5 @@
 """
-ARIA — Dataset Preparation Pipeline
+Yukti — Dataset Preparation Pipeline
 ====================================
 Reads all downloaded datasets from backend/datasets/ and converts them
 into a single instruction-tuning JSONL file ready for LoRA fine-tuning.
@@ -16,7 +16,7 @@ Datasets processed:
   9. NAB Anomaly Detection (time-series anomaly data)
   10. Online Retail (transaction-level retail data)
 
-Output: backend/ml/data/aria_training.jsonl
+Output: backend/ml/data/yukti_training.jsonl
 """
 
 import os
@@ -28,11 +28,11 @@ from pathlib import Path
 from datetime import datetime
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(message)s", datefmt="%H:%M:%S")
-log = logging.getLogger("aria.prepare")
+log = logging.getLogger("yukti.prepare")
 
 DATASETS_DIR = Path(__file__).parent.parent / "datasets"
 OUTPUT_DIR = Path(__file__).parent / "data"
-OUTPUT_FILE = OUTPUT_DIR / "aria_training.jsonl"
+OUTPUT_FILE = OUTPUT_DIR / "yukti_training.jsonl"
 
 # ── Maximum samples per dataset (to keep balanced) ──
 MAX_PER_DATASET = {
@@ -521,11 +521,11 @@ def process_anomaly():
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 9. Custom ARIA Business Analysis Templates
+# 9. Custom Yukti Business Analysis Templates
 # ═══════════════════════════════════════════════════════════════════
-def process_aria_templates():
-    """Generate synthetic instruction-tuning data specifically for ARIA's use case."""
-    log.info("📊 Generating ARIA business analysis templates…")
+def process_yukti_templates():
+    """Generate synthetic instruction-tuning data specifically for Yukti's use case."""
+    log.info("📊 Generating Yukti business analysis templates…")
 
     biz_types = ["Grocery Store", "Bakery", "Restaurant", "Pharmacy", "Supermarket", "Clothing Store", "Electronics Shop"]
     regions = ["Tamil Nadu", "Karnataka", "Maharashtra", "Delhi NCR", "Gujarat"]
@@ -604,7 +604,7 @@ def process_aria_templates():
         })
 
     random.shuffle(records)
-    return _write_jsonl(records, "aria_business_templates")
+    return _write_jsonl(records, "yukti_business_templates")
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -612,7 +612,7 @@ def process_aria_templates():
 # ═══════════════════════════════════════════════════════════════════
 def main():
     log.info("=" * 60)
-    log.info("🚀 ARIA Dataset Preparation Pipeline")
+    log.info("🚀 Yukti Dataset Preparation Pipeline")
     log.info("=" * 60)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -631,7 +631,7 @@ def main():
     total += process_openorca()
     total += process_tabfact()
     total += process_anomaly()
-    total += process_aria_templates()
+    total += process_yukti_templates()
 
     log.info("=" * 60)
     log.info("✅ Dataset preparation complete!")

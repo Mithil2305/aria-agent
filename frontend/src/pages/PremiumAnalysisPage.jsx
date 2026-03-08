@@ -36,9 +36,9 @@ const PROGRESS_STEPS = [
 
 /* ── Provider badge ──────────────────────────────── */
 function ProviderBadge({ generatedBy, label }) {
-	const isModel = generatedBy === "aria_model";
-	// aria_rule_based = ARIA's own data-driven engine (no external API)
-	const isRuleBased = generatedBy === "aria_rule_based";
+	const isModel = generatedBy === "yukti_model";
+	// yukti_rule_based = Yukti's own data-driven engine (no external API)
+	const isRuleBased = generatedBy === "yukti_rule_based";
 
 	return (
 		<span
@@ -51,7 +51,7 @@ function ProviderBadge({ generatedBy, label }) {
 			}`}
 		>
 			{isModel ? <Crown size={12} /> : <BarChart3 size={12} />}
-			{label || "ARIA Custom Model"}
+			{label || "Yukti Custom Model"}
 		</span>
 	);
 }
@@ -164,6 +164,7 @@ export default function PremiumAnalysisPage() {
 				userProfile?.businessType,
 				userProfile?.businessCategory,
 				token,
+				user?.uid,
 			);
 
 			setResult(data);
@@ -251,7 +252,7 @@ export default function PremiumAnalysisPage() {
 									of your business performance. This premium report includes
 									revenue trends, profitability insights, customer intelligence,
 									risk assessment, and a detailed action plan — all powered by
-									ARIA&apos;s custom-trained model.
+									Yukti&apos;s custom-trained model.
 								</p>
 							</div>
 

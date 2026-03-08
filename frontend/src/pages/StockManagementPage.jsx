@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
 	Package,
 	Plus,
@@ -13,6 +13,11 @@ import {
 	TrendingDown,
 	ArrowUpDown,
 	Calendar,
+	Camera,
+	Upload,
+	ScanLine,
+	ImageIcon,
+	X,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -34,6 +39,7 @@ import {
 	needsStockManagement,
 } from "../config/businessTypes";
 import { useNavigate } from "react-router-dom";
+import { scanBillImage } from "../services/api";
 
 function getCurrentMonth() {
 	const d = new Date();
@@ -58,6 +64,15 @@ export default function StockManagementPage() {
 	const [loadingHistory, setLoadingHistory] = useState(true);
 	const [showHistory, setShowHistory] = useState(true);
 
+	// Bill scanner state
+	const [billFile, setBillFile] = useState(null);
+	const [billPreview, setBillPreview] = useState(null);
+	const [scanning, setScanning] = useState(false);
+	const [scanResult, setScanResult] = useState(null);
+	const [showScanner, setShowScanner] = useState(false);
+	const fileInputRef = useRef(null);
+	const dropZoneRef = useRef(null);
+
 	// Redirect if business type doesn't need stock management
 	useEffect(() => {
 		if (userProfile && !needsStockManagement(businessType)) {
@@ -80,6 +95,95 @@ export default function StockManagementPage() {
 			},
 		]);
 		setSaved(false);
+	};
+
+	// ── Bill Scanner Functions ──
+	const handleBillFileSelect = (file) => {
+		if (!file) return;
+		const allowed = [
+			"image/jpeg",
+			"image/png",
+			"image/webp",
+			"image/gif",
+			"image/bmp",
+		];
+		if (!allowed.includes(file.type)) {
+			setError("Please upload a JPG, PNG, or WEBP image.");
+			return;
+		}
+		if (file.size > 10 * 1024 * 1024) {
+			setError("Image too large. Maximum 10 MB.");
+			return;
+		}
+		setBillFile(file);
+		setBillPreview(URL.createObjectURL(file));
+		setScanResult(null);
+		setError(null);
+	};
+
+	const handleDrop = (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		dropZoneRef.current?.classList.remove("border-indigo-400", "bg-indigo-50");
+		const file = e.dataTransfer?.files?.[0];
+		if (file) handleBillFileSelect(file);
+	};
+
+	const handleDragOver = (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		dropZoneRef.current?.classList.add("border-indigo-400", "bg-indigo-50");
+	};
+
+	const handleDragLeave = (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		dropZoneRef.current?.classList.remove("border-indigo-400", "bg-indigo-50");
+	};
+
+	const clearBillFile = () => {
+		if (billPreview) URL.revokeObjectURL(billPreview);
+		setBillFile(null);
+		setBillPreview(null);
+		setScanResult(null);
+		if (fileInputRef.current) fileInputRef.current.value = "";
+	};
+
+	const handleScanBill = async () => {
+		if (!billFile || !user) return;
+		setScanning(true);
+		setError(null);
+		setScanResult(null);
+
+		try {
+			const token = await user.getIdToken();
+			const result = await scanBillImage(billFile, token, user?.uid);
+
+			setScanResult(result);
+
+			if (result.items && result.items.length > 0) {
+				// Auto-populate entries from scanned items
+				const scannedEntries = result.items.map((item, idx) => ({
+					id: Date.now() + idx,
+					productName: item.productName || "",
+					category: categories.includes(item.category)
+						? item.category
+						: categories[0] || "",
+					stockIn: item.quantity || "",
+					stockOut: "",
+					unitCost: item.unitCost || "",
+					unit: item.unit || "units",
+				}));
+				setEntries((prev) => [...prev, ...scannedEntries]);
+				setSaved(false);
+			}
+		} catch (err) {
+			const msg =
+				err?.response?.data?.detail || "Failed to scan bill. Please try again.";
+			setError(msg);
+		} finally {
+			setScanning(false);
+		}
 	};
 
 	const updateEntry = (id, field, value) => {
@@ -269,6 +373,160 @@ export default function StockManagementPage() {
 							{monthSummary.count}
 						</p>
 					</div>
+				</div>
+
+				{/* ── Bill Scanner ── */}
+				<div className="card-elevated p-6 mb-6">
+					<div className="flex items-center justify-between mb-4">
+						<div className="flex items-center gap-3">
+							<div className="p-2 rounded-lg bg-amber-50">
+								<ScanLine size={18} className="text-amber-600" />
+							</div>
+							<div>
+								<h2 className="text-sm font-semibold text-surface-900">
+									Bill Scanner
+								</h2>
+								<p className="text-[11px] text-surface-400">
+									Upload a bill image to auto-add products to inventory
+								</p>
+							</div>
+						</div>
+						<button
+							onClick={() => setShowScanner(!showScanner)}
+							className="text-surface-400 hover:text-surface-600 transition-colors"
+						>
+							{showScanner ? (
+								<ChevronUp size={16} />
+							) : (
+								<ChevronDown size={16} />
+							)}
+						</button>
+					</div>
+
+					{showScanner && (
+						<div className="space-y-4">
+							{/* Drop zone */}
+							{!billFile ? (
+								<div
+									ref={dropZoneRef}
+									onDrop={handleDrop}
+									onDragOver={handleDragOver}
+									onDragLeave={handleDragLeave}
+									onClick={() => fileInputRef.current?.click()}
+									className="border-2 border-dashed border-surface-300 rounded-xl p-8 text-center cursor-pointer hover:border-indigo-300 hover:bg-indigo-50/30 transition-all"
+								>
+									<input
+										ref={fileInputRef}
+										type="file"
+										accept="image/jpeg,image/png,image/webp,image/gif,image/bmp"
+										onChange={(e) => handleBillFileSelect(e.target.files?.[0])}
+										className="hidden"
+									/>
+									<div className="flex flex-col items-center gap-3">
+										<div className="p-3 rounded-full bg-surface-100">
+											<Camera size={24} className="text-surface-400" />
+										</div>
+										<div>
+											<p className="text-sm font-medium text-surface-700">
+												Drop your bill image here or{" "}
+												<span className="text-indigo-600">browse</span>
+											</p>
+											<p className="text-[11px] text-surface-400 mt-1">
+												JPG, PNG, WEBP up to 10 MB
+											</p>
+										</div>
+									</div>
+								</div>
+							) : (
+								<div className="flex flex-col sm:flex-row gap-4">
+									{/* Image preview */}
+									<div className="relative w-full sm:w-48 h-48 rounded-lg overflow-hidden border border-surface-200 shrink-0">
+										<img
+											src={billPreview}
+											alt="Bill preview"
+											className="w-full h-full object-cover"
+										/>
+										<button
+											onClick={clearBillFile}
+											className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition-all"
+											title="Remove image"
+										>
+											<X size={14} />
+										</button>
+									</div>
+
+									{/* File info + scan button */}
+									<div className="flex-1 flex flex-col justify-between">
+										<div>
+											<p className="text-sm font-medium text-surface-800 truncate">
+												{billFile.name}
+											</p>
+											<p className="text-[11px] text-surface-400 mt-0.5">
+												{(billFile.size / 1024).toFixed(1)} KB · {billFile.type}
+											</p>
+										</div>
+
+										<div className="flex items-center gap-3 mt-4">
+											<button
+												onClick={handleScanBill}
+												disabled={scanning}
+												className="btn-primary flex items-center gap-2 text-sm"
+											>
+												{scanning ? (
+													<Loader2 size={15} className="animate-spin" />
+												) : (
+													<ScanLine size={15} />
+												)}
+												{scanning ? "Scanning…" : "Scan Bill"}
+											</button>
+											<button
+												onClick={clearBillFile}
+												className="px-4 py-2 rounded-lg border border-surface-200 text-surface-500 text-sm hover:bg-surface-50 transition-all"
+											>
+												Clear
+											</button>
+										</div>
+
+										{/* Scan result summary */}
+										{scanResult && (
+											<div className={`mt-3 flex flex-col gap-1`}>
+												<div
+													className={`flex items-center gap-2 text-sm ${scanResult.itemCount > 0 ? "text-green-600" : "text-amber-600"}`}
+												>
+													{scanResult.itemCount > 0 ? (
+														<>
+															<CheckCircle2 size={14} />
+															<span>
+																Found {scanResult.itemCount} product
+																{scanResult.itemCount !== 1 ? "s" : ""}
+																{scanResult.storeName &&
+																	` from ${scanResult.storeName}`}
+																{scanResult.billTotal &&
+																	` · Total: ₹${scanResult.billTotal.toLocaleString()}`}
+															</span>
+														</>
+													) : (
+														<>
+															<AlertCircle size={14} />
+															<span>
+																{scanResult.message ||
+																	"No products found. Try a clearer image."}
+															</span>
+														</>
+													)}
+												</div>
+												{scanResult.ocrMethod && scanResult.itemCount > 0 && (
+													<span className="text-xs text-gray-400 ml-5">
+														via {scanResult.ocrMethod}
+													</span>
+												)}
+											</div>
+										)}
+									</div>
+								</div>
+							)}
+						</div>
+					)}
 				</div>
 
 				{/* ── Entry Form ── */}

@@ -1,9 +1,15 @@
 /**
- * API Service – Axios client for ARIA backend communication.
+ * API Service – Axios client for Yukti backend communication.
  * Handles all HTTP calls, auth tokens, and response normalization.
+ *
+ * Rate-limited functions accept an optional `uid` parameter.
+ * When provided, usage is checked before the call and recorded
+ * in Firestore after a successful response (backend no longer
+ * manages rate limits).
  */
 
 import axios from "axios";
+import { checkUsage, recordUsage } from "./usageLimits";
 
 const API = axios.create({
 	baseURL: "http://localhost:8000",
@@ -15,15 +21,55 @@ function authHeaders(token) {
 	return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+/**
+ * Helper: run a Firestore-gated API call.
+ * 1. Check quota (throws if exhausted)
+ * 2. Execute the API call
+ * 3. Record usage on success
+ */
+async function withUsageTracking(uid, action, apiFn) {
+	if (uid && action) {
+		const status = await checkUsage(uid, action);
+		if (!status.allowed) {
+			const labels = {
+				data_upload: "Data Uploads",
+				analysis: "Analysis Runs",
+				report_download: "PDF Reports",
+				ai_strategy: "Strategy Advisor",
+				ai_premium: "Premium Analysis",
+				bill_scan: "Bill Scanner",
+			};
+			throw {
+				response: {
+					data: {
+						detail: `Monthly limit reached for ${labels[action] || action} (${status.limit}/month). Resets on the 1st of next month.`,
+					},
+				},
+			};
+		}
+	}
+	const result = await apiFn();
+	if (uid && action) {
+		// Fire-and-forget — don't block on recording
+		recordUsage(uid, action).catch(() => {});
+	}
+	return result;
+}
+
 // ──────────────────── Upload / Demo ────────────────────
 
-export async function uploadFile(file, token) {
-	const formData = new FormData();
-	formData.append("file", file);
-	const { data } = await API.post("/api/upload", formData, {
-		headers: { "Content-Type": "multipart/form-data", ...authHeaders(token) },
+export async function uploadFile(file, token, uid) {
+	return withUsageTracking(uid, "data_upload", async () => {
+		const formData = new FormData();
+		formData.append("file", file);
+		const { data } = await API.post("/api/upload", formData, {
+			headers: {
+				"Content-Type": "multipart/form-data",
+				...authHeaders(token),
+			},
+		});
+		return data;
 	});
-	return data;
 }
 
 export async function loadDemo(token) {
@@ -35,11 +81,13 @@ export async function loadDemo(token) {
 
 // ──────────────────── Full Analysis ────────────────────
 
-export async function runAnalysis(token) {
-	const { data } = await API.get("/api/analyze", {
-		headers: authHeaders(token),
+export async function runAnalysis(token, uid) {
+	return withUsageTracking(uid, "analysis", async () => {
+		const { data } = await API.get("/api/analyze", {
+			headers: authHeaders(token),
+		});
+		return normalizeAnalysis(data);
 	});
-	return normalizeAnalysis(data);
 }
 
 // ──────────────────── Daily Logs → Analysis ────────────────────
@@ -76,36 +124,46 @@ export async function getStrategyAdvice(
 	businessType,
 	businessCategory,
 	token,
+	uid,
 ) {
-	const { data } = await API.post(
-		"/api/strategy",
-		{
-			dailyLogs,
-			stockEntries,
-			businessType,
-			businessCategory,
-			region: "India",
-		},
-		{ headers: { "Content-Type": "application/json", ...authHeaders(token) } },
-	);
-	return data;
+	return withUsageTracking(uid, "ai_strategy", async () => {
+		const { data } = await API.post(
+			"/api/strategy",
+			{
+				dailyLogs,
+				stockEntries,
+				businessType,
+				businessCategory,
+				region: "India",
+			},
+			{
+				headers: {
+					"Content-Type": "application/json",
+					...authHeaders(token),
+				},
+			},
+		);
+		return data;
+	});
 }
 
 // ──────────────────── PDF Report ────────────────────
 
-export async function downloadReport(token) {
-	const { data } = await API.get("/api/report", {
-		responseType: "blob",
-		headers: authHeaders(token),
+export async function downloadReport(token, uid) {
+	return withUsageTracking(uid, "report_download", async () => {
+		const { data } = await API.get("/api/report", {
+			responseType: "blob",
+			headers: authHeaders(token),
+		});
+		const url = window.URL.createObjectURL(data);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = "Yukti_Intelligence_Report.pdf";
+		document.body.appendChild(a);
+		a.click();
+		a.remove();
+		window.URL.revokeObjectURL(url);
 	});
-	const url = window.URL.createObjectURL(data);
-	const a = document.createElement("a");
-	a.href = url;
-	a.download = "ARIA_Intelligence_Report.pdf";
-	document.body.appendChild(a);
-	a.click();
-	a.remove();
-	window.URL.revokeObjectURL(url);
 }
 
 // ──────────────────── Premium Analysis ────────────────────
@@ -116,19 +174,27 @@ export async function getPremiumAnalysis(
 	businessType,
 	businessCategory,
 	token,
+	uid,
 ) {
-	const { data } = await API.post(
-		"/api/premium-analysis",
-		{
-			dailyLogs,
-			stockEntries,
-			businessType,
-			businessCategory,
-			region: "India",
-		},
-		{ headers: { "Content-Type": "application/json", ...authHeaders(token) } },
-	);
-	return data;
+	return withUsageTracking(uid, "ai_premium", async () => {
+		const { data } = await API.post(
+			"/api/premium-analysis",
+			{
+				dailyLogs,
+				stockEntries,
+				businessType,
+				businessCategory,
+				region: "India",
+			},
+			{
+				headers: {
+					"Content-Type": "application/json",
+					...authHeaders(token),
+				},
+			},
+		);
+		return data;
+	});
 }
 
 export async function getPremiumAnalysisStatus(token) {
@@ -136,6 +202,23 @@ export async function getPremiumAnalysisStatus(token) {
 		headers: authHeaders(token),
 	});
 	return data;
+}
+
+// ──────────────────── Bill Scanner (OCR) ────────────────────
+
+export async function scanBillImage(file, token, uid) {
+	return withUsageTracking(uid, "bill_scan", async () => {
+		const formData = new FormData();
+		formData.append("file", file);
+		const { data } = await API.post("/api/stock/scan-bill", formData, {
+			headers: {
+				"Content-Type": "multipart/form-data",
+				...authHeaders(token),
+			},
+			timeout: 60_000,
+		});
+		return data;
+	});
 }
 
 // ──────────────────── Normalization ────────────────────

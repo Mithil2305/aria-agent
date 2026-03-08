@@ -1,5 +1,5 @@
 """
-ARIA — Autonomous Decision Intelligence Agent
+Yukti — Autonomous Decision Intelligence Agent
 FastAPI Backend Server
 
 Architecture Layers:
@@ -18,12 +18,14 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import uvicorn
 import json
 import io
+import base64
 import pickle
 import tempfile
 import os
 import logging
 import numpy as np
 import pandas as pd
+from datetime import datetime, date
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -141,7 +143,7 @@ except ImportError:
     pass
 
 app = FastAPI(
-    title="ARIA Decision Intelligence",
+    title="Yukti Decision Intelligence",
     description="Autonomous AI-driven analytics system",
     version="1.0.0",
 )
@@ -184,7 +186,7 @@ async def get_current_user(
 # ---------------------------------------------------------------------------
 # Session store — persisted to a temp file so data survives uvicorn --reload
 # ---------------------------------------------------------------------------
-_SESSION_PATH = os.path.join(tempfile.gettempdir(), "aria_session.pkl")
+_SESSION_PATH = os.path.join(tempfile.gettempdir(), "yukti_session.pkl")
 
 
 def _load_session() -> dict:
@@ -237,7 +239,7 @@ def _sanitize(obj):
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "engine": "ARIA Decision Intelligence v1.0"}
+    return {"status": "ok", "engine": "Yukti Decision Intelligence v1.0"}
 
 
 @app.post("/api/upload")
@@ -289,7 +291,7 @@ async def load_demo(uid: str = Depends(get_current_user)):
 @app.get("/api/analyze")
 async def run_full_analysis(uid: str = Depends(get_current_user)):
     """
-    Run the complete ARIA analysis pipeline:
+    Run the complete Yukti analysis pipeline:
     Schema Intelligence → Analytics → Predictions → Decisions → Insights
     """
     global session_store
@@ -453,7 +455,7 @@ async def download_report(uid: str = Depends(get_current_user)):
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f'attachment; filename="ARIA_Intelligence_Report.pdf"'
+            "Content-Disposition": f'attachment; filename="Yukti_Intelligence_Report.pdf"'
         },
     )
 
@@ -462,7 +464,7 @@ async def download_report(uid: str = Depends(get_current_user)):
 # Integrations — Webhook Receiver & Manual Sync
 # ---------------------------------------------------------------------------
 
-# Platform field-mapping (billing field → ARIA daily-log field)
+# Platform field-mapping (billing field → Yukti daily-log field)
 PLATFORM_FIELD_MAPS = {
     "square": {
         "gross_sales": "revenue",
@@ -572,7 +574,7 @@ async def receive_webhook(
 ):
     """
     Receive billing data from an external platform webhook.
-    Maps the incoming fields to ARIA daily-log fields using the platform's field map.
+    Maps the incoming fields to Yukti daily-log fields using the platform's field map.
     Returns the mapped entry so the frontend can save it to Firestore.
     """
     try:
@@ -649,7 +651,7 @@ def _build_rule_based_strategy(stats, biz_type, biz_cat, region, log_summary, st
     """
     import logging
     from datetime import datetime
-    log = logging.getLogger("aria.strategy")
+    log = logging.getLogger("yukti.strategy")
 
     log.info("  📊 Building rule-based strategy from %d logs, %d stock entries",
              len(log_summary), len(stock_summary))
@@ -1047,7 +1049,7 @@ async def generate_strategy(
     """
     import time as _time
     import logging
-    log = logging.getLogger("aria.strategy")
+    log = logging.getLogger("yukti.strategy")
 
     t_start = _time.time()
 
@@ -1193,13 +1195,13 @@ async def premium_analysis(
     uid: str = Depends(get_current_user),
 ):
     """
-    Premium one-time month-end analysis powered by the custom ARIA model.
+    Premium one-time month-end analysis powered by the custom Yukti model.
     Gate: each user gets exactly ONE premium analysis per calendar month.
     """
     import time as _time
     from datetime import datetime as _dt
 
-    log = logging.getLogger("aria.premium")
+    log = logging.getLogger("yukti.premium")
     t_start = _time.time()
 
     logs = payload.dailyLogs or []
@@ -1296,7 +1298,7 @@ async def premium_analysis(
     # ── Store in Firestore for caching ──
     response_data = {
         "generated_by": result.get("generated_by", "unknown"),
-        "provider_label": result.get("provider_label", "ARIA"),
+        "provider_label": result.get("provider_label", "Yukti"),
         "analysis": result.get("analysis", ""),
         "generation_time": result.get("generation_time", 0),
         "generated_at": now.isoformat(),
@@ -1357,6 +1359,311 @@ async def premium_analysis_status(uid: str = Depends(get_current_user)):
             "available": True,
             "error": str(e),
         })
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  BILL IMAGE SCANNER — OCR via Gemini Vision
+# ═══════════════════════════════════════════════════════════════════════════
+
+@app.post("/api/stock/scan-bill")
+async def scan_bill_image(
+    file: UploadFile = File(...),
+    uid: str = Depends(get_current_user),
+):
+    """
+    Accept a bill/invoice image upload. Uses a two-stage pipeline:
+      1. PaddleOCR (local) — extracts raw text from the image
+      2. AI (Gemini/Groq/Claude) — structures raw text into product entries
+
+    Fallback: If PaddleOCR is unavailable, tries Gemini Vision directly.
+    """
+    log = logging.getLogger("yukti.bill_scan")
+
+    # Validate file type
+    allowed_types = {"image/jpeg", "image/png", "image/webp", "image/gif", "image/bmp"}
+    content_type = file.content_type or ""
+    if content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type: {content_type}. Upload a JPG, PNG, or WEBP image.",
+        )
+
+    # Read image bytes
+    image_bytes = await file.read()
+    if len(image_bytes) > 10 * 1024 * 1024:  # 10 MB limit
+        raise HTTPException(status_code=400, detail="Image too large. Maximum 10 MB.")
+
+    log.info("━" * 60)
+    log.info("📸 [BILL SCAN] Image received: %s (%.1f KB, %s)",
+             file.filename, len(image_bytes) / 1024, content_type)
+
+    extracted = None
+    ocr_method = None
+
+    # ── STAGE 1: PaddleOCR — Local text extraction (primary) ──
+    try:
+        from engine.bill_ocr import extract_text_from_image, is_ocr_available
+
+        if is_ocr_available():
+            log.info("   🔄 [Stage 1] Running PaddleOCR text extraction…")
+            raw_ocr_text = extract_text_from_image(image_bytes)
+
+            if raw_ocr_text and len(raw_ocr_text.strip()) > 10:
+                log.info("   ✅ PaddleOCR extracted %d chars of text", len(raw_ocr_text))
+                log.info("   📝 OCR preview: %s…", raw_ocr_text[:200].replace("\n", " | "))
+
+                # ── STAGE 2: AI structures the raw OCR text ──
+                log.info("   � [Stage 2] Sending OCR text to AI for structuring…")
+
+                structure_prompt = f"""You are an expert bill/invoice parser. I extracted the following raw text from a bill image using OCR. 
+Parse this text and extract ALL products/items listed.
+
+=== RAW OCR TEXT ===
+{raw_ocr_text}
+=== END OCR TEXT ===
+
+For each item, extract:
+- "productName": the product/item name (string)
+- "category": best-guess category like "Grocery", "Dairy", "Beverages", "Snacks", "Personal Care", "Household", "Vegetables", "Fruits", "Meat", "Bakery", "Electronics", "Stationery", "Other" (string)
+- "quantity": number of units purchased (number, default 1 if unclear)
+- "unit": the unit type — "units", "kg", "lbs", "liters", "packs", "boxes", "bottles", "dozens" (string, default "units")
+- "unitCost": price per unit in the bill's currency (number, 0 if unclear)
+- "totalCost": total cost for this line item (number, 0 if unclear)
+
+Also extract:
+- "billDate": the date on the bill if visible (string in YYYY-MM-DD format, or null)
+- "storeName": the store/shop name if visible (string or null)
+- "billTotal": the total amount on the bill (number or null)
+
+Return ONLY valid JSON with this exact structure:
+{{"items": [ {{ "productName": "...", "category": "...", "quantity": 1, "unit": "units", "unitCost": 0, "totalCost": 0 }} ], "billDate": "YYYY-MM-DD or null", "storeName": "... or null", "billTotal": 0}}
+
+No markdown, no explanation, no code fences. Just the JSON."""
+
+                try:
+                    ai_text, provider = generate_ai_content(structure_prompt)
+                    # Clean markdown fences if present
+                    ai_text = ai_text.strip()
+                    if ai_text.startswith("```"):
+                        ai_text = ai_text.split("\n", 1)[1] if "\n" in ai_text else ai_text[3:]
+                    if ai_text.endswith("```"):
+                        ai_text = ai_text[:-3]
+                    ai_text = ai_text.strip()
+                    if ai_text.startswith("json"):
+                        ai_text = ai_text[4:].strip()
+
+                    extracted = json.loads(ai_text)
+                    ocr_method = f"PaddleOCR + {provider}"
+                    log.info("   ✅ AI (%s) structured %d items from OCR text",
+                             provider, len(extracted.get("items", [])))
+                except Exception as e:
+                    log.warning("   ❌ AI structuring failed: %s", e)
+            else:
+                log.warning("   ⚠  PaddleOCR returned insufficient text")
+        else:
+            log.info("   ⚠  PaddleOCR not available, skipping…")
+    except ImportError:
+        log.info("   ⚠  PaddleOCR module not installed, skipping…")
+    except Exception as e:
+        log.warning("   ❌ PaddleOCR stage failed: %s", e)
+
+    # ── FALLBACK: Gemini Vision (direct image analysis) ──
+    if extracted is None:
+        from engine.ai_client import _gemini_available, _gemini_client
+
+        vision_prompt = """You are an expert bill/invoice OCR system. Analyze this bill image and extract ALL products/items listed on it.
+
+For each item, extract:
+- "productName": the product/item name (string)
+- "category": best-guess category like "Grocery", "Dairy", "Beverages", "Snacks", "Personal Care", "Household", "Vegetables", "Fruits", "Meat", "Bakery", "Electronics", "Stationery", "Other" (string)
+- "quantity": number of units purchased (number, default 1 if unclear)
+- "unit": the unit type — "units", "kg", "lbs", "liters", "packs", "boxes", "bottles", "dozens" (string, default "units")
+- "unitCost": price per unit in the bill's currency (number, 0 if unclear)
+- "totalCost": total cost for this line item (number, 0 if unclear)
+
+Also extract:
+- "billDate": the date on the bill if visible (string in YYYY-MM-DD format, or null)
+- "storeName": the store/shop name if visible (string or null)
+- "billTotal": the total amount on the bill (number or null)
+
+Return ONLY valid JSON with this exact structure:
+{
+  "items": [ { "productName": "...", "category": "...", "quantity": 1, "unit": "units", "unitCost": 0, "totalCost": 0 } ],
+  "billDate": "YYYY-MM-DD" or null,
+  "storeName": "..." or null,
+  "billTotal": 0 or null
+}
+
+No markdown, no explanation, no code fences. Just the JSON."""
+
+        if _gemini_available and _gemini_client:
+            log.info("   🔄 [Fallback] Using Gemini Vision for direct OCR…")
+            try:
+                from google.genai import types as _gtypes
+
+                response = _gemini_client.models.generate_content(
+                    model="gemini-2.0-flash",
+                    contents=[
+                        _gtypes.Content(
+                            parts=[
+                                _gtypes.Part(
+                                    inline_data=_gtypes.Blob(
+                                        mime_type=content_type,
+                                        data=image_bytes,
+                                    )
+                                ),
+                                _gtypes.Part(text=vision_prompt),
+                            ]
+                        )
+                    ],
+                )
+                raw_text = response.text.strip()
+                if raw_text.startswith("```"):
+                    raw_text = raw_text.split("\n", 1)[1] if "\n" in raw_text else raw_text[3:]
+                if raw_text.endswith("```"):
+                    raw_text = raw_text[:-3]
+                raw_text = raw_text.strip()
+                if raw_text.startswith("json"):
+                    raw_text = raw_text[4:].strip()
+
+                extracted = json.loads(raw_text)
+                ocr_method = "Gemini Vision"
+                log.info("   ✅ Gemini Vision extracted %d items", len(extracted.get("items", [])))
+            except Exception as e:
+                log.warning("   ❌ Gemini Vision failed: %s", e)
+
+    # ── FALLBACK 2: Groq Vision (OpenAI-compatible multimodal) ──
+    if extracted is None:
+        from engine.ai_client import _groq_available, _GROQ_API_KEY, _GROQ_ENDPOINT
+
+        if _groq_available:
+            log.info("   🔄 [Fallback 2] Using Groq Vision…")
+            try:
+                import base64 as _b64
+                import requests as _req
+
+                img_b64 = _b64.b64encode(image_bytes).decode("utf-8")
+                headers = {
+                    "Authorization": f"Bearer {_GROQ_API_KEY}",
+                    "Content-Type": "application/json",
+                }
+                payload = {
+                    "model": "meta-llama/llama-4-scout-17b-16e-instruct",
+                    "messages": [
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:{content_type};base64,{img_b64}"
+                                    },
+                                },
+                                {"type": "text", "text": vision_prompt},
+                            ],
+                        }
+                    ],
+                    "temperature": 0.3,
+                    "max_tokens": 4096,
+                }
+                resp = _req.post(_GROQ_ENDPOINT, headers=headers, json=payload, timeout=90)
+                resp.raise_for_status()
+                raw_text = resp.json()["choices"][0]["message"]["content"].strip()
+                if raw_text.startswith("```"):
+                    raw_text = raw_text.split("\n", 1)[1] if "\n" in raw_text else raw_text[3:]
+                if raw_text.endswith("```"):
+                    raw_text = raw_text[:-3]
+                raw_text = raw_text.strip()
+                if raw_text.startswith("json"):
+                    raw_text = raw_text[4:].strip()
+
+                extracted = json.loads(raw_text)
+                ocr_method = "Groq Vision"
+                log.info("   ✅ Groq Vision extracted %d items", len(extracted.get("items", [])))
+            except Exception as e:
+                log.warning("   ❌ Groq Vision failed: %s", e)
+
+    # ── FALLBACK 3: Claude Vision (Anthropic multimodal) ──
+    if extracted is None:
+        from engine.ai_client import _claude_available, _claude_client
+
+        if _claude_available and _claude_client:
+            log.info("   🔄 [Fallback 3] Using Claude Vision…")
+            try:
+                import base64 as _b64
+
+                img_b64 = _b64.b64encode(image_bytes).decode("utf-8")
+                # Map content_type for Claude (it's strict about media_type)
+                media_type = content_type if content_type in {
+                    "image/jpeg", "image/png", "image/gif", "image/webp"
+                } else "image/png"
+
+                message = _claude_client.messages.create(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=4096,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "image",
+                                    "source": {
+                                        "type": "base64",
+                                        "media_type": media_type,
+                                        "data": img_b64,
+                                    },
+                                },
+                                {"type": "text", "text": vision_prompt},
+                            ],
+                        }
+                    ],
+                    temperature=0.3,
+                )
+                raw_text = message.content[0].text.strip()
+                if raw_text.startswith("```"):
+                    raw_text = raw_text.split("\n", 1)[1] if "\n" in raw_text else raw_text[3:]
+                if raw_text.endswith("```"):
+                    raw_text = raw_text[:-3]
+                raw_text = raw_text.strip()
+                if raw_text.startswith("json"):
+                    raw_text = raw_text[4:].strip()
+
+                extracted = json.loads(raw_text)
+                ocr_method = "Claude Vision"
+                log.info("   ✅ Claude Vision extracted %d items", len(extracted.get("items", [])))
+            except Exception as e:
+                log.warning("   ❌ Claude Vision failed: %s", e)
+
+    # ── LAST RESORT: Return empty template ──
+    if extracted is None:
+        log.warning("   ❌ All OCR methods failed — returning empty template")
+        ocr_method = "none"
+        extracted = {
+            "items": [],
+            "billDate": None,
+            "storeName": None,
+            "billTotal": None,
+            "message": "Could not process the bill image. Please enter items manually.",
+        }
+
+    log.info("   📊 Final result: %d items via %s", len(extracted.get("items", [])), ocr_method)
+
+    return JSONResponse(content=_sanitize({
+        "status": "success",
+        "filename": file.filename,
+        "items": extracted.get("items", []),
+        "billDate": extracted.get("billDate"),
+        "storeName": extracted.get("storeName"),
+        "billTotal": extracted.get("billTotal"),
+        "itemCount": len(extracted.get("items", [])),
+        "ocrMethod": ocr_method,
+        "message": extracted.get("message"),
+    }))
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+#  RATE LIMITS — Usage Dashboard Endpoint  (REMOVED — tracked via Firestore)
+# ═══════════════════════════════════════════════════════════════════════════
 
 
 if __name__ == "__main__":

@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="https://img.shields.io/badge/ARIA-Decision%20Intelligence-6366f1?style=for-the-badge&logo=brain&logoColor=white" alt="ARIA Badge" />
+  <img src="https://img.shields.io/badge/Yukti-Decision%20Intelligence-6366f1?style=for-the-badge&logo=brain&logoColor=white" alt="Yukti Badge" />
 </p>
 
-<h1 align="center">ARIA — Autonomous Real-time Intelligence Agent</h1>
+<h1 align="center">Yukti — Your Unified Knowledge & Trade Intelligence</h1>
 
 <p align="center">
   An AI-powered decision intelligence platform built for Indian SMB retailers.<br/>
@@ -43,9 +43,9 @@
 
 ## 🧠 Overview
 
-**ARIA** (Autonomous Real-time Intelligence Agent) is a full-stack decision intelligence platform designed specifically for **Indian small and medium business owners** — particularly retail, grocery, restaurant, and service businesses in Tamil Nadu.
+**Yukti** (Your Unified Knowledge & Trade Intelligence) is a full-stack decision intelligence platform designed specifically for **Indian small and medium business owners** — particularly retail, grocery, restaurant, and service businesses in Tamil Nadu.
 
-Instead of expensive BI tools or complex dashboards, ARIA lets a shop owner:
+Instead of expensive BI tools or complex dashboards, Yukti lets a shop owner:
 
 1. **Log daily sales, expenses, and customer data** in a simple form
 2. **Upload CSV/Excel datasets** for deep analysis
@@ -66,7 +66,7 @@ The platform combines **classical statistical analysis** (trends, seasonality, f
 | 🔮 **Predictive Intelligence**    | Linear/polynomial regression forecasting with uncertainty bands and confidence intervals           |
 | 🚨 **Anomaly Detection**          | Z-score and IQR-based anomaly detection across all numeric features                                |
 | 🤖 **AI Strategy Advisor**        | Personalised business recommendations powered by Gemini → Groq → Claude fallback chain             |
-| 👑 **Premium Month-End Analysis** | Deep analysis powered by ARIA's custom fine-tuned TinyLlama model (one per month per user)         |
+| 👑 **Premium Month-End Analysis** | Deep analysis powered by Yukti's custom fine-tuned TinyLlama model (one per month per user)        |
 | 📄 **PDF Report Generation**      | One-click downloadable professional PDF reports with charts and insights                           |
 | 📦 **Stock Management**           | Track inventory, pending items, and stock movements with analytics                                 |
 | 🔗 **Integrations**               | Webhook endpoints for external platform sync (POS, accounting, etc.)                               |
@@ -76,7 +76,7 @@ The platform combines **classical statistical analysis** (trends, seasonality, f
 
 ## 🏗 Architecture
 
-ARIA uses a **6-layer analytics pipeline** architecture:
+Yukti uses a **6-layer analytics pipeline** architecture:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -135,12 +135,12 @@ ARIA uses a **6-layer analytics pipeline** architecture:
 
 ### AI Providers
 
-| Provider              | Model                         | Role                     |
-| --------------------- | ----------------------------- | ------------------------ |
-| **Google Gemini**     | `gemini-2.0-flash`            | Primary AI provider      |
-| **Groq**              | `moonshotai/kimi-k2-instruct` | First fallback           |
-| **Anthropic Claude**  | `claude-sonnet-4-20250514`    | Second fallback          |
-| **ARIA Custom Model** | `TinyLlama-1.1B + QLoRA`      | Premium offline analysis |
+| Provider               | Model                         | Role                     |
+| ---------------------- | ----------------------------- | ------------------------ |
+| **Google Gemini**      | `gemini-2.0-flash`            | Primary AI provider      |
+| **Groq**               | `moonshotai/kimi-k2-instruct` | First fallback           |
+| **Anthropic Claude**   | `claude-sonnet-4-20250514`    | Second fallback          |
+| **Yukti Custom Model** | `TinyLlama-1.1B + QLoRA`      | Premium offline analysis |
 
 ### ML / Fine-Tuning
 
@@ -206,7 +206,7 @@ decision-system/
 │   │   ├── prepare_dataset.py        # Dataset preparation from 10+ sources
 │   │   ├── train.py                  # QLoRA fine-tuning pipeline
 │   │   ├── inference.py              # Premium analysis inference engine
-│   │   ├── data/                     # Training data (aria_training.jsonl)
+│   │   ├── data/                     # Training data (yukti_training.jsonl)
 │   │   └── checkpoints/             # Saved model weights (gitignored)
 │   │
 │   └── datasets/                      # Raw training datasets (gitignored)
@@ -270,8 +270,8 @@ decision-system/
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/Mithil2305/aria-agent.git
-cd aria-agent
+git clone https://github.com/Mithil2305/yukti-agent.git
+cd yukti-agent
 ```
 
 ### 2. Backend Setup
@@ -363,7 +363,7 @@ All protected endpoints require a Firebase Auth `Bearer` token in the `Authoriza
 
 ## 🤖 ML Pipeline
 
-ARIA includes a complete custom model training pipeline:
+Yukti includes a complete custom model training pipeline:
 
 ### Dataset Preparation
 
@@ -382,7 +382,7 @@ The `prepare_dataset.py` script processes **10+ diverse datasets** into a unifie
 | NAB Anomaly     | Time-series anomaly detection         | ~2,000  |
 | Online Retail   | Transaction-level data                | ~1,000  |
 
-**Total: ~35,800 instruction-tuning samples** saved as `aria_training.jsonl`.
+**Total: ~35,800 instruction-tuning samples** saved as `yukti_training.jsonl`.
 
 ### Training Configuration
 
@@ -413,7 +413,7 @@ Requires an NVIDIA GPU with 4GB+ VRAM. Training takes ~24 hours on RTX 3050 Lapt
 
 Once trained, the model auto-loads for premium analysis:
 
-- Weights saved to `backend/ml/checkpoints/aria-model/`
+- Weights saved to `backend/ml/checkpoints/yukti-model/`
 - `inference.py` handles lazy loading, prompt construction, and JSON output parsing
 - Falls back to rule-based analysis if the model isn't available
 
@@ -421,7 +421,7 @@ Once trained, the model auto-loads for premium analysis:
 
 ## 🔄 AI Fallback Chain
 
-ARIA uses a resilient multi-provider AI strategy:
+Yukti uses a resilient multi-provider AI strategy:
 
 ```
 Request comes in
@@ -466,7 +466,7 @@ This ensures **zero downtime** — even if all AI providers hit rate limits, use
 | **Daily Log**        | `/daily-log`          | Form to log daily business metrics (saved to Firestore)                                                         |
 | **Stock Management** | `/stock`              | Track inventory, pending items, stock movements                                                                 |
 | **Strategy Advisor** | `/strategy`           | AI-generated business strategy with sales tips, customer strategies, purchase suggestions, and a 4-week roadmap |
-| **Premium Analysis** | `/premium`            | Monthly deep analysis powered by the custom ARIA model                                                          |
+| **Premium Analysis** | `/premium`            | Monthly deep analysis powered by the custom Yukti model                                                         |
 | **Integrations**     | `/integrations`       | Connect external platforms (POS, accounting)                                                                    |
 | **Profile**          | `/profile`            | User profile, business type, region settings                                                                    |
 | **Login / Register** | `/login`, `/register` | Firebase email/password authentication                                                                          |
@@ -477,7 +477,7 @@ This ensures **zero downtime** — even if all AI providers hit rate limits, use
 
 ### 🏪 Retail / Grocery Shop Owner
 
-> "I run a provision store in Madurai. I log my daily sales, and ARIA tells me which products to stock more, when to run offers, and warns me if sales are dropping."
+> "I run a provision store in Madurai. I log my daily sales, and Yukti tells me which products to stock more, when to run offers, and warns me if sales are dropping."
 
 - Log daily revenue, customer count, and orders
 - Get weekly trend analysis and anomaly alerts
@@ -486,7 +486,7 @@ This ensures **zero downtime** — even if all AI providers hit rate limits, use
 
 ### 🍽️ Restaurant / Food Business
 
-> "My restaurant's weekend sales are 3x weekdays. ARIA helps me plan staff, ingredients, and marketing accordingly."
+> "My restaurant's weekend sales are 3x weekdays. Yukti helps me plan staff, ingredients, and marketing accordingly."
 
 - Upload historical sales data (CSV from POS)
 - Predictive engine forecasts busy periods with confidence intervals
@@ -495,7 +495,7 @@ This ensures **zero downtime** — even if all AI providers hit rate limits, use
 
 ### 🛒 E-commerce / Online Seller
 
-> "I sell on multiple platforms. ARIA analyses my combined data and finds which products and channels are underperforming."
+> "I sell on multiple platforms. Yukti analyses my combined data and finds which products and channels are underperforming."
 
 - Upload multi-platform sales CSV
 - Correlation engine identifies product-channel performance links
@@ -559,7 +559,7 @@ This ensures **zero downtime** — even if all AI providers hit rate limits, use
 4. **Automatic Analysis** — The 6-layer engine processes your data in seconds
 5. **Explore Dashboard** — View KPI cards, trend charts, forecasts, and anomaly alerts
 6. **Get Strategy** — Click "Analyse" in Strategy Advisor for AI-powered business recommendations
-7. **Premium Report** — Once per month, get a deep analysis powered by the custom ARIA model
+7. **Premium Report** — Once per month, get a deep analysis powered by the custom Yukti model
 8. **Download PDF** — Export a professional report for stakeholders or personal records
 9. **Track Over Time** — Daily logs accumulate, making analysis richer over weeks and months
 
@@ -593,5 +593,5 @@ This project is proprietary. All rights reserved.
 
 <p align="center">
   Built with ❤️ for Indian small businesses<br/>
-  <strong>ARIA</strong> — Making AI-powered business intelligence accessible to everyone.
+  <strong>Yukti</strong> — Making AI-powered business intelligence accessible to everyone.
 </p>

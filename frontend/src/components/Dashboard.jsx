@@ -30,6 +30,7 @@ import CorrelationView from "./CorrelationView";
 import InsightPanel from "./InsightPanel";
 import SchemaView from "./SchemaView";
 import { downloadReport } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
 
 const TABS = [
 	{ id: "overview", label: "Overview", icon: BarChart3 },
@@ -44,6 +45,7 @@ const TABS = [
 
 export default function Dashboard({ analysis, rowCount, onReset }) {
 	const [activeTab, setActiveTab] = useState("overview");
+	const { user, getIdToken } = useAuth();
 
 	const { schema, kpis, trends, forecasts, anomalies, correlations, insights } =
 		analysis;
@@ -83,7 +85,8 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 
 	const handleExportPDF = async () => {
 		try {
-			await downloadReport();
+			const token = await getIdToken();
+			await downloadReport(token, user?.uid);
 		} catch (err) {
 			console.error("Report download failed:", err);
 		}
@@ -788,7 +791,7 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 						<div className="h-px w-12 bg-surface-300" />
 					</div>
 					<p className="text-[10px] text-surface-400">
-						ARIA · Autonomous Decision Intelligence · v1.0
+						Yukti · Autonomous Decision Intelligence · v1.0
 					</p>
 				</footer>
 			</div>

@@ -614,7 +614,7 @@ def _build_narrative(schema, analytics, predictions, decisions, insights) -> str
     row_count = schema.get("total_rows", schema.get("row_count", "—"))
 
     parts.append(
-        f"ARIA analysed a dataset containing {col_count} features and {row_count} records."
+        f"Yukti analysed a dataset containing {col_count} features and {row_count} records."
     )
 
     kpis = analytics.get("kpis", [])

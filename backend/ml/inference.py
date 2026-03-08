@@ -1,12 +1,12 @@
 """
-ARIA — Premium Analysis Inference Engine
+Yukti — Premium Analysis Inference Engine
 ==========================================
-Loads the fine-tuned ARIA model (LoRA adapter on TinyLlama) and
+Loads the fine-tuned Yukti model (LoRA adapter on TinyLlama) and
 generates premium month-end business analysis from user data.
 
 This is the EXCLUSIVE premium engine — it does NOT fall back to
 external AI APIs (Gemini / Groq). The premium feature is powered
-entirely by ARIA's own custom-trained model.
+entirely by Yukti's own custom-trained model.
 
 If the model is not yet trained, it uses the built-in data-driven
 rule-based engine (which uses statistical analysis on the user's
@@ -19,9 +19,9 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
-log = logging.getLogger("aria.premium")
+log = logging.getLogger("yukti.premium")
 
-MODEL_DIR = Path(__file__).parent / "checkpoints" / "aria-model"
+MODEL_DIR = Path(__file__).parent / "checkpoints" / "yukti-model"
 _model_loaded = False
 _model = None
 _tokenizer = None
@@ -36,9 +36,9 @@ def _load_model():
 
     _model_loaded = True  # Don't try again if it fails
 
-    config_path = MODEL_DIR / "aria_config.json"
+    config_path = MODEL_DIR / "yukti_config.json"
     if not config_path.exists():
-        log.warning("⚠  ARIA model not found at %s — will use AI fallback", MODEL_DIR)
+        log.warning("⚠  Yukti model not found at %s — will use AI fallback", MODEL_DIR)
         return False
 
     try:
@@ -50,7 +50,7 @@ def _load_model():
             config = json.load(f)
 
         base_model_name = config["base_model"]
-        log.info("🤖 Loading ARIA model (base: %s)…", base_model_name)
+        log.info("🤖 Loading Yukti model (base: %s)…", base_model_name)
 
         _tokenizer = AutoTokenizer.from_pretrained(str(MODEL_DIR), trust_remote_code=True)
         if _tokenizer.pad_token is None:
@@ -66,11 +66,11 @@ def _load_model():
         _model = PeftModel.from_pretrained(base_model, str(MODEL_DIR))
         _model.eval()
 
-        log.info("✅ ARIA model loaded successfully on %s", device)
+        log.info("✅ Yukti model loaded successfully on %s", device)
         return True
 
     except Exception as e:
-        log.warning("⚠  Failed to load ARIA model: %s — will use AI fallback", e)
+        log.warning("⚠  Failed to load Yukti model: %s — will use AI fallback", e)
         _model = None
         _tokenizer = None
         return False
@@ -172,7 +172,7 @@ def build_premium_prompt(business_data: dict) -> str:
 
     # Build prompt in model's expected format
     prompt = (
-        f"<|system|>\nYou are ARIA, an expert Indian business analytics AI specializing in "
+        f"<|system|>\nYou are Yukti, an expert Indian business analytics AI specializing in "
         f"retail intelligence, financial reasoning, and actionable strategy recommendations "
         f"for small businesses in India.</s>\n"
         f"<|user|>\nProvide a comprehensive month-end business analysis for this {biz_type.lower()} "
@@ -185,10 +185,10 @@ def build_premium_prompt(business_data: dict) -> str:
 
 def generate_premium_analysis(business_data: dict) -> dict:
     """
-    Generate premium month-end analysis using ARIA's own model ONLY.
+    Generate premium month-end analysis using Yukti's own model ONLY.
 
     Chain:
-      1. Local fine-tuned ARIA model (custom trained on curated datasets)
+      1. Local fine-tuned Yukti model (custom trained on curated datasets)
       2. Data-driven rule-based engine (statistical analysis — no external APIs)
 
     This function NEVER calls Gemini, Groq, or any external AI API.
@@ -198,27 +198,27 @@ def generate_premium_analysis(business_data: dict) -> dict:
 
     prompt, data_text = build_premium_prompt(business_data)
 
-    # ── Attempt 1: Local ARIA model ──
+    # ── Attempt 1: Local Yukti model ──
     if _load_model():
-        log.info("🤖 Generating premium analysis with ARIA custom model…")
+        log.info("🤖 Generating premium analysis with Yukti custom model…")
         try:
             raw_output = _generate_with_local_model(prompt)
             elapsed = time.time() - t_start
-            log.info("✅ ARIA model generated %d chars in %.1fs", len(raw_output), elapsed)
+            log.info("✅ Yukti model generated %d chars in %.1fs", len(raw_output), elapsed)
 
             return {
                 "status": "success",
-                "generated_by": "aria_model",
-                "provider_label": "ARIA Custom Model",
+                "generated_by": "yukti_model",
+                "provider_label": "Yukti Custom Model",
                 "analysis": raw_output,
                 "generation_time": round(elapsed, 2),
             }
         except Exception as e:
-            log.warning("⚠  ARIA model inference failed: %s — using rule-based engine", e)
+            log.warning("⚠  Yukti model inference failed: %s — using rule-based engine", e)
 
     # ── Fallback: Data-driven rule-based engine (NO external APIs) ──
     if not _load_model():
-        log.info("📋 ARIA model not trained yet — using data-driven rule-based engine")
+        log.info("📋 Yukti model not trained yet — using data-driven rule-based engine")
     else:
         log.info("🔧 Falling back to data-driven rule-based engine…")
 
@@ -227,8 +227,8 @@ def generate_premium_analysis(business_data: dict) -> dict:
 
     return {
         "status": "success",
-        "generated_by": "aria_rule_based",
-        "provider_label": "ARIA Data-Driven Engine",
+        "generated_by": "yukti_rule_based",
+        "provider_label": "Yukti Data-Driven Engine",
         "analysis": analysis,
         "generation_time": round(elapsed, 2),
     }
@@ -277,7 +277,7 @@ def _build_premium_rule_based(business_data: dict, data_text: str) -> str:
     current_month = datetime.now().strftime("%B %Y")
 
     return (
-        f"# 📊 ARIA Premium Month-End Report — {current_month}\n"
+        f"# 📊 Yukti Premium Month-End Report — {current_month}\n"
         f"## {biz_type}\n\n"
         f"---\n\n"
         f"## 1. Executive Summary\n"
@@ -322,5 +322,5 @@ def _build_premium_rule_based(business_data: dict, data_text: str) -> str:
         f"- **Customer Target**: {avg_cust*1.1:.0f}/day\n"
         f"- **Profit Target**: ₹{daily_profit*1.2:,.0f}/day\n\n"
         f"---\n"
-        f"*Generated by ARIA Premium Analysis Engine • {current_month}*"
+        f"*Generated by Yukti Premium Analysis Engine • {current_month}*"
     )

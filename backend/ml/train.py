@@ -1,8 +1,8 @@
 """
-ARIA — Model Fine-Tuning Pipeline
+Yukti — Model Fine-Tuning Pipeline
 ===================================
 Fine-tunes a small LLM (TinyLlama-1.1B or Phi-3-mini) using QLoRA
-on the prepared ARIA instruction-tuning dataset.
+on the prepared Yukti instruction-tuning dataset.
 
 Usage:
     cd backend
@@ -12,7 +12,7 @@ Requirements (install in venv):
     pip install torch transformers peft bitsandbytes accelerate datasets trl
 
 Output:
-    backend/ml/checkpoints/aria-model/   — LoRA adapter weights
+    backend/ml/checkpoints/yukti-model/   — LoRA adapter weights
 """
 
 import os
@@ -21,10 +21,10 @@ import logging
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(message)s", datefmt="%H:%M:%S")
-log = logging.getLogger("aria.train")
+log = logging.getLogger("yukti.train")
 
-MODEL_DIR = Path(__file__).parent / "checkpoints" / "aria-model"
-DATA_FILE = Path(__file__).parent / "data" / "aria_training.jsonl"
+MODEL_DIR = Path(__file__).parent / "checkpoints" / "yukti-model"
+DATA_FILE = Path(__file__).parent / "data" / "yukti_training.jsonl"
 
 # ── Configuration ──
 CONFIG = {
@@ -60,7 +60,7 @@ def format_prompt(sample: dict) -> str:
 
     if inp:
         prompt = (
-            f"<|system|>\nYou are ARIA, an expert Indian business analytics AI specializing in "
+            f"<|system|>\nYou are Yukti, an expert Indian business analytics AI specializing in "
             f"retail intelligence, financial reasoning, and actionable strategy recommendations "
             f"for small businesses in India.</s>\n"
             f"<|user|>\n{instruction}\n\n{inp}</s>\n"
@@ -68,7 +68,7 @@ def format_prompt(sample: dict) -> str:
         )
     else:
         prompt = (
-            f"<|system|>\nYou are ARIA, an expert Indian business analytics AI.</s>\n"
+            f"<|system|>\nYou are Yukti, an expert Indian business analytics AI.</s>\n"
             f"<|user|>\n{instruction}</s>\n"
             f"<|assistant|>\n{output}</s>"
         )
@@ -88,7 +88,7 @@ def load_dataset_from_jsonl(path: Path) -> list[dict]:
 
 def main():
     log.info("=" * 60)
-    log.info("🚀 ARIA Model Training Pipeline")
+    log.info("🚀 Yukti Model Training Pipeline")
     log.info("=" * 60)
 
     # ── Check dependencies ──
@@ -233,7 +233,7 @@ def main():
     tokenizer.save_pretrained(output_dir)
 
     # Save config for inference
-    config_path = MODEL_DIR / "aria_config.json"
+    config_path = MODEL_DIR / "yukti_config.json"
     with open(config_path, "w") as f:
         json.dump({
             "base_model": CONFIG["base_model"],

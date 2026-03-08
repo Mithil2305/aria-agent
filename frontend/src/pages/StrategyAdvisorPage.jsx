@@ -90,7 +90,7 @@ export default function StrategyAdvisorPage() {
 
 			if (dailyLogs.length === 0 && stockEntries.length === 0) {
 				setError(
-					"No data found. Please log a few daily entries first so ARIA can generate smart recommendations.",
+					"No data found. Please log a few daily entries first so Yukti can generate smart recommendations.",
 				);
 				setLoading(false);
 				return;
@@ -103,6 +103,7 @@ export default function StrategyAdvisorPage() {
 				businessType,
 				category,
 				token,
+				user?.uid,
 			);
 
 			setStrategy(result);
@@ -178,10 +179,10 @@ export default function StrategyAdvisorPage() {
 										Get Smart Business Recommendations
 									</h2>
 									<p className="text-xs text-surface-500 mt-1 leading-relaxed">
-										ARIA will analyse your daily logs, revenue trends, and stock
-										data to generate personalised strategies — including sales
-										tips, customer acquisition ideas, stock optimisation, and a
-										monthly roadmap tailored for your{" "}
+										Yukti will analyse your daily logs, revenue trends, and
+										stock data to generate personalised strategies — including
+										sales tips, customer acquisition ideas, stock optimisation,
+										and a monthly roadmap tailored for your{" "}
 										<span className="font-medium text-indigo-500">
 											{categoryLabel}
 										</span>{" "}

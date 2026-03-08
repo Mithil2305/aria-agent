@@ -67,7 +67,7 @@ export default function RegisterPage() {
 				{/* Brand */}
 				<div className="text-center mb-10 animate-fade-in-up">
 					<h1 className="text-2xl font-semibold text-surface-900 tracking-tight">
-						ARIA
+						Yukti
 					</h1>
 					<p className="text-xs text-surface-400 mt-1 tracking-wide uppercase">
 						Business Intelligence

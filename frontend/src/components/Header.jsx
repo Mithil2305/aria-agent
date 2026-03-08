@@ -15,7 +15,7 @@ export default function Header({ stage, fileName }) {
 					</div>
 					<div>
 						<h1 className="text-sm font-bold tracking-tight text-surface-900">
-							ARIA{" "}
+							Yukti{" "}
 							<span className="font-normal text-surface-500">
 								Business Intelligence
 							</span>

@@ -25,8 +25,8 @@ export default function DashboardPage() {
 	const { userProfile } = useAuth();
 
 	useEffect(() => {
-		const stored = sessionStorage.getItem("aria_analysis");
-		const storedRows = sessionStorage.getItem("aria_rowCount");
+		const stored = sessionStorage.getItem("yukti_analysis");
+		const storedRows = sessionStorage.getItem("yukti_rowCount");
 		if (stored) {
 			try {
 				setAnalysis(JSON.parse(stored));
@@ -38,8 +38,8 @@ export default function DashboardPage() {
 	}, []);
 
 	const handleReset = () => {
-		sessionStorage.removeItem("aria_analysis");
-		sessionStorage.removeItem("aria_rowCount");
+		sessionStorage.removeItem("yukti_analysis");
+		sessionStorage.removeItem("yukti_rowCount");
 		setAnalysis(null);
 		navigate("/analyse");
 	};
@@ -59,7 +59,7 @@ export default function DashboardPage() {
 	const businessName = userProfile?.businessName;
 	const greeting = businessName
 		? `Welcome back, ${businessName}`
-		: "Welcome to ARIA";
+		: "Welcome to Yukti";
 
 	return (
 		<div className="min-h-screen py-10 px-6">
@@ -189,7 +189,7 @@ export default function DashboardPage() {
 					<div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-surface-200 border border-surface-300">
 						<Sparkles size={11} className="text-gold-500" />
 						<span className="text-[11px] text-surface-500">
-							Powered by ARIA Decision Intelligence
+							Powered by Yukti Decision Intelligence
 						</span>
 					</div>
 				</div>

@@ -47,7 +47,7 @@ import { syncIntegration } from "../services/api";
 function generateSecret() {
 	const chars =
 		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-	let result = "aria_whk_";
+	let result = "yukti_whk_";
 	for (let i = 0; i < 32; i++) {
 		result += chars.charAt(Math.floor(Math.random() * chars.length));
 	}
@@ -218,7 +218,7 @@ export default function IntegrationsPage() {
 					</h1>
 					<p className="text-sm text-surface-500 ml-12">
 						Connect your billing or POS software to auto-import daily sales data
-						into ARIA.
+						into Yukti.
 					</p>
 				</div>
 
@@ -459,7 +459,7 @@ export default function IntegrationsPage() {
 									Secure Connection
 								</p>
 								<p className="text-[11px] text-surface-400 mt-0.5">
-									API keys are stored encrypted. ARIA only reads your sales
+									API keys are stored encrypted. Yukti only reads your sales
 									summaries.
 								</p>
 							</div>

@@ -12,7 +12,7 @@ import json
 import logging
 import requests as _requests
 
-log = logging.getLogger("aria.ai_client")
+log = logging.getLogger("yukti.ai_client")
 
 # ---------------------------------------------------------------------------
 # Gemini setup

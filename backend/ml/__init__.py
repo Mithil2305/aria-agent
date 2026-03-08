@@ -1,1 +1,1 @@
-# ARIA ML — Custom model training & inference
+# Yukti ML — Custom model training & inference
