@@ -80,6 +80,13 @@ Desktop.ini
 backend/_sft_fields.txt
 
 # ========================
+# Cloudflare Worker
+# ========================
+worker/node_modules/
+worker/.dev.vars
+worker/.wrangler/
+
+# ========================
 # ML — Large / Generated Files
 # ========================
 

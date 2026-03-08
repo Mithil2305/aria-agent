@@ -1,0 +1,12 @@
+# Cloudflare Worker local dev secrets
+# Copy this to .dev.vars and fill in real values
+AUTH_TOKEN=dev-token-change-me
+GEMINI_API_KEY=
+GROQ_API_KEY=
+ANTHROPIC_API_KEY=
+FIREBASE_API_KEY=
+FIREBASE_AUTH_DOMAIN=
+FIREBASE_PROJECT_ID=
+FIREBASE_STORAGE_BUCKET=
+FIREBASE_MESSAGING_SENDER_ID=
+FIREBASE_APP_ID=
