@@ -4,6 +4,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./components/AppLayout";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import TrialExpiredPage from "./pages/TrialExpiredPage";
 import DashboardPage from "./pages/DashboardPage";
 import UploadPage from "./pages/UploadPage";
 import DailyLogPage from "./pages/DailyLogPage";
@@ -23,6 +24,16 @@ function App() {
 					{/* Public routes */}
 					<Route path="/login" element={<LoginPage />} />
 					<Route path="/register" element={<RegisterPage />} />
+
+					{/* Trial expired — protected but outside AppLayout */}
+					<Route
+						path="/trial-expired"
+						element={
+							<ProtectedRoute>
+								<TrialExpiredPage />
+							</ProtectedRoute>
+						}
+					/>
 
 					{/* Protected routes — wrapped in SaaS sidebar layout */}
 					<Route

@@ -1,9 +1,10 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Loader } from "lucide-react";
 
 export default function ProtectedRoute({ children }) {
-	const { user, loading } = useAuth();
+	const { user, loading, getTrialStatus } = useAuth();
+	const location = useLocation();
 
 	if (loading) {
 		return (
@@ -14,6 +15,12 @@ export default function ProtectedRoute({ children }) {
 	}
 
 	if (!user) return <Navigate to="/login" replace />;
+
+	// Check if free-tier trial has expired
+	const { isFreeTier, isTrialExpired } = getTrialStatus();
+	if (isFreeTier && isTrialExpired && location.pathname !== "/trial-expired") {
+		return <Navigate to="/trial-expired" replace />;
+	}
 
 	return children;
 }

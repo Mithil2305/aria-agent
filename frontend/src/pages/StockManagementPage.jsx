@@ -155,9 +155,10 @@ export default function StockManagementPage() {
 		setError(null);
 		setScanResult(null);
 
+		const role = userProfile?.role || "paid-user";
 		try {
 			const token = await user.getIdToken();
-			const result = await scanBillImage(billFile, token, user?.uid);
+			const result = await scanBillImage(billFile, token, user?.uid, role);
 
 			setScanResult(result);
 

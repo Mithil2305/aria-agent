@@ -45,7 +45,7 @@ const TABS = [
 
 export default function Dashboard({ analysis, rowCount, onReset }) {
 	const [activeTab, setActiveTab] = useState("overview");
-	const { user, getIdToken } = useAuth();
+	const { user, userProfile, getIdToken } = useAuth();
 
 	const { schema, kpis, trends, forecasts, anomalies, correlations, insights } =
 		analysis;
@@ -85,8 +85,9 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 
 	const handleExportPDF = async () => {
 		try {
+			const role = userProfile?.role || "paid-user";
 			const token = await getIdToken();
-			await downloadReport(token, user?.uid);
+			await downloadReport(token, user?.uid, role);
 		} catch (err) {
 			console.error("Report download failed:", err);
 		}

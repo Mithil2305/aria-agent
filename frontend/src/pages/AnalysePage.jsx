@@ -28,8 +28,9 @@ import {
 } from "lucide-react";
 
 export default function AnalysePage() {
-	const { user, getIdToken } = useAuth();
+	const { user, userProfile, getIdToken } = useAuth();
 	const navigate = useNavigate();
+	const role = userProfile?.role || "paid-user";
 
 	const [logs, setLogs] = useState([]);
 	const [loadingLogs, setLoadingLogs] = useState(true);
@@ -83,7 +84,7 @@ export default function AnalysePage() {
 			// CSV upload path
 			try {
 				const token = await getIdToken();
-				const result = await uploadFile(csvFile, token, user?.uid);
+				const result = await uploadFile(csvFile, token, user?.uid, role);
 				setFileName(result.filename);
 				setRowCount(result.row_count);
 				setStage("processing");
@@ -133,7 +134,7 @@ export default function AnalysePage() {
 		try {
 			setError(null);
 			const token = await getIdToken();
-			const result = await runAnalysis(token, user?.uid);
+			const result = await runAnalysis(token, user?.uid, role);
 
 			if (user) {
 				try {
@@ -155,7 +156,7 @@ export default function AnalysePage() {
 			setError(err.response?.data?.detail || "Analysis failed.");
 			setStage("prepare");
 		}
-	}, [getIdToken, user, rowCount, navigate]);
+	}, [getIdToken, user, role, rowCount, navigate]);
 
 	// ── Processing stage ──
 	if (stage === "processing") {

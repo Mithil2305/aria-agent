@@ -96,6 +96,7 @@ export default function StrategyAdvisorPage() {
 				return;
 			}
 
+			const role = userProfile?.role || "paid-user";
 			const token = await getIdToken();
 			const result = await getStrategyAdvice(
 				dailyLogs,
@@ -104,6 +105,7 @@ export default function StrategyAdvisorPage() {
 				category,
 				token,
 				user?.uid,
+				role,
 			);
 
 			setStrategy(result);
@@ -115,7 +117,7 @@ export default function StrategyAdvisorPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [user, businessType, category, hasStock, getIdToken]);
+	}, [user, userProfile?.role, businessType, category, hasStock, getIdToken]);
 
 	const TABS = [
 		{ key: "sales", label: "Sales Tips", icon: TrendingUp },

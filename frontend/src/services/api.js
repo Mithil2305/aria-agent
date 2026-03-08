@@ -27,9 +27,20 @@ function authHeaders(token) {
  * 2. Execute the API call
  * 3. Record usage on success
  */
-async function withUsageTracking(uid, action, apiFn) {
+/**
+ * Helper: run a Firestore-gated API call.
+ * 1. Check quota (throws if exhausted)
+ * 2. Execute the API call
+ * 3. Record usage on success
+ *
+ * @param {string} uid - User ID
+ * @param {string} action - Usage category key
+ * @param {Function} apiFn - The actual API call function
+ * @param {"free-tier"|"paid-user"|string} [role="paid-user"] - User role for limit lookup
+ */
+async function withUsageTracking(uid, action, apiFn, role = "paid-user") {
 	if (uid && action) {
-		const status = await checkUsage(uid, action);
+		const status = await checkUsage(uid, action, role);
 		if (!status.allowed) {
 			const labels = {
 				data_upload: "Data Uploads",
@@ -39,12 +50,12 @@ async function withUsageTracking(uid, action, apiFn) {
 				ai_premium: "Premium Analysis",
 				bill_scan: "Bill Scanner",
 			};
+			const msg =
+				role === "free-tier"
+					? `Free trial limit reached for ${labels[action] || action} (${status.limit} use). Upgrade to continue.`
+					: `Monthly limit reached for ${labels[action] || action} (${status.limit}/month). Resets on the 1st of next month.`;
 			throw {
-				response: {
-					data: {
-						detail: `Monthly limit reached for ${labels[action] || action} (${status.limit}/month). Resets on the 1st of next month.`,
-					},
-				},
+				response: { data: { detail: msg } },
 			};
 		}
 	}
@@ -58,18 +69,23 @@ async function withUsageTracking(uid, action, apiFn) {
 
 // ──────────────────── Upload / Demo ────────────────────
 
-export async function uploadFile(file, token, uid) {
-	return withUsageTracking(uid, "data_upload", async () => {
-		const formData = new FormData();
-		formData.append("file", file);
-		const { data } = await API.post("/api/upload", formData, {
-			headers: {
-				"Content-Type": "multipart/form-data",
-				...authHeaders(token),
-			},
-		});
-		return data;
-	});
+export async function uploadFile(file, token, uid, role) {
+	return withUsageTracking(
+		uid,
+		"data_upload",
+		async () => {
+			const formData = new FormData();
+			formData.append("file", file);
+			const { data } = await API.post("/api/upload", formData, {
+				headers: {
+					"Content-Type": "multipart/form-data",
+					...authHeaders(token),
+				},
+			});
+			return data;
+		},
+		role,
+	);
 }
 
 export async function loadDemo(token) {
@@ -81,13 +97,18 @@ export async function loadDemo(token) {
 
 // ──────────────────── Full Analysis ────────────────────
 
-export async function runAnalysis(token, uid) {
-	return withUsageTracking(uid, "analysis", async () => {
-		const { data } = await API.get("/api/analyze", {
-			headers: authHeaders(token),
-		});
-		return normalizeAnalysis(data);
-	});
+export async function runAnalysis(token, uid, role) {
+	return withUsageTracking(
+		uid,
+		"analysis",
+		async () => {
+			const { data } = await API.get("/api/analyze", {
+				headers: authHeaders(token),
+			});
+			return normalizeAnalysis(data);
+		},
+		role,
+	);
 }
 
 // ──────────────────── Daily Logs → Analysis ────────────────────
@@ -125,45 +146,56 @@ export async function getStrategyAdvice(
 	businessCategory,
 	token,
 	uid,
+	role,
 ) {
-	return withUsageTracking(uid, "ai_strategy", async () => {
-		const { data } = await API.post(
-			"/api/strategy",
-			{
-				dailyLogs,
-				stockEntries,
-				businessType,
-				businessCategory,
-				region: "India",
-			},
-			{
-				headers: {
-					"Content-Type": "application/json",
-					...authHeaders(token),
+	return withUsageTracking(
+		uid,
+		"ai_strategy",
+		async () => {
+			const { data } = await API.post(
+				"/api/strategy",
+				{
+					dailyLogs,
+					stockEntries,
+					businessType,
+					businessCategory,
+					region: "India",
 				},
-			},
-		);
-		return data;
-	});
+				{
+					headers: {
+						"Content-Type": "application/json",
+						...authHeaders(token),
+					},
+				},
+			);
+			return data;
+		},
+		role,
+	);
 }
 
 // ──────────────────── PDF Report ────────────────────
 
-export async function downloadReport(token, uid) {
-	return withUsageTracking(uid, "report_download", async () => {
-		const { data } = await API.get("/api/report", {
-			responseType: "blob",
-			headers: authHeaders(token),
-		});
-		const url = window.URL.createObjectURL(data);
-		const a = document.createElement("a");
-		a.href = url;
-		a.download = "Yukti_Intelligence_Report.pdf";
-		document.body.appendChild(a);
-		a.click();
-		a.remove();
-		window.URL.revokeObjectURL(url);
-	});
+export async function downloadReport(token, uid, role) {
+	return withUsageTracking(
+		uid,
+		"report_download",
+		async () => {
+			const { data } = await API.get("/api/report", {
+				responseType: "blob",
+				headers: authHeaders(token),
+			});
+			const url = window.URL.createObjectURL(data);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = "Yukti_Intelligence_Report.pdf";
+			document.body.appendChild(a);
+			a.click();
+			a.remove();
+			window.URL.revokeObjectURL(url);
+		},
+		role,
+	);
 }
 
 // ──────────────────── Premium Analysis ────────────────────
@@ -175,26 +207,32 @@ export async function getPremiumAnalysis(
 	businessCategory,
 	token,
 	uid,
+	role,
 ) {
-	return withUsageTracking(uid, "ai_premium", async () => {
-		const { data } = await API.post(
-			"/api/premium-analysis",
-			{
-				dailyLogs,
-				stockEntries,
-				businessType,
-				businessCategory,
-				region: "India",
-			},
-			{
-				headers: {
-					"Content-Type": "application/json",
-					...authHeaders(token),
+	return withUsageTracking(
+		uid,
+		"ai_premium",
+		async () => {
+			const { data } = await API.post(
+				"/api/premium-analysis",
+				{
+					dailyLogs,
+					stockEntries,
+					businessType,
+					businessCategory,
+					region: "India",
 				},
-			},
-		);
-		return data;
-	});
+				{
+					headers: {
+						"Content-Type": "application/json",
+						...authHeaders(token),
+					},
+				},
+			);
+			return data;
+		},
+		role,
+	);
 }
 
 export async function getPremiumAnalysisStatus(token) {
@@ -206,19 +244,24 @@ export async function getPremiumAnalysisStatus(token) {
 
 // ──────────────────── Bill Scanner (OCR) ────────────────────
 
-export async function scanBillImage(file, token, uid) {
-	return withUsageTracking(uid, "bill_scan", async () => {
-		const formData = new FormData();
-		formData.append("file", file);
-		const { data } = await API.post("/api/stock/scan-bill", formData, {
-			headers: {
-				"Content-Type": "multipart/form-data",
-				...authHeaders(token),
-			},
-			timeout: 60_000,
-		});
-		return data;
-	});
+export async function scanBillImage(file, token, uid, role) {
+	return withUsageTracking(
+		uid,
+		"bill_scan",
+		async () => {
+			const formData = new FormData();
+			formData.append("file", file);
+			const { data } = await API.post("/api/stock/scan-bill", formData, {
+				headers: {
+					"Content-Type": "multipart/form-data",
+					...authHeaders(token),
+				},
+				timeout: 60_000,
+			});
+			return data;
+		},
+		role,
+	);
 }
 
 // ──────────────────── Normalization ────────────────────

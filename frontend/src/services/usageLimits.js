@@ -17,7 +17,7 @@ import {
 	serverTimestamp,
 } from "firebase/firestore";
 
-// ── Monthly quotas (must match what the backend previously enforced) ──
+// ── Monthly quotas for PAID users ──
 export const RATE_LIMITS = {
 	ai_strategy: 15,
 	ai_premium: 2,
@@ -26,6 +26,24 @@ export const RATE_LIMITS = {
 	analysis: 30,
 	report_download: 15,
 };
+
+// ── Free-tier trial limits (one-time, not monthly) ──
+export const FREE_TIER_LIMITS = {
+	ai_strategy: 1,
+	ai_premium: 1,
+	bill_scan: 1,
+	data_upload: 2,
+	analysis: 2,
+	report_download: 1,
+};
+
+/**
+ * Get the correct limits object based on user role.
+ * @param {"free-tier"|"paid-user"|string} role
+ */
+export function getLimitsForRole(role) {
+	return role === "free-tier" ? FREE_TIER_LIMITS : RATE_LIMITS;
+}
 
 // ── Category metadata (labels, icons, descriptions) ──
 export const CATEGORIES = {
@@ -80,15 +98,18 @@ function usageRef(uid) {
 
 /**
  * Read current month's usage for a user.
+ * @param {string} uid
+ * @param {"free-tier"|"paid-user"|string} [role="paid-user"]
  * Returns an object like:
  *   { ai_strategy: { used, limit, remaining, percentage }, … }
  */
-export async function getUserUsage(uid) {
+export async function getUserUsage(uid, role = "paid-user") {
 	const snap = await getDoc(usageRef(uid));
 	const counts = snap.exists() ? snap.data() : {};
+	const limits = getLimitsForRole(role);
 
 	const result = {};
-	for (const [action, limit] of Object.entries(RATE_LIMITS)) {
+	for (const [action, limit] of Object.entries(limits)) {
 		const used = counts[action] ?? 0;
 		result[action] = {
 			used,
@@ -102,10 +123,14 @@ export async function getUserUsage(uid) {
 
 /**
  * Check whether the user still has quota for `action`.
+ * @param {string} uid
+ * @param {string} action
+ * @param {"free-tier"|"paid-user"|string} [role="paid-user"]
  * Returns { allowed: true/false, used, limit, remaining }.
  */
-export async function checkUsage(uid, action) {
-	const limit = RATE_LIMITS[action];
+export async function checkUsage(uid, action, role = "paid-user") {
+	const limits = getLimitsForRole(role);
+	const limit = limits[action];
 	if (limit === undefined)
 		return { allowed: true, used: 0, limit: 0, remaining: 0 };
 
@@ -141,13 +166,15 @@ export async function recordUsage(uid, action) {
  * Throws an Error (message includes limit info) if quota is exhausted.
  * Otherwise increments the counter and returns the new counts.
  */
-export async function checkAndRecordUsage(uid, action) {
-	const status = await checkUsage(uid, action);
+export async function checkAndRecordUsage(uid, action, role = "paid-user") {
+	const status = await checkUsage(uid, action, role);
 	if (!status.allowed) {
 		const label = CATEGORIES[action]?.label ?? action;
-		throw new Error(
-			`Monthly limit reached for ${label} (${status.limit}/month). Resets on the 1st of next month.`,
-		);
+		const msg =
+			role === "free-tier"
+				? `Free trial limit reached for ${label} (${status.limit} use). Upgrade to continue.`
+				: `Monthly limit reached for ${label} (${status.limit}/month). Resets on the 1st of next month.`;
+		throw new Error(msg);
 	}
 	await recordUsage(uid, action);
 	return {
@@ -160,8 +187,8 @@ export async function checkAndRecordUsage(uid, action) {
 /**
  * Get full limits dashboard data (mirrors old /api/limits shape).
  */
-export async function getLimitsDashboard(uid) {
-	const usage = await getUserUsage(uid);
+export async function getLimitsDashboard(uid, role = "paid-user") {
+	const usage = await getUserUsage(uid, role);
 
 	const now = new Date();
 	const month = getMonthKey();

@@ -13,6 +13,8 @@ import {
 	AlertCircle,
 	CheckCircle2,
 	Users,
+	Clock,
+	ExternalLink,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import { getLimitsDashboard, CATEGORIES } from "../services/usageLimits";
@@ -66,24 +68,27 @@ const COLOR_MAP = {
 };
 
 export default function LimitsPage() {
-	const { user } = useAuth();
+	const { user, userProfile, getTrialStatus } = useAuth();
 	const [limitsData, setLimitsData] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
+
+	const role = userProfile?.role || "paid-user";
+	const trialStatus = getTrialStatus();
 
 	const fetchLimits = useCallback(async () => {
 		if (!user) return;
 		setLoading(true);
 		setError(null);
 		try {
-			const data = await getLimitsDashboard(user.uid);
+			const data = await getLimitsDashboard(user.uid, role);
 			setLimitsData(data);
 		} catch (err) {
 			setError(err?.message || "Failed to load usage limits.");
 		} finally {
 			setLoading(false);
 		}
-	}, [user]);
+	}, [user, role]);
 
 	useEffect(() => {
 		fetchLimits();
@@ -137,6 +142,36 @@ export default function LimitsPage() {
 						Monitor your monthly usage across all Yukti features.
 					</p>
 				</div>
+
+				{/* Trial banner for free-tier users */}
+				{trialStatus.isFreeTier && (
+					<div className="mb-6 p-5 rounded-xl border-2 border-amber-200 bg-amber-50/60">
+						<div className="flex items-start gap-3">
+							<div className="p-2 rounded-lg bg-amber-100 mt-0.5">
+								<Clock size={16} className="text-amber-600" />
+							</div>
+							<div className="flex-1">
+								<p className="text-sm font-semibold text-amber-800 mb-1">
+									Free Trial — {trialStatus.daysLeft} day
+									{trialStatus.daysLeft !== 1 ? "s" : ""} remaining
+								</p>
+								<p className="text-xs text-amber-600 mb-3">
+									You have one-time access to each feature. Upgrade to unlock
+									full monthly limits.
+								</p>
+								<a
+									href="https://mudmedia.vercel.app/book"
+									target="_blank"
+									rel="noopener noreferrer"
+									className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-600 text-white text-xs font-medium hover:bg-amber-700 transition-colors"
+								>
+									Upgrade Now
+									<ExternalLink size={12} />
+								</a>
+							</div>
+						</div>
+					</div>
+				)}
 
 				{/* Overview cards */}
 				<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
@@ -270,22 +305,41 @@ export default function LimitsPage() {
 						</div>
 						<div>
 							<p className="text-sm font-medium text-surface-800 mb-1">
-								About Rate Limits
+								About {trialStatus.isFreeTier ? "Your Trial" : "Rate Limits"}
 							</p>
 							<ul className="text-[12px] text-surface-500 space-y-1">
-								<li>
-									• All usage limits reset automatically on the{" "}
-									<strong>1st of each month</strong>.
-								</li>
-								<li>
-									• AI-powered features (Strategy Advisor, Premium Analysis,
-									Bill Scanner) have lower limits to ensure fast response times
-									for everyone.
-								</li>
-								<li>
-									• If you hit a limit, your data and history remain intact —
-									you can continue using the feature next month.
-								</li>
+								{trialStatus.isFreeTier ? (
+									<>
+										<li>
+											• Your free trial gives <strong>one-time access</strong>{" "}
+											to each feature for 7 days.
+										</li>
+										<li>
+											• After 7 days, your account will be deactivated until you
+											upgrade to a paid plan.
+										</li>
+										<li>
+											• Paid users get generous monthly limits that reset on the{" "}
+											<strong>1st of each month</strong>.
+										</li>
+									</>
+								) : (
+									<>
+										<li>
+											• All usage limits reset automatically on the{" "}
+											<strong>1st of each month</strong>.
+										</li>
+										<li>
+											• AI-powered features (Strategy Advisor, Premium Analysis,
+											Bill Scanner) have lower limits to ensure fast response
+											times for everyone.
+										</li>
+										<li>
+											• If you hit a limit, your data and history remain intact
+											— you can continue using the feature next month.
+										</li>
+									</>
+								)}
 							</ul>
 						</div>
 					</div>

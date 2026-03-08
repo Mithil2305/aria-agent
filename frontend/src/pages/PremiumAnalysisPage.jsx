@@ -158,6 +158,7 @@ export default function PremiumAnalysisPage() {
 				return;
 			}
 
+			const role = userProfile?.role || "paid-user";
 			const data = await getPremiumAnalysis(
 				dailyLogs,
 				stockEntries,
@@ -165,6 +166,7 @@ export default function PremiumAnalysisPage() {
 				userProfile?.businessCategory,
 				token,
 				user?.uid,
+				role,
 			);
 
 			setResult(data);

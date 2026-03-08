@@ -1,11 +1,21 @@
 import { useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
-import { Mail, Lock, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
+import {
+	Mail,
+	Lock,
+	ArrowRight,
+	AlertCircle,
+	Loader2,
+	Eye,
+	EyeOff,
+	Sparkles,
+} from "lucide-react";
 
 export default function LoginPage() {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
+	const [showPassword, setShowPassword] = useState(false);
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
 	const { login } = useAuth();
@@ -40,7 +50,10 @@ export default function LoginPage() {
 		<div className="min-h-screen bg-surface-100 flex items-center justify-center px-4">
 			<div className="w-full max-w-sm">
 				{/* Brand */}
-				<div className="text-center mb-10 animate-fade-in-up">
+				<div className="text-center mb-8 animate-fade-in-up">
+					<div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gold-600 mb-3">
+						<Sparkles size={22} className="text-white" />
+					</div>
 					<h1 className="text-2xl font-semibold text-surface-900 tracking-tight">
 						Yukti
 					</h1>
@@ -82,6 +95,7 @@ export default function LoginPage() {
 							onChange={(e) => setEmail(e.target.value)}
 							className="input-field w-full"
 							placeholder="you@business.com"
+							autoFocus
 							required
 						/>
 					</div>
@@ -91,14 +105,24 @@ export default function LoginPage() {
 							<Lock size={12} strokeWidth={1.5} />
 							Password
 						</label>
-						<input
-							type="password"
-							value={password}
-							onChange={(e) => setPassword(e.target.value)}
-							className="input-field w-full"
-							placeholder="••••••••"
-							required
-						/>
+						<div className="relative">
+							<input
+								type={showPassword ? "text" : "password"}
+								value={password}
+								onChange={(e) => setPassword(e.target.value)}
+								className="input-field w-full pr-10"
+								placeholder="••••••••"
+								required
+							/>
+							<button
+								type="button"
+								onClick={() => setShowPassword(!showPassword)}
+								className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600 transition-colors"
+								tabIndex={-1}
+							>
+								{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+							</button>
+						</div>
 					</div>
 
 					<button
@@ -113,12 +137,12 @@ export default function LoginPage() {
 				</form>
 
 				<p className="text-center text-sm text-surface-400 mt-6">
-					Don't have an account?{" "}
+					Don&apos;t have an account?{" "}
 					<Link
 						to="/register"
 						className="text-gold-600 hover:text-gold-700 font-medium transition-colors"
 					>
-						Create one free
+						Start free trial
 					</Link>
 				</p>
 			</div>

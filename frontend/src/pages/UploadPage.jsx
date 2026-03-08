@@ -12,15 +12,16 @@ export default function UploadPage() {
 	const [fileName, setFileName] = useState("");
 	const [rowCount, setRowCount] = useState(0);
 	const [error, setError] = useState(null);
-	const { user, getIdToken } = useAuth();
+	const { user, userProfile, getIdToken } = useAuth();
 	const navigate = useNavigate();
+	const role = userProfile?.role || "paid-user";
 
 	const handleFileSelect = useCallback(
 		async (file) => {
 			try {
 				setError(null);
 				const token = await getIdToken();
-				const result = await uploadFile(file, token, user?.uid);
+				const result = await uploadFile(file, token, user?.uid, role);
 				setFileName(result.filename);
 				setRowCount(result.row_count);
 				setStage("processing");
@@ -31,7 +32,7 @@ export default function UploadPage() {
 				);
 			}
 		},
-		[getIdToken, user],
+		[getIdToken, user, role],
 	);
 
 	const handleDemoLoad = useCallback(async () => {
@@ -54,7 +55,7 @@ export default function UploadPage() {
 		try {
 			setError(null);
 			const token = await getIdToken();
-			const result = await runAnalysis(token, user?.uid);
+			const result = await runAnalysis(token, user?.uid, role);
 
 			// Save analysis to Firestore under user
 			if (user) {
@@ -78,7 +79,7 @@ export default function UploadPage() {
 			setError(err.response?.data?.detail || "Analysis failed.");
 			setStage("upload");
 		}
-	}, [getIdToken, user, rowCount, navigate]);
+	}, [getIdToken, user, role, rowCount, navigate]);
 
 	return (
 		<div className="min-h-screen">

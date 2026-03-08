@@ -156,6 +156,7 @@ app.add_middleware(
         "http://localhost:4173",
         "http://127.0.0.1:5173",
         "https://aria-agent-alpha.vercel.app",
+        "https://mudmedia-yukti.vercel.app"
     ],
 
     
