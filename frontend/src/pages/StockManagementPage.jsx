@@ -69,7 +69,7 @@ export default function StockManagementPage() {
 	const [billPreview, setBillPreview] = useState(null);
 	const [scanning, setScanning] = useState(false);
 	const [scanResult, setScanResult] = useState(null);
-	const [showScanner, setShowScanner] = useState(false);
+	const [showScanner, setShowScanner] = useState(true);
 	const fileInputRef = useRef(null);
 	const dropZoneRef = useRef(null);
 
