@@ -12,7 +12,7 @@
  *
  * Auth: Bearer token in Authorization header must match the AUTH_TOKEN secret.
  *        The /keys/firebase endpoint is open (Firebase config is not secret)
- *        but still CORS-restricted to allowed origins.
+ *         but still CORS-restricted to allowed origins.
  */
 
 export default {
