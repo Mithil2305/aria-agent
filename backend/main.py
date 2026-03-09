@@ -389,9 +389,11 @@ async def run_full_analysis(uid: str = Depends(get_current_user)):
         "correlations": decisions["correlations"],
         "feature_importance": decisions.get("feature_importance", []),
         "risk_scores": decisions.get("risk_scores", []),
-        "insights": insights["insights"],
-        "narrative": insights["narrative"],
-        "severity_summary": insights["severity_summary"],
+        "insights": insights.get("insights", []),
+        "narrative": insights.get("narrative", ""),
+        "trend_lock": insights.get("trend_lock", {}),
+        "data_sufficiency": insights.get("data_sufficiency", "full"),
+        "ai_provider": insights.get("ai_provider", "rule_based"),
     }))
 
 

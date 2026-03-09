@@ -22,8 +22,18 @@ export default {
 
 		// ── CORS ──
 		const origin = request.headers.get("Origin") || "";
-		const allowed = (env.ALLOWED_ORIGINS || "").split(",").map((o) => o.trim());
-		const corsOrigin = allowed.includes(origin) ? origin : allowed[0] || "*";
+		const allowed = (env.ALLOWED_ORIGINS || "")
+			.split(",")
+			.map((o) => o.trim())
+			.filter(Boolean);
+
+		// Allow the request origin if it's in the list, or if it's localhost (dev)
+		const isAllowed =
+			allowed.includes(origin) ||
+			origin.startsWith("http://localhost:") ||
+			origin.startsWith("http://127.0.0.1:");
+
+		const corsOrigin = isAllowed ? origin : allowed[0] || "*";
 
 		const corsHeaders = {
 			"Access-Control-Allow-Origin": corsOrigin,

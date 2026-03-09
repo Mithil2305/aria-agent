@@ -5,17 +5,25 @@
  * `initFirebase()` is called from main.jsx BEFORE the React tree renders,
  * so every component that imports `auth` / `db` gets working instances.
  *
+ * We use a plain object (`firebase`) as the export container so that
+ * all importers always get the same live references — even across
+ * Vite HMR cycles.
+ *
+ * Usage in other files:
+ *   import { auth, db } from "../firebase";
+ *
  * SETUP: Set VITE_SECRETS_WORKER_URL in .env or Vercel env vars, e.g.:
  *   VITE_SECRETS_WORKER_URL=https://yukti-secrets.<you>.workers.dev
  */
 
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-// These are populated by initFirebase() before the app renders
-export let auth = /** @type {import("firebase/auth").Auth} */ (null);
-export let db = /** @type {import("firebase/firestore").Firestore} */ (null);
+/** @type {import("firebase/auth").Auth} */
+export let auth = null;
+/** @type {import("firebase/firestore").Firestore} */
+export let db = null;
 let app = null;
 
 /**
@@ -23,6 +31,14 @@ let app = null;
  * Must be called (and awaited) once at app startup before rendering.
  */
 export async function initFirebase() {
+	// Already initialised (e.g. Vite HMR re-run)
+	if (getApps().length > 0) {
+		app = getApps()[0];
+		auth = getAuth(app);
+		db = getFirestore(app);
+		return app;
+	}
+
 	const workerUrl = import.meta.env.VITE_SECRETS_WORKER_URL;
 
 	if (!workerUrl) {

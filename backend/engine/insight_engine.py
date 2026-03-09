@@ -1,20 +1,27 @@
 """
-Layer 6: AI Insight & Reasoning Engine
-Generates human-readable insights, narratives, severity-ranked recommendations,
-and business context from the full analytics pipeline output.
-Optionally uses Google Gemini API for AI-powered strategy generation.
+Layer 6: AI Insight & Reasoning Engine (Indian SMB Edition)
+
+Generates shopkeeper-friendly, action-oriented insights in simple language.
+Uses INR currency, Hindi-English terminology, and "tell them what to DO" framing.
+Includes contradiction-prevention via trend-locking and data-sufficiency guards.
 """
 
 import os
 import json
 from datetime import datetime
 
-
-# ---------------------------------------------------------------------------
-# Optional: AI integration (Gemini → Groq fallback)
-# ---------------------------------------------------------------------------
 from engine.ai_client import generate_ai_content, is_any_ai_available
 
+# ---------------------------------------------------------------------------
+# Data-sufficiency thresholds
+# ---------------------------------------------------------------------------
+MIN_ROWS_FOR_FORECAST = 14
+MIN_ROWS_FOR_BASIC = 3
+
+
+# ────────────────────────────────────────────────────────────────────
+#  PUBLIC API
+# ────────────────────────────────────────────────────────────────────
 
 def generate_insights(
     schema: dict,
@@ -22,657 +29,669 @@ def generate_insights(
     predictions: dict,
     decisions: dict,
 ) -> dict:
-    """Produce insights, narrative, and recommendations."""
-    insights = []
+    """Produce insights, narrative, and recommendations in simple language."""
+    row_count = schema.get("total_rows", schema.get("row_count", 0))
+    kpis = analytics.get("kpis", [])
+    anomalies = predictions.get("anomalies", [])
+    forecasts = predictions.get("forecasts", [])
+    correlations = analytics.get("correlations", [])
+    trends = analytics.get("trends", {})
 
-    insights.extend(_kpi_insights(analytics.get("kpis", [])))
-    insights.extend(_anomaly_insights(predictions.get("anomalies", [])))
-    insights.extend(_forecast_insights(predictions.get("forecasts", [])))
-    insights.extend(_correlation_insights(decisions.get("correlations", [])))
-    insights.extend(_risk_insights(decisions.get("risk_scores", [])))
-    insights.extend(_quality_insights(schema))
-    insights.extend(_growth_strategy_insights(analytics, predictions, decisions))
-    insights.extend(_revenue_opportunity_insights(analytics, predictions))
+    # ── Step 1: Lock primary trend (contradiction prevention) ──
+    trend_lock = _lock_primary_trend(kpis, trends)
 
-    # AI-powered strategy insights (Gemini)
-    ai_insights = _gemini_strategy_insights(schema, analytics, predictions, decisions)
-    if ai_insights:
-        insights.extend(ai_insights)
-
-    # Deduplicate by title
-    seen = set()
-    unique_insights = []
-    for ins in insights:
-        if ins["title"] not in seen:
-            seen.add(ins["title"])
-            unique_insights.append(ins)
-    insights = unique_insights
-
-    # Sort by severity weight then confidence
-    severity_weight = {"critical": 4, "high": 3, "moderate": 2, "low": 1, "info": 0}
-    insights.sort(
-        key=lambda x: (severity_weight.get(x["severity"], 0), x["confidence"]),
-        reverse=True,
+    # ── Step 2: Data sufficiency ──
+    data_sufficiency = (
+        "full" if row_count >= MIN_ROWS_FOR_FORECAST
+        else "partial" if row_count >= MIN_ROWS_FOR_BASIC
+        else "insufficient"
     )
 
-    # Limit to top 20
-    insights = insights[:20]
+    # ── Step 3: Generate categorized insights ──
+    insights = []
 
-    narrative = _build_narrative(schema, analytics, predictions, decisions, insights)
+    # Khata (financial)
+    insights.extend(_daily_khata_insights(kpis, trend_lock))
 
-    severity_summary = {"critical": 0, "high": 0, "moderate": 0, "low": 0, "info": 0}
-    for ins in insights:
-        sev = ins["severity"]
-        if sev in severity_summary:
-            severity_summary[sev] += 1
+    # Footfall & orders
+    insights.extend(_footfall_order_insights(kpis, trends, trend_lock))
+
+    # Godown / inventory
+    insights.extend(_godown_inventory_insights(kpis, trend_lock))
+
+    # Customer insights
+    insights.extend(_customer_insights(kpis, correlations, trend_lock))
+
+    # Anomalies (simple language)
+    insights.extend(_anomaly_insights_simple(anomalies))
+
+    # Forecasts (only if enough data)
+    if data_sufficiency == "full":
+        insights.extend(_forecast_insights_simple(forecasts, trend_lock))
+
+    # Data quality
+    insights.extend(_quality_insights_simple(schema, data_sufficiency))
+
+    # AI-powered advisor (growth / savings / opportunity)
+    advisor_insights, ai_provider = _ai_advisor_insights(
+        kpis, anomalies, forecasts, correlations, trends, trend_lock, data_sufficiency
+    )
+    insights.extend(advisor_insights)
+
+    # ── Step 4: Sort by severity ──
+    severity_order = {"critical": 0, "high": 1, "moderate": 2, "low": 3, "info": 4}
+    insights.sort(key=lambda x: severity_order.get(x.get("severity", "info"), 5))
+
+    # ── Step 5: Narrative ──
+    narrative = _build_narrative_simple(kpis, anomalies, forecasts, trend_lock, data_sufficiency)
 
     return {
         "insights": insights,
         "narrative": narrative,
-        "severity_summary": severity_summary,
-        "generated_at": datetime.utcnow().isoformat(),
+        "trend_lock": trend_lock,
+        "data_sufficiency": data_sufficiency,
+        "ai_provider": ai_provider,
     }
 
 
-# ------------------------------------------------------------------ #
-#  Insight generators                                                  #
-# ------------------------------------------------------------------ #
+# ────────────────────────────────────────────────────────────────────
+#  TREND LOCKING (contradiction prevention)
+# ────────────────────────────────────────────────────────────────────
 
-def _kpi_insights(kpis: list) -> list:
+def _lock_primary_trend(kpis: list, trends: dict) -> dict:
+    """Determine the single dominant business direction.
+    All insights must be consistent with this lock."""
+    if not kpis:
+        return {"direction": "stable", "metric": "business", "change": 0}
+
+    # Find the "most important" KPI by keyword priority
+    priority_keywords = [
+        ["revenue", "sales", "income"],
+        ["profit", "margin"],
+        ["order", "transaction"],
+        ["customer", "footfall"],
+    ]
+
+    best_kpi = None
+    for keywords in priority_keywords:
+        for kpi in kpis:
+            name = (kpi.get("label", "") + " " + kpi.get("column", "")).lower()
+            if any(kw in name for kw in keywords):
+                best_kpi = kpi
+                break
+        if best_kpi:
+            break
+
+    if not best_kpi:
+        best_kpi = kpis[0]
+
+    change = best_kpi.get("change", 0)
+    direction = "up" if change > 3 else "down" if change < -3 else "stable"
+
+    return {
+        "direction": direction,
+        "metric": best_kpi.get("label", "business"),
+        "change": round(change, 1),
+    }
+
+
+# ────────────────────────────────────────────────────────────────────
+#  DAILY KHATA (financial insights)
+# ────────────────────────────────────────────────────────────────────
+
+def _daily_khata_insights(kpis: list, trend_lock: dict) -> list:
     insights = []
-    for kpi in kpis:
-        name = kpi.get("label", kpi.get("column", ""))
-        growth = kpi.get("change", kpi.get("growth", 0))
-        significance = kpi.get("significance", 0)
-        trend = kpi.get("trend", "stable")
+    revenue_kpi = _find_kpi(kpis, ["revenue", "sales", "income", "total"])
+    expense_kpi = _find_kpi(kpis, ["expense", "cost", "spend"])
 
-        if abs(growth) > 15:
-            severity = "high" if abs(growth) > 25 else "moderate"
-            direction = "increase" if growth > 0 else "decrease"
-            insights.append(_make_insight(
-                title=f"Significant {direction} in {name}",
-                description=(
-                    f"{name} shows a {abs(growth):.1f}% {direction} over the analysis period. "
-                    f"The trend is statistically {'significant' if significance > 0.7 else 'notable'} "
-                    f"and warrants {'immediate' if abs(growth) > 25 else 'close'} attention."
-                ),
-                severity=severity,
-                confidence=min(0.95, significance),
-                category="trend",
-                metric=name,
-                recommendation=(
-                    f"Investigate the root cause of the {direction} in {name}. "
-                    + ("This positive trend should be reinforced." if growth > 0
-                       else "Develop mitigation strategies to address this decline.")
-                ),
-            ))
+    if revenue_kpi:
+        change = revenue_kpi.get("change", 0)
+        current = revenue_kpi.get("current", 0)
+        if change > 5:
+            insights.append({
+                "title": f"Revenue is growing at {change:.1f}%",
+                "description": f"Your revenue is now ~{_fmt_inr(current)}. Keep this momentum going!",
+                "recommendation": "Double down on what's working. Consider running the same promotions or stocking the same popular items.",
+                "severity": "low",
+                "category": "khata",
+            })
+        elif change < -5:
+            insights.append({
+                "title": f"Revenue dropped by {abs(change):.1f}%",
+                "description": f"Revenue is down to ~{_fmt_inr(current)}. This needs your attention.",
+                "recommendation": "Check if footfall is down, prices changed, or any popular items went out of stock.",
+                "severity": "high",
+                "category": "khata",
+            })
 
-        if kpi.get("volatility", 0) > 30:
-            insights.append(_make_insight(
-                title=f"High volatility in {name}",
-                description=(
-                    f"{name} exhibits a coefficient of variation of {kpi['volatility']:.1f}%, "
-                    "indicating substantial instability that introduces forecasting risk."
-                ),
-                severity="moderate",
-                confidence=0.85,
-                category="risk",
-                metric=name,
-                recommendation=(
-                    f"Identify the factors driving variability in {name} and consider "
-                    "implementing stabilisation measures or tighter monitoring."
-                ),
-            ))
+    if revenue_kpi and expense_kpi:
+        rev = revenue_kpi.get("current", 0)
+        exp = expense_kpi.get("current", 0)
+        if rev > 0 and exp > 0:
+            margin = ((rev - exp) / rev) * 100
+            if margin < 10:
+                insights.append({
+                    "title": f"Profit margin is only {margin:.0f}%",
+                    "description": "Your expenses are eating most of the revenue.",
+                    "recommendation": "Review your top 3 expenses. Can you negotiate better rates with suppliers?",
+                    "severity": "high",
+                    "category": "khata",
+                })
+            elif margin > 30:
+                insights.append({
+                    "title": f"Healthy profit margin: {margin:.0f}%",
+                    "description": "You are keeping good control over costs.",
+                    "recommendation": "Consider reinvesting some profit into marketing or inventory to grow faster.",
+                    "severity": "low",
+                    "category": "khata",
+                })
 
     return insights
 
 
-def _anomaly_insights(anomalies: list) -> list:
-    insights = []
+# ────────────────────────────────────────────────────────────────────
+#  FOOTFALL & ORDER INSIGHTS
+# ────────────────────────────────────────────────────────────────────
 
+def _footfall_order_insights(kpis: list, trends: dict, trend_lock: dict) -> list:
+    insights = []
+    customer_kpi = _find_kpi(kpis, ["customer", "footfall", "visitor"])
+    order_kpi = _find_kpi(kpis, ["order", "transaction", "bill"])
+
+    if customer_kpi:
+        change = customer_kpi.get("change", 0)
+        if change > 5:
+            insights.append({
+                "title": f"Footfall up {change:.1f}%",
+                "description": "More customers are visiting your shop. Great sign!",
+                "recommendation": "Make sure you have enough staff and stock to handle the rush.",
+                "severity": "low",
+                "category": "footfall",
+            })
+        elif change < -5:
+            insights.append({
+                "title": f"Customer visits dropped {abs(change):.1f}%",
+                "description": "Fewer people are coming to your shop compared to before.",
+                "recommendation": "Try a special offer or WhatsApp broadcast to bring customers back.",
+                "severity": "high",
+                "category": "footfall",
+            })
+
+    if order_kpi and customer_kpi:
+        orders = order_kpi.get("current", 0)
+        customers = customer_kpi.get("current", 1)
+        if customers > 0:
+            conversion = (orders / customers) * 100
+            if conversion < 50:
+                insights.append({
+                    "title": "Many visitors but few buyers",
+                    "description": f"Only {conversion:.0f}% of visitors are making a purchase.",
+                    "recommendation": "Check your pricing, product display, or offer a first-purchase discount.",
+                    "severity": "moderate",
+                    "category": "footfall",
+                })
+
+    return insights
+
+
+# ────────────────────────────────────────────────────────────────────
+#  GODOWN / INVENTORY INSIGHTS
+# ────────────────────────────────────────────────────────────────────
+
+def _godown_inventory_insights(kpis: list, trend_lock: dict) -> list:
+    insights = []
+    inv_kpi = _find_kpi(kpis, ["inventory", "stock", "godown", "quantity"])
+
+    if inv_kpi:
+        change = inv_kpi.get("change", 0)
+        if change > 20:
+            insights.append({
+                "title": "Inventory is piling up",
+                "description": f"Stock levels increased by {change:.0f}%. You might be over-ordering.",
+                "recommendation": "Run a clearance sale or reduce next order quantity for slow-moving items.",
+                "severity": "moderate",
+                "category": "godown",
+            })
+        elif change < -20:
+            insights.append({
+                "title": "Stock running low!",
+                "description": f"Inventory dropped by {abs(change):.0f}%. You might run out soon.",
+                "recommendation": "Place a reorder now for your fastest-selling items. Don't wait!",
+                "severity": "high",
+                "category": "godown",
+            })
+
+    return insights
+
+
+# ────────────────────────────────────────────────────────────────────
+#  CUSTOMER INSIGHTS
+# ────────────────────────────────────────────────────────────────────
+
+def _customer_insights(kpis: list, correlations: list, trend_lock: dict) -> list:
+    insights = []
+    basket_kpi = _find_kpi(kpis, ["basket", "avg_order", "ticket", "average"])
+
+    if basket_kpi:
+        change = basket_kpi.get("change", 0)
+        current = basket_kpi.get("current", 0)
+        if change > 5:
+            insights.append({
+                "title": f"Average bill increased to {_fmt_inr(current)}",
+                "description": "Customers are spending more per visit. Your upselling is working!",
+                "recommendation": "Keep suggesting add-on products at the billing counter.",
+                "severity": "low",
+                "category": "customer",
+            })
+        elif change < -5:
+            insights.append({
+                "title": f"Average bill dropped to {_fmt_inr(current)}",
+                "description": "Customers are buying less per visit.",
+                "recommendation": "Try combo offers or 'buy 2 get 1' deals to increase bill size.",
+                "severity": "moderate",
+                "category": "customer",
+            })
+
+    # Simple correlation-based insight
+    for corr in correlations[:3]:
+        if corr.get("strength") == "strong" and corr.get("direction") == "positive":
+            insights.append({
+                "title": f"{corr.get('label1', 'A')} and {corr.get('label2', 'B')} grow together",
+                "description": f"When {corr.get('label1', 'one')} increases, {corr.get('label2', 'the other')} also goes up.",
+                "recommendation": f"Focus on boosting {corr.get('label1', 'the first metric')} to see gains in both.",
+                "severity": "info",
+                "category": "customer",
+            })
+
+    return insights
+
+
+# ────────────────────────────────────────────────────────────────────
+#  ANOMALY INSIGHTS (simple language)
+# ────────────────────────────────────────────────────────────────────
+
+def _anomaly_insights_simple(anomalies: list) -> list:
+    insights = []
     critical = [a for a in anomalies if a.get("severity") == "critical"]
     high = [a for a in anomalies if a.get("severity") == "high"]
 
     if critical:
-        cols = list({a.get("label", a.get("column", "")) for a in critical})
-        insights.append(_make_insight(
-            title="Critical anomalies detected",
-            description=(
-                f"{len(critical)} critical anomalies detected across {', '.join(cols[:3])}. "
-                "These represent extreme deviations that could indicate data quality issues "
-                "or significant operational events."
-            ),
-            severity="critical",
-            confidence=0.90,
-            category="anomaly",
-            metric=cols[0] if cols else None,
-            recommendation=(
-                "Immediately investigate critical anomalies to determine if they are "
-                "genuine events or data errors. Implement alerting if not already in place."
-            ),
-        ))
+        names = ", ".join(a.get("label", a.get("column", "?")) for a in critical[:3])
+        insights.append({
+            "title": f"{len(critical)} number(s) look very unusual",
+            "description": f"These need immediate attention: {names}",
+            "recommendation": "Check if there was a data entry error, or if something genuinely changed in your business.",
+            "severity": "critical",
+            "category": "anomaly",
+        })
 
     if high:
-        cols = list({a.get("label", a.get("column", "")) for a in high})
-        insights.append(_make_insight(
-            title="Multiple high-severity anomalies",
-            description=(
-                f"{len(high)} high-severity anomalies found in {', '.join(cols[:3])}. "
-                "These warrant review as part of regular monitoring."
-            ),
-            severity="high",
-            confidence=0.85,
-            category="anomaly",
-            metric=cols[0] if cols else None,
-            recommendation="Review anomalies in the context of business events and seasonality.",
-        ))
+        names = ", ".join(a.get("label", a.get("column", "?")) for a in high[:3])
+        insights.append({
+            "title": f"{len(high)} number(s) are outside normal range",
+            "description": f"Keep an eye on: {names}",
+            "recommendation": "Monitor these over the next few days. If the pattern continues, investigate.",
+            "severity": "high",
+            "category": "anomaly",
+        })
+
+    if not anomalies:
+        insights.append({
+            "title": "Everything looks normal",
+            "description": "No unusual patterns found in your data today.",
+            "severity": "low",
+            "category": "anomaly",
+        })
 
     return insights
 
 
-def _forecast_insights(forecasts: list) -> list:
+# ────────────────────────────────────────────────────────────────────
+#  FORECAST INSIGHTS (simple language, no R-squared)
+# ────────────────────────────────────────────────────────────────────
+
+def _forecast_insights_simple(forecasts: list, trend_lock: dict) -> list:
     insights = []
-    for fc in forecasts:
-        name = fc.get("label", fc.get("column", ""))
-        r2 = fc.get("r2", fc.get("r_squared", 0))
-        forecast_points = fc.get("forecast", [])
+    growing = []
+    declining = []
 
-        if not forecast_points:
-            continue
+    for f in forecasts:
+        gr = f.get("growthRate", 0)
+        label = f.get("label", f.get("column", "metric"))
+        if gr > 5:
+            growing.append(label)
+        elif gr < -5:
+            declining.append(label)
 
-        last_actual = fc.get("historical", [])
-        if last_actual:
-            last_val = last_actual[-1].get("actual", last_actual[-1].get("value", 0))
-        else:
-            last_val = 0
+    if growing:
+        insights.append({
+            "title": f"{len(growing)} metric(s) predicted to grow",
+            "description": f"Expected growth in: {', '.join(growing[:4])}.",
+            "recommendation": "Prepare for increased demand. Stock up and ensure staffing is ready.",
+            "severity": "low",
+            "category": "forecast",
+        })
 
-        end_val = forecast_points[-1].get("predicted", forecast_points[-1].get("value", 0)) if forecast_points else 0
-        if last_val != 0:
-            forecast_change = (end_val - last_val) / abs(last_val) * 100
-        else:
-            forecast_change = 0
-
-        if abs(forecast_change) > 10:
-            direction = "growth" if forecast_change > 0 else "decline"
-            severity = "high" if abs(forecast_change) > 20 else "moderate"
-            insights.append(_make_insight(
-                title=f"Projected {direction} in {name}",
-                description=(
-                    f"Forecasting model (R²={r2:.2f}) projects a {abs(forecast_change):.1f}% "
-                    f"{direction} in {name} over the forecast horizon. "
-                    f"Model confidence is {'high' if r2 > 0.8 else 'moderate' if r2 > 0.5 else 'low'}."
-                ),
-                severity=severity,
-                confidence=min(0.92, r2),
-                category="forecast",
-                metric=name,
-                recommendation=(
-                    f"{'Capitalise on' if forecast_change > 0 else 'Prepare for'} the projected "
-                    f"{direction} in {name}. "
-                    f"{'Consider scaling resources to meet expected demand.' if forecast_change > 0 else 'Develop contingency plans to mitigate impact.'}"
-                ),
-            ))
-
-        if r2 < 0.4:
-            insights.append(_make_insight(
-                title=f"Low forecast confidence for {name}",
-                description=(
-                    f"The forecasting model for {name} has an R² of {r2:.2f}, indicating limited "
-                    "predictive power. Forecasts should be interpreted with caution."
-                ),
-                severity="low",
-                confidence=0.80,
-                category="forecast",
-                metric=name,
-                recommendation=(
-                    "Gather more historical data or consider external factors that may improve "
-                    "forecast accuracy."
-                ),
-            ))
+    if declining:
+        # Respect trend lock
+        sev = "moderate"
+        if trend_lock.get("direction") == "down":
+            sev = "high"
+        insights.append({
+            "title": f"{len(declining)} metric(s) may decline",
+            "description": f"Possible decline in: {', '.join(declining[:4])}.",
+            "recommendation": "Plan promotions or cost reductions to offset the expected dip.",
+            "severity": sev,
+            "category": "forecast",
+        })
 
     return insights
 
 
-def _correlation_insights(correlations: list) -> list:
+# ────────────────────────────────────────────────────────────────────
+#  DATA QUALITY INSIGHTS
+# ────────────────────────────────────────────────────────────────────
+
+def _quality_insights_simple(schema: dict, data_sufficiency: str) -> list:
     insights = []
-    strong = [c for c in correlations if c.get("strength") == "strong" and c.get("is_significant")]
+    dq = schema.get("data_quality", {})
+    completeness = dq.get("overall_completeness", 100)
 
-    for corr in strong[:5]:
-        direction = corr["direction"]
-        insights.append(_make_insight(
-            title=f"Strong {direction} link: {corr['label1']} ↔ {corr['label2']}",
-            description=(
-                f"{corr['label1']} and {corr['label2']} have a strong {direction} correlation "
-                f"(r = {corr['correlation']:.2f}, p = {corr['p_value']:.4f}). "
-                "Changes in one metric likely accompany changes in the other."
-            ),
-            severity="moderate",
-            confidence=0.88,
-            category="correlation",
-            metric=corr["col1"],
-            recommendation=(
-                f"Consider {corr['label1']} and {corr['label2']} together when making decisions. "
-                "Optimising one may have a direct effect on the other."
-            ),
-        ))
+    if completeness < 90:
+        insights.append({
+            "title": "Some data is missing",
+            "description": f"About {100 - completeness:.0f}% of your data has empty fields.",
+            "recommendation": "Try to fill in all columns when entering data. Complete data = better insights.",
+            "severity": "moderate",
+            "category": "data_quality",
+        })
 
-    return insights
-
-
-def _risk_insights(risk_scores: list) -> list:
-    insights = []
-    high_risk = [r for r in risk_scores if r["risk_level"] in ("critical", "high")]
-
-    for risk in high_risk[:3]:
-        insights.append(_make_insight(
-            title=f"Elevated risk: {risk['label']}",
-            description=(
-                f"{risk['label']} has a composite risk score of {risk['risk_score']:.2f} "
-                f"({risk['risk_level']}). Contributing factors: "
-                f"volatility ({risk['volatility_component']:.0%}), "
-                f"negative trend ({risk['trend_component']:.0%}), "
-                f"outliers ({risk['outlier_component']:.0%})."
-            ),
-            severity=risk["risk_level"],
-            confidence=0.82,
-            category="risk",
-            metric=risk["column"],
-            recommendation=(
-                f"Prioritise monitoring of {risk['label']} and address the dominant risk factor."
-            ),
-        ))
+    if data_sufficiency == "partial":
+        insights.append({
+            "title": "Log more days to unlock predictions",
+            "description": "Yukti needs at least 14 days of data for accurate predictions.",
+            "recommendation": "Keep logging your daily numbers. Predictions will unlock soon!",
+            "severity": "info",
+            "category": "data_quality",
+        })
+    elif data_sufficiency == "insufficient":
+        insights.append({
+            "title": "Need more data to analyze",
+            "description": "You have less than 3 days of data. Yukti needs more to find patterns.",
+            "recommendation": "Log your daily sales, expenses, and customer numbers for at least a week.",
+            "severity": "moderate",
+            "category": "data_quality",
+        })
 
     return insights
 
 
-def _quality_insights(schema: dict) -> list:
-    insights = []
-    quality = schema.get("data_quality", {})
-    completeness = quality.get("overall_completeness", quality.get("completeness", 100))
+# ────────────────────────────────────────────────────────────────────
+#  AI-POWERED ADVISOR
+# ────────────────────────────────────────────────────────────────────
 
-    if completeness < 95:
-        severity = "high" if completeness < 80 else "moderate"
-        insights.append(_make_insight(
-            title="Data completeness concern",
-            description=(
-                f"Overall data completeness is {completeness:.1f}%. "
-                "Missing values may bias analytics and reduce forecast reliability."
-            ),
-            severity=severity,
-            confidence=0.95,
-            category="data_quality",
-            metric=None,
-            recommendation=(
-                "Investigate missing data patterns. Consider imputation strategies or "
-                "data pipeline improvements to increase completeness."
-            ),
-        ))
-
-    return insights
-
-
-# ------------------------------------------------------------------ #
-#  Growth & Strategy Insights                                          #
-# ------------------------------------------------------------------ #
-
-def _growth_strategy_insights(analytics: dict, predictions: dict, decisions: dict) -> list:
-    """Generate actionable growth and strategy insights from KPIs, forecasts, and correlations."""
-    insights = []
-    kpis = analytics.get("kpis", [])
-    forecasts = predictions.get("forecasts", [])
-    correlations = decisions.get("correlations", [])
-
-    # Identify top growing KPIs as growth opportunities
-    growing_kpis = sorted(
-        [k for k in kpis if k.get("growth_rate", k.get("change", 0)) > 0],
-        key=lambda k: k.get("growth_rate", k.get("change", 0)),
-        reverse=True,
-    )
-
-    for kpi in growing_kpis[:3]:
-        name = kpi.get("label", kpi.get("column", ""))
-        growth = kpi.get("growth_rate", kpi.get("change", 0))
-        current = kpi.get("current", kpi.get("mean", 0))
-        insights.append(_make_insight(
-            title=f"Accelerate growth in {name}",
-            description=(
-                f"{name} is already growing at {abs(growth):.1f}% "
-                f"(current: {current:,.0f}). This positive momentum represents a "
-                "strategic opportunity to double down with targeted investments."
-            ),
-            severity="moderate",
-            confidence=0.85,
-            category="growth",
-            metric=name,
-            recommendation=(
-                f"Allocate additional resources to sustain {name} growth. "
-                "Analyse what's driving this metric upward and replicate those conditions. "
-                "Set a stretch target 15-20% above current trajectory."
-            ),
-        ))
-
-    # Declining KPIs as improvement opportunities
-    declining_kpis = sorted(
-        [k for k in kpis if k.get("growth_rate", k.get("change", 0)) < -5],
-        key=lambda k: k.get("growth_rate", k.get("change", 0)),
-    )
-
-    for kpi in declining_kpis[:2]:
-        name = kpi.get("label", kpi.get("column", ""))
-        decline = abs(kpi.get("growth_rate", kpi.get("change", 0)))
-        insights.append(_make_insight(
-            title=f"Recovery opportunity: {name}",
-            description=(
-                f"{name} has declined by {decline:.1f}%. Reversing this trend "
-                "could significantly impact overall business performance."
-            ),
-            severity="high",
-            confidence=0.82,
-            category="opportunity",
-            metric=name,
-            recommendation=(
-                f"Conduct root-cause analysis on the {name} decline. "
-                "Implement a 30-day recovery plan with weekly checkpoints. "
-                "Consider competitive benchmarking to identify gaps."
-            ),
-        ))
-
-    # Forecast-based growth strategies
-    positive_forecasts = [f for f in forecasts if f.get("growth_rate", 0) > 5]
-    for fc in positive_forecasts[:2]:
-        name = fc.get("label", fc.get("column", ""))
-        growth = fc.get("growth_rate", 0)
-        r2 = fc.get("r2", 0)
-        insights.append(_make_insight(
-            title=f"Capitalise on projected {name} growth",
-            description=(
-                f"Forecasting models project {growth:.1f}% growth in {name} "
-                f"(model confidence: {r2*100:.0f}%). Proactive preparation can "
-                "maximise returns from this projected uptrend."
-            ),
-            severity="moderate",
-            confidence=min(0.90, r2),
-            category="growth",
-            metric=name,
-            recommendation=(
-                f"Pre-position inventory and staffing for the projected increase in {name}. "
-                "Develop promotional campaigns timed to coincide with the growth window. "
-                "Monitor weekly to confirm the trend materialises."
-            ),
-        ))
-
-    # Correlation-based strategy (e.g. marketing → revenue link)
-    strong_positive = [c for c in correlations
-                       if c.get("strength") == "strong" and c.get("direction") == "positive"]
-    for corr in strong_positive[:2]:
-        col1 = corr.get("label1", corr.get("col1", ""))
-        col2 = corr.get("label2", corr.get("col2", ""))
-        r = corr.get("correlation", 0)
-        insights.append(_make_insight(
-            title=f"Strategic lever: {col1} drives {col2}",
-            description=(
-                f"A strong positive correlation (r={r:.2f}) exists between {col1} and {col2}. "
-                f"Increasing {col1} is statistically likely to boost {col2}."
-            ),
-            severity="moderate",
-            confidence=0.87,
-            category="growth",
-            metric=corr.get("col1", ""),
-            recommendation=(
-                f"Test a controlled increase in {col1} to measure the impact on {col2}. "
-                "Start with a 10-15% uplift and track results over 2-4 weeks. "
-                "Use A/B testing where possible for statistical rigour."
-            ),
-        ))
-
-    # If no specific growth insights were generated, add generic ones
-    if not insights and kpis:
-        best_kpi = max(kpis, key=lambda k: k.get("current", k.get("mean", 0)), default=None)
-        if best_kpi:
-            name = best_kpi.get("label", best_kpi.get("column", ""))
-            insights.append(_make_insight(
-                title=f"Optimise your top metric: {name}",
-                description=(
-                    f"{name} is your strongest performing metric. Focus on protecting and "
-                    "growing this key driver through systematic optimisation."
-                ),
-                severity="moderate",
-                confidence=0.75,
-                category="growth",
-                metric=name,
-                recommendation=(
-                    f"Set up automated monitoring for {name}. Identify the top 3 factors "
-                    "influencing it and create action plans for each. "
-                    "Aim for a 10% improvement over the next quarter."
-                ),
-            ))
-
-    return insights
-
-
-def _revenue_opportunity_insights(analytics: dict, predictions: dict) -> list:
-    """Generate revenue-specific opportunity insights."""
-    insights = []
-    kpis = analytics.get("kpis", [])
-    forecasts = predictions.get("forecasts", [])
-
-    # Find revenue-related KPIs
-    revenue_kpis = [k for k in kpis if any(
-        term in (k.get("label", k.get("column", ""))).lower()
-        for term in ["revenue", "sales", "income", "profit", "earning"]
-    )]
-
-    for kpi in revenue_kpis[:2]:
-        name = kpi.get("label", kpi.get("column", ""))
-        current = kpi.get("current", kpi.get("mean", 0))
-        growth = kpi.get("growth_rate", kpi.get("change", 0))
-
-        if growth > 0:
-            insights.append(_make_insight(
-                title=f"Revenue momentum: {name} is growing",
-                description=(
-                    f"{name} shows {growth:.1f}% growth with a current value of "
-                    f"${current:,.0f}. This positive trajectory can be amplified with "
-                    "targeted strategies."
-                ),
-                severity="moderate",
-                confidence=0.85,
-                category="opportunity",
-                metric=name,
-                recommendation=(
-                    "Focus on customer retention to compound growth. "
-                    "Consider upselling/cross-selling to increase average transaction value. "
-                    "Invest in the marketing channels with highest ROI."
-                ),
-            ))
-        else:
-            target_recovery = abs(growth) * 1.5
-            insights.append(_make_insight(
-                title=f"Revenue recovery plan needed for {name}",
-                description=(
-                    f"{name} shows a {abs(growth):.1f}% decline. "
-                    f"A targeted recovery plan aiming for +{target_recovery:.1f}% could "
-                    "restore and exceed previous performance levels."
-                ),
-                severity="high",
-                confidence=0.80,
-                category="opportunity",
-                metric=name,
-                recommendation=(
-                    "Launch a promotional campaign to re-engage lapsed customers. "
-                    "Review pricing strategy against competitors. "
-                    "Analyse customer feedback for product/service improvements."
-                ),
-            ))
-
-    # Basket size / order value opportunities
-    basket_kpis = [k for k in kpis if any(
-        term in (k.get("label", k.get("column", ""))).lower()
-        for term in ["basket", "order", "transaction", "avg"]
-    )]
-
-    for kpi in basket_kpis[:1]:
-        name = kpi.get("label", kpi.get("column", ""))
-        current = kpi.get("current", kpi.get("mean", 0))
-        insights.append(_make_insight(
-            title=f"Increase average {name}",
-            description=(
-                f"Current {name} is ${current:,.2f}. Even a 5% improvement would "
-                f"yield approximately ${current * 0.05:,.2f} additional per transaction."
-            ),
-            severity="moderate",
-            confidence=0.80,
-            category="opportunity",
-            metric=name,
-            recommendation=(
-                "Implement bundle pricing or minimum-order incentives. "
-                "Train staff on suggestive selling techniques. "
-                "Use data to identify commonly paired products for cross-sell opportunities."
-            ),
-        ))
-
-    return insights
-
-
-def _gemini_strategy_insights(schema: dict, analytics: dict,
-                               predictions: dict, decisions: dict) -> list:
-    """Use AI (Gemini → Groq fallback) to generate business strategy insights."""
+def _ai_advisor_insights(
+    kpis, anomalies, forecasts, correlations, trends, trend_lock, data_sufficiency
+) -> list:
+    """Use AI (Gemini/Groq/Claude) to generate advisor insights."""
     if not is_any_ai_available():
-        return []
+        return _fallback_advisor_insights(kpis, trend_lock)
+
+    # Build context for the AI
+    kpi_summary = []
+    for k in kpis[:8]:
+        kpi_summary.append(
+            f"- {k.get('label', k.get('column', '?'))}: "
+            f"current={k.get('current', '?')}, change={k.get('change', 0)}%, "
+            f"trend={k.get('trend', 'stable')}"
+        )
+
+    anomaly_summary = []
+    for a in anomalies[:5]:
+        anomaly_summary.append(
+            f"- {a.get('label', a.get('column', '?'))}: "
+            f"severity={a.get('severity', '?')}, type={a.get('type', '?')}"
+        )
+
+    forecast_summary = []
+    for f in forecasts[:5]:
+        forecast_summary.append(
+            f"- {f.get('label', f.get('column', '?'))}: "
+            f"growth={f.get('growthRate', 0):.1f}%"
+        )
+
+    prompt = f"""You are Yukti, a business advisor for small Indian shopkeepers (kirana stores, 
+small retail, local businesses in tier 2-3 cities).
+
+BUSINESS DATA:
+Trend direction: {trend_lock.get('direction', 'stable')} 
+(primary metric: {trend_lock.get('metric', 'business')} at {trend_lock.get('change', 0)}%)
+Data sufficiency: {data_sufficiency}
+
+KPIs:
+{chr(10).join(kpi_summary) if kpi_summary else 'No KPIs available'}
+
+Anomalies:
+{chr(10).join(anomaly_summary) if anomaly_summary else 'None'}
+
+Forecasts:
+{chr(10).join(forecast_summary) if forecast_summary else 'Not enough data'}
+
+RULES:
+1. Use simple English a shopkeeper can understand
+2. Use Indian Rupee (₹) for all money values
+3. NO technical terms (no R², no regression, no coefficient, no statistical jargon)
+4. Every insight MUST have a specific ACTION the shopkeeper can take TODAY or THIS WEEK
+5. Be consistent with the trend direction: {trend_lock.get('direction', 'stable')}
+6. Generate 6-8 insights covering different aspects of the business
+7. Categories must be one of: growth, savings, opportunity
+8. Include at least one insight about: pricing strategy, customer retention, seasonal planning, and cost optimization
+9. Make recommendations very specific — mention exact numbers, days, or actions where possible
+10. If forecasts show growth, suggest how to prepare for increased demand
+11. If forecasts show decline, suggest concrete recovery steps
+
+Return ONLY valid JSON array like:
+[
+  {{
+    "title": "short headline",
+    "description": "1-2 sentence explanation with specific numbers",
+    "recommendation": "specific action to take today or this week",
+    "severity": "moderate",
+    "category": "growth"
+  }}
+]"""
 
     try:
-        # Build a concise summary for the AI prompt
-        kpis = analytics.get("kpis", [])
-        forecasts = predictions.get("forecasts", [])
-        correlations = decisions.get("correlations", [])
+        response, provider = generate_ai_content(prompt)
+        if not response:
+            return _fallback_advisor_insights(kpis, trend_lock), "rule_based"
 
-        kpi_summary = []
-        for k in kpis[:8]:
-            kpi_summary.append({
-                "metric": k.get("label", k.get("column", "")),
-                "current": round(k.get("current", k.get("mean", 0)), 2),
-                "change_pct": round(k.get("growth_rate", k.get("change", 0)), 2),
-                "trend": k.get("trend", "stable"),
+        # Parse JSON from response
+        text = response.strip()
+        # Find JSON array in the response
+        start = text.find("[")
+        end = text.rfind("]") + 1
+        if start >= 0 and end > start:
+            parsed = json.loads(text[start:end])
+            # Validate and clean
+            valid = []
+            allowed_cats = {"growth", "savings", "opportunity", "advisor"}
+            for item in parsed[:8]:
+                if isinstance(item, dict) and "title" in item:
+                    if item.get("category") not in allowed_cats:
+                        item["category"] = "advisor"
+                    if item.get("severity") not in {"critical", "high", "moderate", "low", "info"}:
+                        item["severity"] = "moderate"
+                    valid.append(item)
+            return valid, provider
+    except Exception as e:
+        print(f"[insight_engine] AI advisor error: {e}")
+
+    return _fallback_advisor_insights(kpis, trend_lock), "rule_based"
+
+
+def _fallback_advisor_insights(kpis: list, trend_lock: dict) -> list:
+    """Rule-based advisor when AI is unavailable — richer set of insights."""
+    insights = []
+    direction = trend_lock.get("direction", "stable")
+
+    if direction == "up":
+        insights.append({
+            "title": "Your business is growing - time to invest!",
+            "description": "Revenue is trending up. This is the best time to reinvest in your business.",
+            "recommendation": "Consider adding a new product line, improving your shop display, or running a loyalty program.",
+            "severity": "low",
+            "category": "growth",
+        })
+        insights.append({
+            "title": "Prepare for increased demand",
+            "description": "Growing sales means you need to keep stock ready. Running out of popular items costs you money.",
+            "recommendation": "Increase order quantity for your top 5 selling items by 15-20% this week to avoid stockouts.",
+            "severity": "moderate",
+            "category": "growth",
+        })
+    elif direction == "down":
+        insights.append({
+            "title": "Time to focus on cost control",
+            "description": "Revenue is declining. Focus on reducing waste and unnecessary expenses.",
+            "recommendation": "Review your top 5 expenses. Cancel any subscriptions you don't need. Negotiate with suppliers for better rates.",
+            "severity": "high",
+            "category": "savings",
+        })
+        insights.append({
+            "title": "Win back lost customers",
+            "description": "When sales drop, reconnecting with past customers is the fastest recovery path.",
+            "recommendation": "Send a WhatsApp message to your top 10 regular customers with a special offer or discount to bring them back.",
+            "severity": "high",
+            "category": "growth",
+        })
+    else:
+        insights.append({
+            "title": "Business is steady - good time to experiment",
+            "description": "Your numbers are stable. This is a safe time to try new things.",
+            "recommendation": "Try a new product, a weekend sale, or start a WhatsApp group for your regular customers.",
+            "severity": "moderate",
+            "category": "opportunity",
+        })
+
+    # Revenue-specific insight
+    revenue_kpi = _find_kpi(kpis, ["revenue", "sales", "income"])
+    if revenue_kpi and revenue_kpi.get("current"):
+        insights.append({
+            "title": f"Your revenue is at {_fmt_inr(revenue_kpi['current'])}",
+            "description": f"Current revenue trend: {revenue_kpi.get('trend', 'steady')}. "
+                          f"Change: {revenue_kpi.get('change', 0):.1f}% from previous period.",
+            "recommendation": "Set a target to increase revenue by 10% next month. Start by upselling to existing customers.",
+            "severity": "info",
+            "category": "growth",
+        })
+
+    # Expense-specific insight
+    expense_kpi = _find_kpi(kpis, ["expense", "cost", "spend"])
+    if expense_kpi and expense_kpi.get("current"):
+        insights.append({
+            "title": "Review your expenses",
+            "description": f"Current expenses: {_fmt_inr(expense_kpi['current'])}. "
+                          f"Even a 5% reduction can improve your profit significantly.",
+            "recommendation": "List all recurring expenses. Cut the bottom 3 that give least value. Renegotiate supplier terms for bulk discounts.",
+            "severity": "moderate",
+            "category": "savings",
+        })
+
+    # Customer-specific insight
+    customer_kpi = _find_kpi(kpis, ["customer", "footfall", "visitor"])
+    if customer_kpi and customer_kpi.get("current"):
+        change = customer_kpi.get("change", 0)
+        if change > 5:
+            insights.append({
+                "title": "Customer footfall is increasing",
+                "description": f"You're seeing {change:.0f}% more customers. Convert this traffic into higher sales.",
+                "recommendation": "Place high-margin items near the billing counter. Train staff to suggest add-on products.",
+                "severity": "low",
+                "category": "growth",
+            })
+        elif change < -5:
+            insights.append({
+                "title": "Fewer customers this period",
+                "description": f"Customer visits are down {abs(change):.0f}%. Focus on bringing people back.",
+                "recommendation": "Run a 'bring a friend' offer or a limited-time discount on popular items to attract footfall.",
+                "severity": "high",
+                "category": "opportunity",
             })
 
-        forecast_summary = []
-        for f in forecasts[:4]:
-            forecast_summary.append({
-                "metric": f.get("label", f.get("column", "")),
-                "growth_rate": round(f.get("growth_rate", 0), 2),
-                "confidence": round(f.get("r2", 0), 2),
-                "trend": f.get("trend", "flat"),
-            })
+    # Always add general business tips
+    insights.append({
+        "title": "Track your numbers daily",
+        "description": "Businesses that track daily perform 30% better on average.",
+        "recommendation": "Log your sales, expenses, and customer count every evening. Yukti will find patterns you might miss.",
+        "severity": "info",
+        "category": "advisor",
+    })
 
-        prompt = f"""You are a senior business analyst. Based on the following business metrics data, generate exactly 3 actionable strategy recommendations.
+    insights.append({
+        "title": "Plan for the weekend rush",
+        "description": "Most retail businesses see 30-40% higher sales on weekends.",
+        "recommendation": "Stock up on fast-moving items by Thursday. Schedule extra help for Saturday if needed.",
+        "severity": "info",
+        "category": "opportunity",
+    })
 
-KPI Performance:
-{json.dumps(kpi_summary, indent=2)}
-
-Forecast Projections:
-{json.dumps(forecast_summary, indent=2)}
-
-For each recommendation, provide:
-1. A short title (5-10 words)
-2. A description (2-3 sentences explaining the insight)
-3. A specific recommendation (2-3 actionable sentences)
-4. A severity: "high" for urgent items, "moderate" for important ones
-5. A category: must be either "growth" or "opportunity"
-
-Return ONLY a valid JSON array of objects with keys: title, description, recommendation, severity, category
-No markdown, no explanation, just the JSON array."""
-
-        text, provider = generate_ai_content(prompt)
-
-        items = json.loads(text)
-        insights = []
-        for item in items[:3]:
-            insights.append(_make_insight(
-                title=item.get("title", "AI Strategy Recommendation"),
-                description=item.get("description", ""),
-                severity=item.get("severity", "moderate"),
-                confidence=0.78,
-                category=item.get("category", "growth"),
-                metric=None,
-                recommendation=item.get("recommendation", ""),
-            ))
-        return insights
-
-    except Exception:
-        # If all AI providers fail, return empty — the rule-based insights still work
-        return []
+    return insights
 
 
-# ------------------------------------------------------------------ #
-#  Narrative                                                           #
-# ------------------------------------------------------------------ #
+# ────────────────────────────────────────────────────────────────────
+#  NARRATIVE BUILDER
+# ────────────────────────────────────────────────────────────────────
 
-def _build_narrative(schema, analytics, predictions, decisions, insights) -> str:
-    """Generate a top-level executive summary paragraph."""
+def _build_narrative_simple(kpis, anomalies, forecasts, trend_lock, data_sufficiency) -> str:
+    """Build a 1-2 sentence summary for the dashboard header."""
+    direction = trend_lock.get("direction", "stable")
+    metric = trend_lock.get("metric", "business")
+    change = abs(trend_lock.get("change", 0))
+
     parts = []
-    col_count = len(schema.get("columns", []))
-    row_count = schema.get("total_rows", schema.get("row_count", "—"))
 
-    parts.append(
-        f"Yukti analysed a dataset containing {col_count} features and {row_count} records."
-    )
+    if direction == "up":
+        parts.append(f"Your {metric} is up {change}% - great progress!")
+    elif direction == "down":
+        parts.append(f"Your {metric} is down {change}% - let's work on recovery.")
+    else:
+        parts.append(f"Your {metric} is holding steady.")
 
-    kpis = analytics.get("kpis", [])
-    if kpis:
-        growing = [k for k in kpis if k.get("growth_rate", k.get("growth", 0)) > 5]
-        declining = [k for k in kpis if k.get("growth_rate", k.get("growth", 0)) < -5]
-        if growing:
-            names = ", ".join(k.get("label", k.get("column", "")) for k in growing[:3])
-            parts.append(f"Positive momentum was detected in {names}.")
-        if declining:
-            names = ", ".join(k.get("label", k.get("column", "")) for k in declining[:3])
-            parts.append(f"Declining trends were observed in {names}.")
+    critical = len([a for a in anomalies if a.get("severity") == "critical"])
+    if critical:
+        parts.append(f"{critical} item(s) need your immediate attention.")
 
-    anomalies = predictions.get("anomalies", [])
-    critical_anomalies = [a for a in anomalies if a.get("severity") == "critical"]
-    if critical_anomalies:
-        parts.append(
-            f"{len(critical_anomalies)} critical anomalies require immediate attention."
-        )
-
-    correlations = decisions.get("correlations", [])
-    strong_corr = [c for c in correlations if c.get("strength") == "strong"]
-    if strong_corr:
-        parts.append(
-            f"{len(strong_corr)} strong inter-metric correlations were identified, "
-            "suggesting actionable dependencies."
-        )
-
-    severity_counts = {}
-    for ins in insights:
-        sev = ins["severity"]
-        severity_counts[sev] = severity_counts.get(sev, 0) + 1
-    if severity_counts:
-        breakdown = ", ".join(f"{v} {k}" for k, v in severity_counts.items() if v > 0)
-        parts.append(f"In total, the system generated insights: {breakdown}.")
+    if data_sufficiency == "partial":
+        parts.append("Log more days to unlock full predictions.")
+    elif data_sufficiency == "insufficient":
+        parts.append("Start logging daily data to get better insights.")
 
     return " ".join(parts)
 
 
-# ------------------------------------------------------------------ #
-#  Helper                                                              #
-# ------------------------------------------------------------------ #
+# ────────────────────────────────────────────────────────────────────
+#  UTILITY HELPERS
+# ────────────────────────────────────────────────────────────────────
 
-def _make_insight(
-    title: str,
-    description: str,
-    severity: str,
-    confidence: float,
-    category: str,
-    metric: str | None,
-    recommendation: str,
-) -> dict:
-    return {
-        "title": title,
-        "description": description,
-        "severity": severity,
-        "confidence": round(confidence, 2),
-        "category": category,
-        "metric": metric,
-        "recommendation": recommendation,
-    }
+def _find_kpi(kpis: list, keywords: list):
+    """Find a KPI whose label/column matches any keyword."""
+    for kpi in kpis:
+        name = (kpi.get("label", "") + " " + kpi.get("column", "")).lower()
+        if any(kw in name for kw in keywords):
+            return kpi
+    return None
+
+
+def _fmt_inr(value) -> str:
+    """Format a number in Indian Rupee style."""
+    if value is None:
+        return "?"
+    num = float(value)
+    if abs(num) >= 10_000_000:
+        return f"₹{num / 10_000_000:.1f} Cr"
+    if abs(num) >= 100_000:
+        return f"₹{num / 100_000:.1f} L"
+    if abs(num) >= 1_000:
+        return f"₹{num / 1_000:.1f}K"
+    return f"₹{num:,.0f}"

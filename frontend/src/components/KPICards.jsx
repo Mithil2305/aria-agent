@@ -1,8 +1,13 @@
-import { TrendingUp, TrendingDown, Minus, Activity } from "lucide-react";
+import { ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
+
+/**
+ * KPICards — Indian SMB edition
+ * Shows key business numbers with ₹ formatting.
+ * "Yukti Confidence: High / Medium / Low" instead of raw percentages.
+ */
 
 export default function KPICards({ kpis, expanded }) {
 	if (!kpis || kpis.length === 0) return null;
-
 	const displayed = expanded ? kpis : kpis.slice(0, 6);
 
 	return (
@@ -17,7 +22,6 @@ export default function KPICards({ kpis, expanded }) {
 function KPICard({ kpi, index }) {
 	const isPositive = kpi.change > 0;
 	const isNeutral = Math.abs(kpi.change) < 2;
-	const TrendIcon = isNeutral ? Minus : isPositive ? TrendingUp : TrendingDown;
 	const trendColor = isNeutral
 		? "text-surface-400"
 		: isPositive
@@ -34,7 +38,17 @@ function KPICard({ kpi, index }) {
 			? "Growing"
 			: kpi.trend === "falling"
 				? "Declining"
-				: "Stable";
+				: "Steady";
+
+	// Confidence: High / Medium / Low instead of raw %
+	const conf = kpi.confidence || 0;
+	const confLabel = conf > 0.8 ? "High" : conf > 0.5 ? "Medium" : "Low";
+	const confColor =
+		conf > 0.8
+			? "text-green-600 bg-green-50"
+			: conf > 0.5
+				? "text-amber-600 bg-amber-50"
+				: "text-surface-500 bg-surface-100";
 
 	return (
 		<div
@@ -48,13 +62,19 @@ function KPICard({ kpi, index }) {
 						{kpi.label}
 					</p>
 					<p className="text-2xl font-bold text-surface-900 tracking-tight">
-						{formatValue(kpi.current)}
+						{formatINR(kpi.current)}
 					</p>
 				</div>
 				<div
 					className={`flex items-center gap-1 px-2.5 py-1 rounded-lg ${trendBg} shrink-0`}
 				>
-					<TrendIcon size={13} className={trendColor} />
+					{isNeutral ? (
+						<Minus size={13} className={trendColor} />
+					) : isPositive ? (
+						<ArrowUpRight size={13} className={trendColor} />
+					) : (
+						<ArrowDownRight size={13} className={trendColor} />
+					)}
 					<span className={`text-xs font-semibold ${trendColor}`}>
 						{kpi.change > 0 ? "+" : ""}
 						{kpi.change}%
@@ -65,41 +85,28 @@ function KPICard({ kpi, index }) {
 			{/* Context row */}
 			<div className="flex items-center justify-between text-[11px] mb-3">
 				<span className={`font-medium ${trendColor}`}>{trendWord}</span>
-				<span className="text-surface-500">Avg: {formatValue(kpi.mean)}</span>
+				<span className="text-surface-500">Avg: {formatINR(kpi.mean)}</span>
 			</div>
 
-			{/* Confidence bar with label */}
-			<div>
-				<div className="flex items-center justify-between mb-1">
-					<span className="text-[10px] text-surface-500 flex items-center gap-1">
-						<Activity size={9} className="text-surface-600" />
-						Reliability
-					</span>
-					<span className="text-[10px] text-surface-500">
-						{(kpi.confidence * 100).toFixed(0)}%
-					</span>
-				</div>
-				<div className="h-1.5 bg-surface-200 rounded-full overflow-hidden">
-					<div
-						className={`h-full rounded-full transition-all duration-1000 ${
-							kpi.confidence > 0.8
-								? "bg-green-500"
-								: kpi.confidence > 0.6
-									? "bg-amber-500"
-									: "bg-red-500"
-						}`}
-						style={{ width: `${kpi.confidence * 100}%` }}
-					/>
-				</div>
+			{/* Yukti Confidence: simple label */}
+			<div className="flex items-center gap-2">
+				<span
+					className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${confColor}`}
+				>
+					Yukti Confidence: {confLabel}
+				</span>
 			</div>
 		</div>
 	);
 }
 
-function formatValue(num) {
-	if (num === null || num === undefined) return "—";
-	if (Math.abs(num) >= 1e6) return (num / 1e6).toFixed(2) + "M";
-	if (Math.abs(num) >= 1e3) return (num / 1e3).toFixed(1) + "K";
-	if (Number.isInteger(num)) return num.toLocaleString();
+function formatINR(value) {
+	if (value == null) return "—";
+	const num = Number(value);
+	if (isNaN(num)) return String(value);
+	if (Math.abs(num) >= 10000000) return `₹${(num / 10000000).toFixed(1)} Cr`;
+	if (Math.abs(num) >= 100000) return `₹${(num / 100000).toFixed(1)} L`;
+	if (Math.abs(num) >= 1000) return `₹${(num / 1000).toFixed(1)}K`;
+	if (Number.isInteger(num)) return num.toLocaleString("en-IN");
 	return num.toFixed(2);
 }

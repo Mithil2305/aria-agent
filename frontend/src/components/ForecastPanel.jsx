@@ -96,7 +96,7 @@ export default function ForecastPanel({ forecasts, expanded }) {
 			</div>
 
 			{/* Summary cards */}
-			<div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+			<div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
 				<SummaryCard
 					label="Direction"
 					value={trendWord}
@@ -107,10 +107,15 @@ export default function ForecastPanel({ forecasts, expanded }) {
 					value={`${fc.growthRate > 0 ? "+" : ""}${fc.growthRate}%`}
 				/>
 				<SummaryCard
-					label="Confidence"
-					value={`${(fc.confidence * 100).toFixed(0)}%`}
+					label="Yukti Confidence"
+					value={
+						fc.confidence >= 0.7
+							? "High"
+							: fc.confidence >= 0.4
+								? "Medium"
+								: "Low"
+					}
 				/>
-				<SummaryCard label="Model Fit" value={`${(fc.r2 * 100).toFixed(0)}%`} />
 			</div>
 
 			{expanded && lastForecast && (
@@ -131,8 +136,11 @@ export default function ForecastPanel({ forecasts, expanded }) {
 				</div>
 			)}
 
-			<div className={expanded ? "h-72" : "h-56"}>
-				<ResponsiveContainer width="100%" height="100%">
+			<div
+				className={expanded ? "h-72" : "h-56"}
+				style={{ minWidth: 0, minHeight: expanded ? 288 : 224 }}
+			>
+				<ResponsiveContainer width="99%" height="100%">
 					<ComposedChart
 						data={combinedData}
 						margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
@@ -217,7 +225,7 @@ export default function ForecastPanel({ forecasts, expanded }) {
 
 			<div className="flex items-center gap-6 mt-3 justify-center">
 				<div className="flex items-center gap-1.5">
-					<div className="w-4 h-0.5 bg-gold-500 rounded" />
+					<div className="w-4 h-0.5 bg-indigo-500 rounded" />
 					<span className="text-[10px] text-surface-500">Past Data</span>
 				</div>
 				<div className="flex items-center gap-1.5">
