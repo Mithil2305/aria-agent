@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Dashboard from "../components/Dashboard";
+import ReportHistory from "../components/ReportHistory";
 import { useAuth } from "../contexts/AuthContext";
+import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
+import { db } from "../firebase";
 import {
 	TrendingUp,
 	Target,
@@ -21,9 +24,12 @@ import {
 export default function DashboardPage() {
 	const [analysis, setAnalysis] = useState(null);
 	const [rowCount, setRowCount] = useState(0);
+	const [savedReports, setSavedReports] = useState([]);
+	const [reportsLoading, setReportsLoading] = useState(false);
 	const navigate = useNavigate();
-	const { userProfile } = useAuth();
+	const { user, userProfile } = useAuth();
 
+	// Load current session analysis
 	useEffect(() => {
 		const stored = sessionStorage.getItem("yukti_analysis");
 		const storedRows = sessionStorage.getItem("yukti_rowCount");
@@ -37,6 +43,40 @@ export default function DashboardPage() {
 		}
 	}, []);
 
+	// Fetch saved reports from Firestore
+	useEffect(() => {
+		if (!user) return;
+		let cancelled = false;
+
+		const fetchReports = async () => {
+			setReportsLoading(true);
+			try {
+				const q = query(
+					collection(db, "users", user.uid, "reports"),
+					orderBy("createdAt", "desc"),
+					limit(20),
+				);
+				const snap = await getDocs(q);
+				if (!cancelled) {
+					const reports = snap.docs.map((d) => ({
+						id: d.id,
+						...d.data(),
+					}));
+					setSavedReports(reports);
+				}
+			} catch {
+				// Firestore fetch failed — not critical
+			} finally {
+				if (!cancelled) setReportsLoading(false);
+			}
+		};
+
+		fetchReports();
+		return () => {
+			cancelled = true;
+		};
+	}, [user]);
+
 	const handleReset = () => {
 		sessionStorage.removeItem("yukti_analysis");
 		sessionStorage.removeItem("yukti_rowCount");
@@ -44,14 +84,48 @@ export default function DashboardPage() {
 		navigate("/analyse");
 	};
 
+	const handleLoadReport = (report) => {
+		try {
+			const data = JSON.parse(report.analysisData);
+			setAnalysis(data);
+			setRowCount(report.rowCount || data.row_count || 0);
+			// Also save to sessionStorage so it persists on page refresh
+			sessionStorage.setItem("yukti_analysis", report.analysisData);
+			sessionStorage.setItem("yukti_rowCount", String(report.rowCount || 0));
+		} catch {
+			// Invalid analysis data
+		}
+	};
+
+	const handleDeleteReport = (reportId) => {
+		setSavedReports((prev) => prev.filter((r) => r.id !== reportId));
+	};
+
 	// ── If we have analysis data, show the full dashboard ──
 	if (analysis) {
 		return (
-			<Dashboard
-				analysis={analysis}
-				rowCount={rowCount}
-				onReset={handleReset}
-			/>
+			<div>
+				<Dashboard
+					analysis={analysis}
+					rowCount={rowCount}
+					onReset={handleReset}
+				/>
+				{/* Past Reports below the main dashboard */}
+				{savedReports.length > 1 && (
+					<div className="max-w-7xl mx-auto px-6 pb-10">
+						<ReportHistory
+							reports={savedReports.filter(
+								(r) =>
+									// Don't show the currently loaded report
+									r.analysisData !== JSON.stringify(analysis),
+							)}
+							loading={false}
+							onLoadReport={handleLoadReport}
+							onDelete={handleDeleteReport}
+						/>
+					</div>
+				)}
+			</div>
 		);
 	}
 
@@ -193,6 +267,21 @@ export default function DashboardPage() {
 						</span>
 					</div>
 				</div>
+
+				{/* Past Reports */}
+				{(savedReports.length > 0 || reportsLoading) && (
+					<div
+						className="mt-12 animate-fade-in-up"
+						style={{ animationDelay: "240ms" }}
+					>
+						<ReportHistory
+							reports={savedReports}
+							loading={reportsLoading}
+							onLoadReport={handleLoadReport}
+							onDelete={handleDeleteReport}
+						/>
+					</div>
+				)}
 			</div>
 		</div>
 	);

@@ -7,8 +7,7 @@ import {
 	getDocs,
 	query,
 	orderBy,
-	doc,
-	setDoc,
+	addDoc,
 	serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
@@ -136,16 +135,26 @@ export default function AnalysePage() {
 			const token = await getIdToken();
 			const result = await runAnalysis(token, user?.uid, role);
 
+			// Save report to Firestore for history
 			if (user) {
 				try {
-					await setDoc(doc(db, "users", user.uid, "analyses", "latest"), {
-						filename: result.filename,
-						rowCount: result.rowCount,
-						analysisData: JSON.stringify(result),
+					const reportData = {
+						filename: result.filename || fileName || "Unknown",
+						rowCount: result.row_count || rowCount || 0,
+						ai_provider: result.ai_provider || "unknown",
+						narrative: (result.narrative || "").slice(0, 800),
+						kpiCount: result.kpis?.length || 0,
+						insightCount: result.insights?.length || 0,
 						createdAt: serverTimestamp(),
-					});
+						date: new Date().toISOString(),
+						analysisData: JSON.stringify(result),
+					};
+					await addDoc(
+						collection(db, "users", user.uid, "reports"),
+						reportData,
+					);
 				} catch {
-					// Silently fail Firestore save
+					// Silently fail Firestore save — don't block navigation
 				}
 			}
 
@@ -156,7 +165,7 @@ export default function AnalysePage() {
 			setError(err.response?.data?.detail || "Analysis failed.");
 			setStage("prepare");
 		}
-	}, [getIdToken, user, role, rowCount, navigate]);
+	}, [getIdToken, user, role, rowCount, fileName, navigate]);
 
 	// ── Processing stage ──
 	if (stage === "processing") {

@@ -47,7 +47,7 @@ import {
 } from "lucide-react";
 import TrendCharts from "./TrendCharts";
 import ForecastPanel from "./ForecastPanel";
-import { downloadReport, getStrategyAdvice } from "../services/api";
+import { getStrategyAdvice } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 import { db } from "../firebase";
@@ -72,6 +72,7 @@ const PRIORITY_STYLES = {
 export default function Dashboard({ analysis, rowCount, onReset }) {
 	const [activeTab, setActiveTab] = useState("khata");
 	const [expandedInsight, setExpandedInsight] = useState(null);
+	const [exporting, setExporting] = useState(false);
 	const { user, userProfile, getIdToken } = useAuth();
 
 	const {
@@ -95,15 +96,370 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 	const alertTotal = criticalCount + highCount;
 
 	const handleExportPDF = async () => {
+		setExporting(true);
 		try {
-			const role = userProfile?.role || "paid-user";
-			const token = await getIdToken();
-			await downloadReport(token, user?.uid, role);
-		} catch (err) {
-			console.error("Report download failed:", err);
-			alert(
-				"Report download failed. Please run an analysis first, then try again.",
+			const { jsPDF } = await import("jspdf");
+			const { default: autoTable } = await import("jspdf-autotable");
+
+			const pdf = new jsPDF("p", "mm", "a4");
+			const W = pdf.internal.pageSize.getWidth();
+			const H = pdf.internal.pageSize.getHeight();
+			const M = 14; // margin
+			const CW = W - M * 2; // content width
+			let y = M;
+
+			const COLORS = {
+				primary: [79, 70, 229], // indigo-600
+				dark: [17, 24, 39], // gray-900
+				body: [55, 65, 81], // gray-700
+				muted: [107, 114, 128], // gray-500
+				light: [229, 231, 235], // gray-200
+				accent: [245, 243, 255], // indigo-50
+				green: [22, 163, 74],
+				red: [220, 38, 38],
+				amber: [217, 119, 6],
+				white: [255, 255, 255],
+			};
+
+			// Check page space, add page if needed
+			const ensureSpace = (needed) => {
+				if (y + needed > H - 20) {
+					pdf.addPage();
+					y = M;
+				}
+			};
+
+			// Section header
+			const addSection = (title) => {
+				ensureSpace(18);
+				y += 6;
+				pdf.setDrawColor(...COLORS.primary);
+				pdf.setLineWidth(0.8);
+				pdf.line(M, y, M + CW, y);
+				y += 6;
+				pdf.setFont("helvetica", "bold");
+				pdf.setFontSize(13);
+				pdf.setTextColor(...COLORS.dark);
+				pdf.text(title, M, y);
+				y += 8;
+			};
+
+			// Wrapped text helper
+			const addText = (text, opts = {}) => {
+				const {
+					size = 9,
+					color = COLORS.body,
+					bold = false,
+					indent = 0,
+				} = opts;
+				pdf.setFont("helvetica", bold ? "bold" : "normal");
+				pdf.setFontSize(size);
+				pdf.setTextColor(...color);
+				const lines = pdf.splitTextToSize(String(text || ""), CW - indent);
+				for (const line of lines) {
+					ensureSpace(5);
+					pdf.text(line, M + indent, y);
+					y += size * 0.45;
+				}
+				y += 1;
+			};
+
+			/* ── COVER / HEADER ── */
+			pdf.setFillColor(...COLORS.primary);
+			pdf.rect(0, 0, W, 48, "F");
+			pdf.setFont("helvetica", "bold");
+			pdf.setFontSize(22);
+			pdf.setTextColor(...COLORS.white);
+			pdf.text("Yukti Business Intelligence Report", M, 22);
+			pdf.setFont("helvetica", "normal");
+			pdf.setFontSize(10);
+			pdf.text(
+				`Generated: ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}  |  ${rowCount} data points analysed  |  Powered by ${aiProvider === "gemini" ? "Gemini AI" : aiProvider === "groq" ? "Groq AI" : aiProvider === "claude" ? "Claude AI" : "Yukti Engine"}`,
+				M,
+				34,
 			);
+			y = 56;
+
+			/* ── EXECUTIVE SUMMARY ── */
+			if (analysis.narrative) {
+				addSection("Executive Summary");
+				addText(analysis.narrative, { size: 10 });
+				y += 4;
+			}
+
+			/* ── HEALTH & TREND ── */
+			addSection("Business Health Overview");
+			const healthLabel =
+				healthScore >= 80
+					? "Excellent"
+					: healthScore >= 60
+						? "Good"
+						: healthScore >= 40
+							? "Needs Attention"
+							: "Critical";
+			addText(`Health Score: ${healthScore}/100 (${healthLabel})`, {
+				size: 11,
+				bold: true,
+			});
+			if (trendLock?.direction) {
+				const dir =
+					trendLock.direction === "up"
+						? "Growing"
+						: trendLock.direction === "down"
+							? "Declining"
+							: "Steady";
+				addText(
+					`Primary Trend: ${trendLock.metric || "Business"} is ${dir} (${trendLock.change || 0}% change)`,
+					{ size: 10 },
+				);
+			}
+			y += 2;
+
+			/* ── KEY PERFORMANCE INDICATORS ── */
+			if (kpis.length > 0) {
+				addSection("Key Performance Indicators (KPIs)");
+				const kpiRows = kpis.map((k) => {
+					const trendWord =
+						k.trend === "rising"
+							? "Growing"
+							: k.trend === "falling"
+								? "Declining"
+								: "Steady";
+					const changeStr =
+						k.change != null ? `${k.change > 0 ? "+" : ""}${k.change}%` : "---";
+					return [k.label, formatINR(k.current), changeStr, trendWord];
+				});
+				autoTable(pdf, {
+					startY: y,
+					margin: { left: M, right: M },
+					head: [["Metric", "Current Value", "Change", "Trend"]],
+					body: kpiRows,
+					theme: "grid",
+					headStyles: {
+						fillColor: COLORS.primary,
+						fontSize: 8,
+						fontStyle: "bold",
+					},
+					bodyStyles: { fontSize: 8, textColor: COLORS.body },
+					alternateRowStyles: { fillColor: [249, 250, 251] },
+					columnStyles: {
+						0: { cellWidth: 55 },
+						2: { halign: "center" },
+						3: { halign: "center" },
+					},
+				});
+				y = pdf.lastAutoTable.finalY + 6;
+			}
+
+			/* ── INSIGHTS BY CATEGORY ── */
+			const categoryLabels = {
+				khata: "Financial (Khata) Insights",
+				footfall: "Footfall & Orders Insights",
+				godown: "Inventory (Godown) Insights",
+				customer: "Customer Insights",
+				advisor: "Yukti Advisor Recommendations",
+				growth: "Growth Opportunities",
+				savings: "Cost Savings",
+				opportunity: "Business Opportunities",
+				forecast: "Forecast Insights",
+				other: "Other Insights",
+			};
+
+			for (const [cat, catInsights] of Object.entries(insightsByCategory)) {
+				if (!catInsights || catInsights.length === 0) continue;
+				addSection(
+					categoryLabels[cat] ||
+						`${cat.charAt(0).toUpperCase() + cat.slice(1)} Insights`,
+				);
+
+				for (const ins of catInsights) {
+					ensureSpace(20);
+					// Severity tag
+					const sevLabel =
+						ins.severity === "critical"
+							? "URGENT"
+							: ins.severity === "high"
+								? "IMPORTANT"
+								: ins.severity === "low"
+									? "GOOD NEWS"
+									: "INSIGHT";
+					const sevColor =
+						ins.severity === "critical"
+							? COLORS.red
+							: ins.severity === "high"
+								? COLORS.amber
+								: ins.severity === "low"
+									? COLORS.green
+									: COLORS.primary;
+					pdf.setFont("helvetica", "bold");
+					pdf.setFontSize(7);
+					pdf.setTextColor(...COLORS.white);
+					pdf.setFillColor(...sevColor);
+					const tagW = pdf.getTextWidth(sevLabel) + 4;
+					pdf.roundedRect(M, y - 3, tagW, 4.5, 1, 1, "F");
+					pdf.text(sevLabel, M + 2, y);
+					y += 4;
+
+					// Title
+					addText(ins.title, { size: 10, bold: true, color: COLORS.dark });
+					// Description
+					if (ins.description) addText(ins.description, { size: 9, indent: 2 });
+					// Recommendation
+					if (ins.recommendation) {
+						addText("Recommended Action:", {
+							size: 8,
+							bold: true,
+							color: COLORS.primary,
+							indent: 2,
+						});
+						addText(ins.recommendation, { size: 9, indent: 4 });
+					}
+					y += 3;
+				}
+			}
+
+			/* ── TREND ANALYSIS ── */
+			if (trendLock?.direction) {
+				addSection("Trend Analysis");
+				const statusMsg =
+					trendLock.direction === "up"
+						? `Your ${trendLock.metric} is growing at ${trendLock.change}%. Great momentum — focus on sustaining this.`
+						: trendLock.direction === "down"
+							? `Your ${trendLock.metric} is down ${Math.abs(trendLock.change || 0)}%. Recovery actions are needed this week.`
+							: "Business is running steady. A great time to plan for growth.";
+				addText(statusMsg, { size: 10 });
+				y += 2;
+			}
+
+			/* ── CORRELATIONS ── */
+			if (correlations.length > 0) {
+				addSection("Data Correlations");
+				addText("How your business metrics are connected:", {
+					size: 9,
+					color: COLORS.muted,
+				});
+				y += 2;
+				const corrRows = correlations
+					.slice(0, 8)
+					.map((c) => [
+						c.label1,
+						c.direction === "positive" ? "+" : "-",
+						c.label2,
+						c.strength || "---",
+					]);
+				autoTable(pdf, {
+					startY: y,
+					margin: { left: M, right: M },
+					head: [["Metric A", "Direction", "Metric B", "Strength"]],
+					body: corrRows,
+					theme: "grid",
+					headStyles: {
+						fillColor: COLORS.primary,
+						fontSize: 8,
+						fontStyle: "bold",
+					},
+					bodyStyles: { fontSize: 8, textColor: COLORS.body },
+					columnStyles: {
+						1: { halign: "center", cellWidth: 20 },
+						3: { halign: "center", cellWidth: 25 },
+					},
+				});
+				y = pdf.lastAutoTable.finalY + 6;
+			}
+
+			/* ── FORECASTS / PREDICTIONS ── */
+			if (forecasts.length > 0) {
+				addSection("Predictions & Forecasts");
+				if (dataSufficiency !== "full") {
+					addText(
+						"Note: Yukti is still learning your business. Provide 14+ days of data for more accurate predictions.",
+						{ size: 8, color: COLORS.amber },
+					);
+					y += 2;
+				}
+				const forecastRows = forecasts.slice(0, 10).map((f) => {
+					const nextVal =
+						f.predictions?.[0]?.value != null
+							? formatINR(f.predictions[0].value)
+							: "---";
+					const growth =
+						f.growthRate != null
+							? `${f.growthRate > 0 ? "+" : ""}${f.growthRate.toFixed(1)}%`
+							: "---";
+					const r2 = f.r2 || 0;
+					const conf = r2 > 0.8 ? "High" : r2 > 0.5 ? "Medium" : "Low";
+					return [f.label || f.column, nextVal, growth, conf];
+				});
+				autoTable(pdf, {
+					startY: y,
+					margin: { left: M, right: M },
+					head: [
+						["Metric", "Next Period Forecast", "Growth Rate", "Confidence"],
+					],
+					body: forecastRows,
+					theme: "grid",
+					headStyles: {
+						fillColor: COLORS.primary,
+						fontSize: 8,
+						fontStyle: "bold",
+					},
+					bodyStyles: { fontSize: 8, textColor: COLORS.body },
+					alternateRowStyles: { fillColor: [249, 250, 251] },
+					columnStyles: { 2: { halign: "center" }, 3: { halign: "center" } },
+				});
+				y = pdf.lastAutoTable.finalY + 6;
+			}
+
+			/* ── ANOMALIES / ALERTS ── */
+			if (anomalies.length > 0) {
+				addSection("Alerts & Anomalies");
+				const anomRows = anomalies.map((a) => [
+					(a.severity || "").toUpperCase(),
+					a.column || a.metric || "---",
+					a.description || a.message || "Anomaly detected",
+				]);
+				autoTable(pdf, {
+					startY: y,
+					margin: { left: M, right: M },
+					head: [["Severity", "Metric", "Description"]],
+					body: anomRows,
+					theme: "grid",
+					headStyles: { fillColor: COLORS.red, fontSize: 8, fontStyle: "bold" },
+					bodyStyles: { fontSize: 8, textColor: COLORS.body },
+					columnStyles: {
+						0: { cellWidth: 22, halign: "center", fontStyle: "bold" },
+					},
+				});
+				y = pdf.lastAutoTable.finalY + 6;
+			}
+
+			/* ── FOOTER on every page ── */
+			const totalPages = pdf.getNumberOfPages();
+			for (let p = 1; p <= totalPages; p++) {
+				pdf.setPage(p);
+				pdf.setDrawColor(...COLORS.light);
+				pdf.setLineWidth(0.3);
+				pdf.line(M, H - 12, W - M, H - 12);
+				pdf.setFont("helvetica", "normal");
+				pdf.setFontSize(7);
+				pdf.setTextColor(...COLORS.muted);
+				pdf.text(
+					"Yukti Business Intelligence Report  |  Confidential",
+					M,
+					H - 8,
+				);
+				pdf.text(`Page ${p} of ${totalPages}`, W - M, H - 8, {
+					align: "right",
+				});
+			}
+
+			const date = new Date().toISOString().split("T")[0];
+			pdf.save(`Yukti_Report_${date}.pdf`);
+		} catch (err) {
+			console.error("PDF export failed:", err);
+			alert("Report download failed. Please try again.");
+		} finally {
+			setExporting(false);
 		}
 	};
 
@@ -165,9 +521,19 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 						<div className="flex items-center gap-2 shrink-0">
 							<button
 								onClick={handleExportPDF}
-								className="btn-primary flex items-center gap-2 text-xs"
+								disabled={exporting}
+								className="btn-primary flex items-center gap-2 text-xs disabled:opacity-60"
 							>
-								<Download size={14} /> Download Report
+								{exporting ? (
+									<>
+										<Loader2 size={14} className="animate-spin" /> Generating
+										PDF...
+									</>
+								) : (
+									<>
+										<Download size={14} /> Download Report
+									</>
+								)}
 							</button>
 							<button
 								onClick={onReset}
