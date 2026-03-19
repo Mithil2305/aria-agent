@@ -28,6 +28,7 @@ def generate_insights(
     analytics: dict,
     predictions: dict,
     decisions: dict,
+    history_context: dict | None = None,
 ) -> dict:
     """Produce insights, narrative, and recommendations in simple language."""
     row_count = schema.get("total_rows", schema.get("row_count", 0))
@@ -36,6 +37,7 @@ def generate_insights(
     forecasts = predictions.get("forecasts", [])
     correlations = decisions.get("correlations", [])
     trends = analytics.get("trends", [])
+    history_context = history_context or {}
 
     # ── Step 1: Lock primary trend (contradiction prevention) ──
     trend_lock = _lock_primary_trend(kpis, trends)
@@ -72,9 +74,27 @@ def generate_insights(
     # Data quality
     insights.extend(_quality_insights_simple(schema, data_sufficiency))
 
+    # Personalized root-cause diagnostics from current + historical report memory
+    insights.extend(
+        _build_personalized_diagnostics(
+            kpis=kpis,
+            anomalies=anomalies,
+            correlations=correlations,
+            trend_lock=trend_lock,
+            history_context=history_context,
+        )
+    )
+
     # AI-powered advisor (growth / savings / opportunity)
     advisor_insights, ai_provider = _ai_advisor_insights(
-        kpis, anomalies, forecasts, correlations, trends, trend_lock, data_sufficiency
+        kpis,
+        anomalies,
+        forecasts,
+        correlations,
+        trends,
+        trend_lock,
+        data_sufficiency,
+        history_context,
     )
     insights.extend(advisor_insights)
 
@@ -83,7 +103,14 @@ def generate_insights(
     insights.sort(key=lambda x: severity_order.get(x.get("severity", "info"), 5))
 
     # ── Step 5: Narrative ──
-    narrative = _build_narrative_simple(kpis, anomalies, forecasts, trend_lock, data_sufficiency)
+    narrative = _build_narrative_simple(
+        kpis,
+        anomalies,
+        forecasts,
+        trend_lock,
+        data_sufficiency,
+        history_context,
+    )
 
     return {
         "insights": insights,
@@ -91,7 +118,130 @@ def generate_insights(
         "trend_lock": trend_lock,
         "data_sufficiency": data_sufficiency,
         "ai_provider": ai_provider,
+        "history_used": bool(history_context.get("recent_reports")),
     }
+
+
+def _build_personalized_diagnostics(
+    kpis: list,
+    anomalies: list,
+    correlations: list,
+    trend_lock: dict,
+    history_context: dict,
+) -> list:
+    """Create root-cause style insights with evidence and personalized actions."""
+    diagnostics = []
+    recurring = history_context.get("recurring_issues", [])[:3]
+    wins = history_context.get("successful_actions", [])[:3]
+
+    revenue_kpi = _find_kpi(kpis, ["revenue", "sales", "income"])
+    customer_kpi = _find_kpi(kpis, ["customer", "footfall", "visitor"])
+    expense_kpi = _find_kpi(kpis, ["expense", "cost", "spend"])
+
+    if revenue_kpi and revenue_kpi.get("change", 0) < -4:
+        change = revenue_kpi.get("change", 0)
+        reasons = []
+        if customer_kpi and customer_kpi.get("change", 0) < -3:
+            reasons.append("customer visits have dropped")
+        if expense_kpi and expense_kpi.get("change", 0) > 4:
+            reasons.append("costs are rising faster than sales")
+        if anomalies:
+            reasons.append("recent anomaly spikes suggest unstable operations")
+        if not reasons:
+            reasons.append("conversion and demand need closer diagnosis")
+
+        recurring_txt = (
+            f"Recurring in past reports: {', '.join(recurring)}. " if recurring else ""
+        )
+        win_txt = f"Previously effective: {wins[0]}." if wins else ""
+
+        diagnostics.append({
+            "title": f"Why sales are down ({abs(change):.1f}%): likely demand + execution gap",
+            "description": (
+                f"Sales declined by {abs(change):.1f}% because {', '.join(reasons)}. "
+                f"{recurring_txt}{win_txt}"
+            ).strip(),
+            "reason": ", ".join(reasons),
+            "evidence": _diagnostic_evidence(revenue_kpi, customer_kpi, expense_kpi),
+            "recommendation": _diagnostic_action_plan(recurring, wins, direction="down"),
+            "expected_impact": "Can recover 6-12% revenue in 2-4 weeks when executed consistently",
+            "severity": "high",
+            "category": "khata",
+            "section": "diagnose",
+        })
+
+    if expense_kpi and revenue_kpi:
+        rev = revenue_kpi.get("current", 0)
+        exp = expense_kpi.get("current", 0)
+        if rev and exp and rev > 0:
+            margin = ((rev - exp) / rev) * 100
+            if margin < 15:
+                diagnostics.append({
+                    "title": f"Profit squeeze detected: margin at {margin:.1f}%",
+                    "description": "Your current cost structure is suppressing profitability.",
+                    "reason": "cost mix is heavier than healthy SMB benchmark levels",
+                    "evidence": f"Revenue ~{_fmt_inr(rev)} vs expense ~{_fmt_inr(exp)}",
+                    "recommendation": (
+                        "Run a 7-day cost audit: renegotiate top supplier, reduce waste-heavy SKU orders, "
+                        "and add premium upsell bundles at billing counter."
+                    ),
+                    "expected_impact": "2-5% margin improvement in the next billing cycle",
+                    "severity": "high",
+                    "category": "savings",
+                    "section": "optimize",
+                })
+
+    strong_links = [
+        c for c in correlations
+        if c.get("strength") == "strong" and c.get("direction") in {"positive", "negative"}
+    ]
+    if strong_links:
+        top = strong_links[0]
+        direction = "moves together" if top.get("direction") == "positive" else "moves opposite"
+        diagnostics.append({
+            "title": f"Business driver found: {top.get('label1', 'Metric A')} {direction} {top.get('label2', 'Metric B')}",
+            "description": "This relationship is strong enough to use as a weekly decision lever.",
+            "reason": "historical movement indicates a repeatable operational pattern",
+            "evidence": f"Correlation strength: {top.get('strength', 'strong')} ({top.get('correlation', 0):.2f})",
+            "recommendation": (
+                f"Track {top.get('label1', 'driver metric')} daily and set a threshold alert to protect "
+                f"{top.get('label2', 'outcome metric')} before it drops."
+            ),
+            "expected_impact": "Earlier intervention and fewer surprise downturns",
+            "severity": "moderate",
+            "category": "opportunity",
+            "section": "levers",
+        })
+
+    return diagnostics
+
+
+def _diagnostic_evidence(revenue_kpi, customer_kpi, expense_kpi) -> str:
+    parts = []
+    if revenue_kpi:
+        parts.append(
+            f"Revenue {revenue_kpi.get('change', 0):+.1f}% (current {_fmt_inr(revenue_kpi.get('current', 0))})"
+        )
+    if customer_kpi:
+        parts.append(f"Footfall {customer_kpi.get('change', 0):+.1f}%")
+    if expense_kpi:
+        parts.append(f"Expenses {expense_kpi.get('change', 0):+.1f}%")
+    return " | ".join(parts) if parts else "Limited evidence due to sparse KPI history"
+
+
+def _diagnostic_action_plan(recurring: list, wins: list, direction: str) -> str:
+    if direction == "down":
+        base = (
+            "Next 7 days: Day 1 identify top 10 lost customers, Day 2 launch return-offer campaign, "
+            "Day 3 fix stock/pricing gaps, Day 4-7 track conversion daily and iterate."
+        )
+    else:
+        base = "Scale what is working while monitoring margin and stock pressure daily."
+    if recurring:
+        base += f" Focus first on recurring issue: {recurring[0]}."
+    if wins:
+        base += f" Reuse successful playbook: {wins[0]}."
+    return base
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -431,7 +581,14 @@ def _quality_insights_simple(schema: dict, data_sufficiency: str) -> list:
 # ────────────────────────────────────────────────────────────────────
 
 def _ai_advisor_insights(
-    kpis, anomalies, forecasts, correlations, trends, trend_lock, data_sufficiency
+    kpis,
+    anomalies,
+    forecasts,
+    correlations,
+    trends,
+    trend_lock,
+    data_sufficiency,
+    history_context,
 ) -> list:
     """Use AI (Gemini/Groq/Claude) to generate advisor insights."""
     if not is_any_ai_available():
@@ -460,6 +617,14 @@ def _ai_advisor_insights(
             f"growth={f.get('growthRate', 0):.1f}%"
         )
 
+    recent_reports = history_context.get("recent_reports", [])[:5]
+    report_summary = []
+    for rep in recent_reports:
+        report_summary.append(
+            f"- {rep.get('section', 'analysis')}: trend={rep.get('trend', 'n/a')}; "
+            f"top_issue={rep.get('top_issue', 'n/a')}; action={rep.get('action', 'n/a')}"
+        )
+
     prompt = f"""You are Yukti, a business advisor for small Indian shopkeepers (kirana stores, 
 small retail, local businesses in tier 2-3 cities).
 
@@ -477,6 +642,9 @@ Anomalies:
 Forecasts:
 {chr(10).join(forecast_summary) if forecast_summary else 'Not enough data'}
 
+Historical Report Memory:
+{chr(10).join(report_summary) if report_summary else 'No report memory available yet'}
+
 RULES:
 1. Use simple English a shopkeeper can understand
 2. Use Indian Rupee (₹) for all money values
@@ -489,15 +657,21 @@ RULES:
 9. Make recommendations very specific — mention exact numbers, days, or actions where possible
 10. If forecasts show growth, suggest how to prepare for increased demand
 11. If forecasts show decline, suggest concrete recovery steps
+12. Every insight must include a clear reason of WHY this happened and evidence from given data
+13. Reuse learnings from Historical Report Memory where relevant
 
 Return ONLY valid JSON array like:
 [
   {{
     "title": "short headline",
     "description": "1-2 sentence explanation with specific numbers",
+        "reason": "root-cause in plain language",
+        "evidence": "data-backed proof",
     "recommendation": "specific action to take today or this week",
+        "expected_impact": "what business outcome to expect",
     "severity": "moderate",
-    "category": "growth"
+        "category": "growth",
+        "section": "diagnose"
   }}
 ]"""
 
@@ -515,11 +689,14 @@ Return ONLY valid JSON array like:
             parsed = json.loads(text[start:end])
             # Validate and clean
             valid = []
-            allowed_cats = {"growth", "savings", "opportunity", "advisor"}
+            allowed_cats = {"growth", "savings", "opportunity", "advisor", "khata", "customer", "footfall", "godown"}
+            allowed_sections = {"diagnose", "prioritize", "act", "measure", "optimize", "levers"}
             for item in parsed[:8]:
                 if isinstance(item, dict) and "title" in item:
                     if item.get("category") not in allowed_cats:
                         item["category"] = "advisor"
+                    if item.get("section") not in allowed_sections:
+                        item["section"] = "act"
                     if item.get("severity") not in {"critical", "high", "moderate", "low", "info"}:
                         item["severity"] = "moderate"
                     valid.append(item)
@@ -643,7 +820,7 @@ def _fallback_advisor_insights(kpis: list, trend_lock: dict) -> list:
 #  NARRATIVE BUILDER
 # ────────────────────────────────────────────────────────────────────
 
-def _build_narrative_simple(kpis, anomalies, forecasts, trend_lock, data_sufficiency) -> str:
+def _build_narrative_simple(kpis, anomalies, forecasts, trend_lock, data_sufficiency, history_context) -> str:
     """Build a 1-2 sentence summary for the dashboard header."""
     direction = trend_lock.get("direction", "stable")
     metric = trend_lock.get("metric", "business")
@@ -666,6 +843,9 @@ def _build_narrative_simple(kpis, anomalies, forecasts, trend_lock, data_suffici
         parts.append("Log more days to unlock full predictions.")
     elif data_sufficiency == "insufficient":
         parts.append("Start logging daily data to get better insights.")
+
+    if history_context.get("recent_reports"):
+        parts.append("This report is personalized using your previous report outcomes.")
 
     return " ".join(parts)
 

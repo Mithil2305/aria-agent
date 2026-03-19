@@ -76,6 +76,9 @@ export default function Dashboard({
 	onReset,
 	token,
 	analysisReady,
+	businessType = "",
+	previousAnalysis = null,
+	previousReportDate = null,
 }) {
 	const [activeTab, setActiveTab] = useState("khata");
 	const [expandedInsight, setExpandedInsight] = useState(null);
@@ -96,6 +99,7 @@ export default function Dashboard({
 	} = analysis;
 
 	const healthScore = computeHealthScore(kpis, anomalies, insights, schema);
+	const changeSummary = computeWhatChangedSummary(analysis, previousAnalysis);
 	const criticalCount = anomalies.filter(
 		(a) => a.severity === "critical",
 	).length;
@@ -500,7 +504,7 @@ export default function Dashboard({
 
 	return (
 		<div className="min-h-[calc(100vh-60px)]">
-			<div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-6">
+			<div className="max-w-300 mx-auto px-4 sm:px-6 py-6">
 				{/* Hero Summary */}
 				<div className="mb-6 animate-fade-in-up">
 					<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -578,6 +582,11 @@ export default function Dashboard({
 					dataPoints={rowCount}
 				/>
 
+				<WhatChangedStrip
+					summary={changeSummary}
+					previousReportDate={previousReportDate}
+				/>
+
 				{/* AI Provider Badge */}
 				<AIProviderBadge provider={aiProvider} />
 
@@ -629,19 +638,29 @@ export default function Dashboard({
 							kpis={kpis}
 							insights={insightsByCategory}
 							trends={trends}
+							businessType={businessType}
 						/>
 					)}
 					{activeTab === "footfall" && (
-						<FootfallSection kpis={kpis} insights={insightsByCategory} />
+						<FootfallSection
+							kpis={kpis}
+							insights={insightsByCategory}
+							businessType={businessType}
+						/>
 					)}
 					{activeTab === "godown" && (
-						<GodownSection kpis={kpis} insights={insightsByCategory} />
+						<GodownSection
+							kpis={kpis}
+							insights={insightsByCategory}
+							businessType={businessType}
+						/>
 					)}
 					{activeTab === "customer" && (
 						<CustomerSection
 							kpis={kpis}
 							insights={insightsByCategory}
 							correlations={correlations}
+							businessType={businessType}
 						/>
 					)}
 					{activeTab === "predictions" && (
@@ -727,6 +746,65 @@ function QuickStatsBar({ avgRevenue, avgCustomers, avgOrders, dataPoints }) {
 	);
 }
 
+function WhatChangedStrip({ summary, previousReportDate }) {
+	if (!summary || !summary.hasPrevious || summary.cards.length === 0)
+		return null;
+
+	const dateText = previousReportDate
+		? new Date(previousReportDate).toLocaleDateString("en-IN", {
+				day: "numeric",
+				month: "short",
+				year: "numeric",
+			})
+		: "your previous report";
+
+	return (
+		<div className="card p-4 mb-5 border border-indigo-200 bg-indigo-50/40 animate-fade-in-up">
+			<div className="flex items-center gap-2 mb-3">
+				<BarChart2 size={14} className="text-indigo-600" />
+				<p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide">
+					What changed since {dateText}
+				</p>
+			</div>
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+				{summary.cards.map((card) => {
+					const isUp = card.delta > 0;
+					const isFlat = Math.abs(card.delta) < 0.5;
+					return (
+						<div
+							key={card.label}
+							className="rounded-lg bg-white border border-surface-200 p-3"
+						>
+							<p className="text-[11px] text-surface-500 mb-1">{card.label}</p>
+							<p className="text-sm font-semibold text-surface-900">
+								{card.currentText}
+							</p>
+							<div
+								className={`mt-1 text-[11px] font-medium flex items-center gap-1 ${
+									isFlat
+										? "text-surface-500"
+										: isUp
+											? "text-green-600"
+											: "text-red-500"
+								}`}
+							>
+								{isFlat ? (
+									<Minus size={10} />
+								) : isUp ? (
+									<ArrowUpRight size={10} />
+								) : (
+									<ArrowDownRight size={10} />
+								)}
+								{Math.abs(card.delta).toFixed(1)}% vs last report
+							</div>
+						</div>
+					);
+				})}
+			</div>
+		</div>
+	);
+}
+
 /* ================================================================
    AI PROVIDER BADGE
    ================================================================ */
@@ -745,7 +823,7 @@ function AIProviderBadge({ provider }) {
 
 	return (
 		<div className="flex items-center gap-2 mb-5">
-			<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 text-indigo-600 text-[10px] font-semibold uppercase tracking-wider">
+			<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-linear-to-r from-indigo-50 to-purple-50 border border-indigo-200 text-indigo-600 text-[10px] font-semibold uppercase tracking-wider">
 				<Sparkles size={10} />
 				Powered by {providerLabel}
 			</span>
@@ -972,15 +1050,58 @@ function EmptyState({ text }) {
 	);
 }
 
+function SectionPlaybook({ playbook }) {
+	if (!playbook) return null;
+	return (
+		<div className="card p-4 border border-indigo-200 bg-indigo-50/30">
+			<div className="flex items-center gap-2 mb-2">
+				<Target size={14} className="text-indigo-600" />
+				<p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide">
+					This Week Playbook
+				</p>
+			</div>
+			<p className="text-sm text-surface-800 font-medium mb-3">
+				{playbook.goal}
+			</p>
+			<div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+				{playbook.targets.map((t) => (
+					<div
+						key={t.label}
+						className="rounded-lg bg-white border border-surface-200 px-3 py-2"
+					>
+						<p className="text-[10px] text-surface-500">{t.label}</p>
+						<p className="text-sm font-semibold text-surface-900">{t.value}</p>
+					</div>
+				))}
+			</div>
+			<div className="space-y-1.5">
+				{playbook.actions.map((a, idx) => (
+					<p
+						key={`${a}-${idx}`}
+						className="text-xs text-surface-700 flex items-start gap-2"
+					>
+						<CheckCircle2
+							size={12}
+							className="text-green-600 mt-0.5 shrink-0"
+						/>
+						<span>{a}</span>
+					</p>
+				))}
+			</div>
+		</div>
+	);
+}
+
 /* ================================================================
    TAB SECTIONS (original 7)
    ================================================================ */
 
-function KhataSection({ kpis, insights, trends }) {
+function KhataSection({ kpis, insights, trends, businessType }) {
 	const [expanded, setExpanded] = useState(null);
 	const khataInsights = insights.khata || [];
 	const revenueKpi = findKpiByKeywords(kpis, ["revenue", "sales", "income"]);
 	const expenseKpi = findKpiByKeywords(kpis, ["expense", "cost", "spend"]);
+	const playbook = buildWeeklyPlaybook("khata", kpis, businessType);
 
 	return (
 		<div className="space-y-6">
@@ -1019,6 +1140,7 @@ function KhataSection({ kpis, insights, trends }) {
 				</div>
 			)}
 			{trends && <TrendCharts trends={trends} />}
+			<SectionPlaybook playbook={playbook} />
 			<div className="space-y-3">
 				{khataInsights.map((ins, i) => (
 					<ActionCard
@@ -1045,9 +1167,10 @@ function KhataSection({ kpis, insights, trends }) {
 	);
 }
 
-function FootfallSection({ kpis, insights }) {
+function FootfallSection({ kpis, insights, businessType }) {
 	const [expanded, setExpanded] = useState(null);
 	const footfallInsights = insights.footfall || [];
+	const playbook = buildWeeklyPlaybook("footfall", kpis, businessType);
 	const customerKpi = findKpiByKeywords(kpis, [
 		"customer",
 		"footfall",
@@ -1082,6 +1205,7 @@ function FootfallSection({ kpis, insights }) {
 					</div>
 				</div>
 			)}
+			<SectionPlaybook playbook={playbook} />
 			<div className="space-y-3">
 				{footfallInsights.map((ins, i) => (
 					<ActionCard
@@ -1100,10 +1224,11 @@ function FootfallSection({ kpis, insights }) {
 	);
 }
 
-function GodownSection({ kpis, insights }) {
+function GodownSection({ kpis, insights, businessType }) {
 	const [expanded, setExpanded] = useState(null);
 	const godownInsights = insights.godown || [];
 	const invKpi = findKpiByKeywords(kpis, ["inventory", "stock", "godown"]);
+	const playbook = buildWeeklyPlaybook("godown", kpis, businessType);
 
 	return (
 		<div className="space-y-6">
@@ -1121,6 +1246,7 @@ function GodownSection({ kpis, insights }) {
 					/>
 				</div>
 			)}
+			<SectionPlaybook playbook={playbook} />
 			<div className="space-y-3">
 				{godownInsights.map((ins, i) => (
 					<ActionCard
@@ -1139,10 +1265,11 @@ function GodownSection({ kpis, insights }) {
 	);
 }
 
-function CustomerSection({ kpis, insights, correlations }) {
+function CustomerSection({ kpis, insights, correlations, businessType }) {
 	const [expanded, setExpanded] = useState(null);
 	const customerInsights = insights.customer || [];
 	const basketKpi = findKpiByKeywords(kpis, ["basket", "avg_order", "ticket"]);
+	const playbook = buildWeeklyPlaybook("customer", kpis, businessType);
 
 	return (
 		<div className="space-y-6">
@@ -1161,6 +1288,7 @@ function CustomerSection({ kpis, insights, correlations }) {
 					/>
 				</div>
 			)}
+			<SectionPlaybook playbook={playbook} />
 			<div className="space-y-3">
 				{customerInsights.map((ins, i) => (
 					<ActionCard
@@ -1547,9 +1675,9 @@ function StrategySection() {
 
 			{/* Generate / Regenerate button */}
 			{!strategy && !loading && !error && (
-				<div className="card-elevated p-6 bg-gradient-to-br from-indigo-50/80 via-purple-50/50 to-white border-indigo-200/60">
+				<div className="card-elevated p-6 bg-linear-to-br from-indigo-50/80 via-purple-50/50 to-white border-indigo-200/60">
 					<div className="flex items-start gap-4">
-						<div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
+						<div className="w-12 h-12 rounded-xl bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
 							<Lightbulb size={22} className="text-white" />
 						</div>
 						<div className="space-y-3 flex-1">
@@ -1582,7 +1710,7 @@ function StrategySection() {
 							</div>
 							<button
 								onClick={generateStrategy}
-								className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-sm transition-all"
+								className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-linear-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-sm transition-all"
 							>
 								<Sparkles size={15} /> Analyse <ChevronRight size={14} />
 							</button>
@@ -1665,7 +1793,7 @@ function StrategySection() {
 
 					{/* AI provider badge + Regenerate */}
 					<div className="flex items-center justify-between">
-						<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 text-indigo-600 text-[10px] font-semibold uppercase tracking-wider">
+						<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-linear-to-r from-indigo-50 to-purple-50 border border-indigo-200 text-indigo-600 text-[10px] font-semibold uppercase tracking-wider">
 							<Sparkles size={10} />
 							{strategy.generated_by === "gemini_ai"
 								? "Powered by Gemini AI"
@@ -1894,7 +2022,7 @@ function StrategySection() {
 								Roadmap
 							</h3>
 							<div className="relative">
-								<div className="absolute left-[18px] top-6 bottom-6 w-0.5 bg-indigo-100" />
+								<div className="absolute left-4.5 top-6 bottom-6 w-0.5 bg-indigo-100" />
 								{(strategy.roadmap || []).map((week, wi) => (
 									<div
 										key={wi}
@@ -2002,6 +2130,220 @@ function findKpiByKeywords(kpis, keywords) {
 			return keywords.some((kw) => name.includes(kw));
 		}) || null
 	);
+}
+
+function extractKpis(analysis) {
+	if (!analysis) return [];
+	return analysis.kpis || analysis?.analytics?.kpis || [];
+}
+
+function extractAnomalies(analysis) {
+	if (!analysis) return [];
+	return analysis.anomalies || analysis?.predictions?.anomalies || [];
+}
+
+function computeWhatChangedSummary(currentAnalysis, previousAnalysis) {
+	if (!currentAnalysis || !previousAnalysis) {
+		return { hasPrevious: false, cards: [] };
+	}
+
+	const currentKpis = extractKpis(currentAnalysis);
+	const previousKpis = extractKpis(previousAnalysis);
+
+	const currentRevenue = findKpiByKeywords(currentKpis, [
+		"revenue",
+		"sales",
+		"income",
+	]);
+	const previousRevenue = findKpiByKeywords(previousKpis, [
+		"revenue",
+		"sales",
+		"income",
+	]);
+	const currentCustomers = findKpiByKeywords(currentKpis, [
+		"customer",
+		"footfall",
+		"visitor",
+	]);
+	const previousCustomers = findKpiByKeywords(previousKpis, [
+		"customer",
+		"footfall",
+		"visitor",
+	]);
+	const currentOrders = findKpiByKeywords(currentKpis, [
+		"order",
+		"transaction",
+		"bill",
+	]);
+	const previousOrders = findKpiByKeywords(previousKpis, [
+		"order",
+		"transaction",
+		"bill",
+	]);
+
+	const currentCritical = extractAnomalies(currentAnalysis).filter(
+		(a) => a.severity === "critical",
+	).length;
+	const previousCritical = extractAnomalies(previousAnalysis).filter(
+		(a) => a.severity === "critical",
+	).length;
+
+	const cards = [];
+	const addCard = (
+		label,
+		currentVal,
+		previousVal,
+		formatter = (v) => String(v ?? "---"),
+	) => {
+		if (currentVal == null || previousVal == null || Number(previousVal) === 0)
+			return;
+		cards.push({
+			label,
+			currentText: formatter(currentVal),
+			delta:
+				((Number(currentVal) - Number(previousVal)) /
+					Math.abs(Number(previousVal))) *
+				100,
+		});
+	};
+
+	addCard(
+		"Revenue",
+		currentRevenue?.current,
+		previousRevenue?.current,
+		(v) => `₹${Number(v).toLocaleString("en-IN")}`,
+	);
+	addCard(
+		"Customers",
+		currentCustomers?.current,
+		previousCustomers?.current,
+		(v) => `${Math.round(Number(v))}`,
+	);
+	addCard(
+		"Orders",
+		currentOrders?.current,
+		previousOrders?.current,
+		(v) => `${Math.round(Number(v))}`,
+	);
+	addCard("Critical Alerts", currentCritical, previousCritical, (v) => `${v}`);
+
+	return {
+		hasPrevious: cards.length > 0,
+		cards,
+	};
+}
+
+function buildWeeklyPlaybook(section, kpis, businessType) {
+	const category = getBusinessCategory(businessType || "");
+	const revenue = findKpiByKeywords(kpis, ["revenue", "sales", "income"]);
+	const expense = findKpiByKeywords(kpis, ["expense", "cost", "spend"]);
+	const customers = findKpiByKeywords(kpis, [
+		"customer",
+		"footfall",
+		"visitor",
+	]);
+	const orders = findKpiByKeywords(kpis, ["order", "transaction", "bill"]);
+	const inventory = findKpiByKeywords(kpis, ["inventory", "stock", "godown"]);
+	const basket = findKpiByKeywords(kpis, ["basket", "avg_order", "ticket"]);
+
+	const revenueTarget = revenue?.current ? revenue.current * 1.08 : null;
+	const customerTarget = customers?.current ? customers.current * 1.1 : null;
+	const ordersTarget = orders?.current ? orders.current * 1.1 : null;
+	const expenseTarget = expense?.current ? expense.current * 0.95 : null;
+	const basketTarget = basket?.current ? basket.current * 1.06 : null;
+
+	const bySection = {
+		khata: {
+			goal: "Improve cashflow quality while increasing net profit this week.",
+			targets: [
+				{
+					label: "Revenue Target",
+					value: revenueTarget
+						? `₹${Math.round(revenueTarget).toLocaleString("en-IN")}/day`
+						: "Track daily",
+				},
+				{
+					label: "Expense Cap",
+					value: expenseTarget
+						? `₹${Math.round(expenseTarget).toLocaleString("en-IN")}/day`
+						: "Reduce by 5%",
+				},
+			],
+			actions: [
+				"Review top 3 costs every evening and cut one avoidable expense.",
+				"Push one high-margin bundle offer for repeat buyers.",
+				"Track revenue, expense, and margin in a 7-day sheet.",
+			],
+		},
+		footfall: {
+			goal: "Lift walk-ins and convert more visits into paid bills.",
+			targets: [
+				{
+					label: "Customer Target",
+					value: customerTarget
+						? `${Math.round(customerTarget)}/day`
+						: "Increase by 10%",
+				},
+				{
+					label: "Order Target",
+					value: ordersTarget
+						? `${Math.round(ordersTarget)}/day`
+						: "Increase by 10%",
+				},
+			],
+			actions: [
+				"Run a weekday reactivation offer for old customers.",
+				"Train billing staff to upsell one add-on every transaction.",
+				"Audit low-conversion hours and run micro-promotions there.",
+			],
+		},
+		godown: {
+			goal: "Keep stock healthy: avoid stock-outs and reduce dead inventory.",
+			targets: [
+				{ label: "Fast SKU Availability", value: "98%+ in-stock" },
+				{
+					label: "Slow Stock Reduction",
+					value: inventory?.current
+						? "Reduce slow stock by 10%"
+						: "Identify top 20 slow SKUs",
+				},
+			],
+			actions: [
+				"Reorder top 10 fast SKUs before weekend demand.",
+				"Bundle or discount dead stock for faster movement.",
+				"Set min-max stock rules for the next purchase cycle.",
+			],
+		},
+		customer: {
+			goal: "Improve customer value and retention through better experience.",
+			targets: [
+				{
+					label: "Average Bill Target",
+					value: basketTarget
+						? `₹${Math.round(basketTarget).toLocaleString("en-IN")}`
+						: "Increase by 6%",
+				},
+				{ label: "Retention Goal", value: "Bring back 15 dormant customers" },
+			],
+			actions: [
+				"Launch one loyalty or stamp-card offer this week.",
+				"Send personalized WhatsApp follow-up to top regular buyers.",
+				"Create one combo offer aligned to high-frequency purchase pattern.",
+			],
+		},
+	};
+
+	const base = bySection[section] || bySection.khata;
+	if (category === "restaurant" && section === "customer") {
+		base.actions[2] =
+			"Create weekday combo meals to lift lunch and dinner conversion.";
+	}
+	if (category === "pharmacy" && section === "godown") {
+		base.actions[0] =
+			"Prioritize reorder for essential medicines and fast OTC items.";
+	}
+
+	return base;
 }
 
 function computeHealthScore(kpis, anomalies, insights, schema) {

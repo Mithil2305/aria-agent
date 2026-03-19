@@ -73,12 +73,20 @@ MARKET_BENCHMARKS = {
 }
 
 
-def generate_smart_alerts(kpis: list, anomalies: list, forecasts: list, logs: list) -> list:
+def generate_smart_alerts(
+    kpis: list,
+    anomalies: list,
+    forecasts: list,
+    logs: list,
+    history_context: Optional[dict] = None,
+) -> list:
     """
     Generate proactive, specific smart alerts from business data.
     Returns list of alert objects with severity, title, detail, and action.
     """
     alerts = []
+    history_context = history_context or {}
+    recurring_issues = history_context.get("recurring_issues", [])
 
     # Revenue decline alert
     revenue_kpi = _find_kpi(kpis, ["revenue", "sales", "income"])
@@ -173,6 +181,17 @@ def generate_smart_alerts(kpis: list, anomalies: list, forecasts: list, logs: li
                 "category": "anomaly",
             })
 
+    if recurring_issues:
+        alerts.append({
+            "id": "recurring_issue_watch",
+            "severity": "medium",
+            "icon": "🧠",
+            "title": "Recurring pattern detected from previous reports",
+            "detail": f"Previously repeated issue: {recurring_issues[0][:90]}",
+            "action": "Add this item to your weekly review checklist and track daily until stable.",
+            "category": "memory",
+        })
+
     return alerts
 
 
@@ -244,12 +263,14 @@ def answer_business_question(
     category: str,
     correlations: list = None,
     forecasts: list = None,
+    history_context: Optional[dict] = None,
 ) -> dict:
     """
     Natural language Q&A about business data.
     Returns an answer with supporting data and recommendation.
     """
     question_lower = question.lower()
+    history_context = history_context or {}
     
     # Build context summary
     revenue_kpi = _find_kpi(kpis, ["revenue", "sales", "income"])
@@ -286,6 +307,11 @@ def answer_business_question(
             f"- {day}: avg ₹{avg:,.0f}" for day, avg in sorted(day_averages.items(), key=lambda x: -x[1])
         ])
 
+        report_memory = "\n".join([
+            f"- {rep.get('section', 'analysis')}: issue={rep.get('top_issue', 'n/a')}; action={rep.get('action', 'n/a')}"
+            for rep in history_context.get("recent_reports", [])[:5]
+        ])
+
         prompt = f"""You are Yukti, an AI business advisor for Indian SMBs. Answer this question about the business data concisely and helpfully.
 
 Business Category: {category}
@@ -299,11 +325,15 @@ Sales by Day of Week:
 
 Revenue stats: min=₹{min(revenues, default=0):,.0f}, max=₹{max(revenues, default=0):,.0f}, avg=₹{sum(revenues)/max(len(revenues),1):,.0f}
 
+Historical Report Memory:
+{report_memory if report_memory else 'No historical report memory available'}
+
 Rules:
 1. Answer in 2-3 sentences max
 2. Give ONE specific action recommendation
 3. Use ₹ for currency, Indian number formatting
 4. Be direct — tell them what to DO
+5. Reference historical pattern if relevant to improve answer quality
 
 Return JSON: {{"answer": "...", "highlight": "key number or stat", "action": "specific action", "confidence": "high/medium/low"}}"""
 
@@ -386,10 +416,18 @@ Return JSON: {{"answer": "...", "highlight": "key number or stat", "action": "sp
     return answer_data
 
 
-def generate_weekly_digest(kpis: list, anomalies: list, forecasts: list, insights: list, logs: list) -> dict:
+def generate_weekly_digest(
+    kpis: list,
+    anomalies: list,
+    forecasts: list,
+    insights: list,
+    logs: list,
+    history_context: Optional[dict] = None,
+) -> dict:
     """
     Generate a concise weekly business digest with the top actions for the week.
     """
+    history_context = history_context or {}
     revenue_kpi = _find_kpi(kpis, ["revenue", "sales", "income"])
     customer_kpi = _find_kpi(kpis, ["customer", "footfall", "visitor"])
     expense_kpi = _find_kpi(kpis, ["expense", "cost", "spend"])
@@ -447,6 +485,13 @@ def generate_weekly_digest(kpis: list, anomalies: list, forecasts: list, insight
             "impact": "Unlock advanced predictions and alerts",
         })
 
+    if history_context.get("successful_actions"):
+        actions.append({
+            "priority": 2,
+            "action": f"Repeat proven action: {history_context['successful_actions'][0]}",
+            "impact": "Reuses a strategy that worked in your earlier reports",
+        })
+
     actions.sort(key=lambda x: x["priority"])
 
     return {
@@ -460,11 +505,16 @@ def generate_weekly_digest(kpis: list, anomalies: list, forecasts: list, insight
     }
 
 
-def generate_actionable_forecast_summary(forecasts: list, logs: list) -> list:
+def generate_actionable_forecast_summary(
+    forecasts: list,
+    logs: list,
+    history_context: Optional[dict] = None,
+) -> list:
     """
     Convert forecast data into plain-language warnings and actions.
     """
     summaries = []
+    history_context = history_context or {}
     revenues = [float(l.get("revenue", 0) or 0) for l in logs if l.get("revenue")]
     avg_daily_rev = sum(revenues) / max(len(revenues), 1)
 
@@ -510,6 +560,12 @@ def generate_actionable_forecast_summary(forecasts: list, logs: list) -> list:
                 "action": "Try a new promotion or product to break out of the plateau.",
                 "urgency": "low",
             })
+
+    if history_context.get("recurring_issues") and summaries:
+        summaries[0]["detail"] = (
+            f"{summaries[0].get('detail', '')} Past reports show recurring issue: "
+            f"{history_context['recurring_issues'][0][:70]}"
+        ).strip()
 
     return summaries
 

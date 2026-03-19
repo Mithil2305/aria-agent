@@ -117,7 +117,7 @@ export default function YuktiAdvisorPanel({
 	return (
 		<div className="card mb-6 overflow-hidden border-indigo-200 animate-fade-in-up">
 			{/* Panel Header */}
-			<div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-surface-200 bg-gradient-to-r from-indigo-50/60 to-purple-50/40">
+			<div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-surface-200 bg-linear-to-r from-indigo-50/60 to-purple-50/40">
 				<div className="flex items-center gap-2.5">
 					<div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
 						<BrainCircuit size={16} className="text-indigo-600" />

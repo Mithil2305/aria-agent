@@ -82,7 +82,7 @@ from engine.insight_engine import generate_insights
 from engine.report_generator import generate_pdf_report
 
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Any, List, Optional
 
 
 class DailyLogEntry(BaseModel):
@@ -282,6 +282,165 @@ def _sanitize(obj):
     return obj
 
 
+def _get_firestore_client():
+    """Return Firestore client when Firebase Admin is configured."""
+    if not _firebase_available:
+        return None
+    try:
+        from firebase_admin import firestore as _fs
+
+        return _fs.client()
+    except Exception:
+        return None
+
+
+def _build_history_context(uid: Optional[str], limit: int = 12) -> dict:
+    """Build report memory context for personalized prompts and diagnostics."""
+    context = {
+        "recent_reports": [],
+        "recurring_issues": [],
+        "successful_actions": [],
+    }
+    if not uid:
+        return context
+
+    db = _get_firestore_client()
+    if db is None:
+        return context
+
+    try:
+        from firebase_admin import firestore as _fs
+
+        reports_ref = (
+            db.collection("users")
+            .document(uid)
+            .collection("reports")
+            .order_by("createdAt", direction=_fs.Query.DESCENDING)
+            .limit(limit)
+        )
+        generated_ref = (
+            db.collection("users")
+            .document(uid)
+            .collection("generatedReports")
+            .order_by("createdAt", direction=_fs.Query.DESCENDING)
+            .limit(limit)
+        )
+
+        recent = []
+        top_issues = []
+        successful_actions = []
+
+        for doc in reports_ref.stream():
+            item = doc.to_dict() or {}
+            analysis_raw = item.get("analysisData")
+            analysis_obj = None
+            if isinstance(analysis_raw, str):
+                try:
+                    analysis_obj = json.loads(analysis_raw)
+                except Exception:
+                    analysis_obj = None
+
+            trend = (
+                (analysis_obj or {}).get("trend_lock", {}).get("direction")
+                if isinstance(analysis_obj, dict)
+                else None
+            )
+            insights = (analysis_obj or {}).get("insights", []) if isinstance(analysis_obj, dict) else []
+            top_issue = None
+            action = None
+            for ins in insights:
+                if ins.get("severity") in {"critical", "high"} and ins.get("title"):
+                    top_issue = ins.get("title")
+                    action = ins.get("recommendation")
+                    break
+            if not top_issue and item.get("narrative"):
+                top_issue = item.get("narrative", "")[:120]
+
+            if top_issue:
+                top_issues.append(top_issue.strip().lower())
+            if action and len(action) > 8:
+                successful_actions.append(action)
+
+            recent.append(
+                {
+                    "section": "analysis",
+                    "trend": trend or "unknown",
+                    "top_issue": top_issue or "n/a",
+                    "action": action or "n/a",
+                }
+            )
+
+        for doc in generated_ref.stream():
+            item = doc.to_dict() or {}
+            top_issue = item.get("top_issue") or item.get("summary")
+            action = item.get("action")
+            if top_issue:
+                top_issues.append(str(top_issue).strip().lower())
+            if action and len(action) > 8:
+                successful_actions.append(str(action))
+
+            recent.append(
+                {
+                    "section": item.get("section", "advisor"),
+                    "trend": item.get("trend", "n/a"),
+                    "top_issue": top_issue or "n/a",
+                    "action": action or "n/a",
+                }
+            )
+
+        issue_counts = {}
+        for issue in top_issues:
+            issue_counts[issue] = issue_counts.get(issue, 0) + 1
+
+        recurring = [k[:120] for k, v in issue_counts.items() if v >= 2]
+
+        dedup_actions = []
+        seen = set()
+        for action in successful_actions:
+            key = action.strip().lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            dedup_actions.append(action)
+
+        context["recent_reports"] = recent[:limit]
+        context["recurring_issues"] = recurring[:5]
+        context["successful_actions"] = dedup_actions[:5]
+        return context
+    except Exception:
+        return context
+
+
+def _save_generated_report(uid: Optional[str], section: str, payload: dict[str, Any]) -> None:
+    """Persist generated section outputs under the authenticated user id."""
+    if not uid:
+        return
+    db = _get_firestore_client()
+    if db is None:
+        return
+
+    try:
+        report = {
+            "section": section,
+            "date": datetime.utcnow().isoformat() + "Z",
+            "createdAt": datetime.utcnow(),
+            "summary": payload.get("summary"),
+            "top_issue": payload.get("top_issue"),
+            "action": payload.get("action"),
+            "trend": payload.get("trend"),
+            "payload": _sanitize(payload),
+        }
+        (
+            db.collection("users")
+            .document(uid)
+            .collection("generatedReports")
+            .add(report)
+        )
+    except Exception:
+        # Best-effort persistence should never break the API response
+        pass
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "engine": "Yukti Decision Intelligence v1.0"}
@@ -363,12 +522,15 @@ async def run_full_analysis(uid: str = Depends(get_current_user)):
         # Layer 5: Decision Intelligence
         decisions = compute_decisions(data, schema)
 
+        history_context = _build_history_context(uid)
+
         # Layer 6: AI Reasoning
         insights = generate_insights(
             schema=schema,
             analytics=analytics,
             predictions=predictions,
             decisions=decisions,
+            history_context=history_context,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Analysis pipeline error: {str(e)}")
@@ -382,6 +544,27 @@ async def run_full_analysis(uid: str = Depends(get_current_user)):
         "insights": insights,
     }
     _save_session(session_store)
+
+    top_issue = None
+    top_action = None
+    for ins in insights.get("insights", []):
+        if ins.get("severity") in {"critical", "high"}:
+            top_issue = ins.get("title")
+            top_action = ins.get("recommendation")
+            break
+
+    _save_generated_report(
+        uid,
+        "analysis",
+        {
+            "summary": insights.get("narrative", "")[:200],
+            "top_issue": top_issue,
+            "action": top_action,
+            "trend": insights.get("trend_lock", {}).get("direction", "unknown"),
+            "insightCount": len(insights.get("insights", [])),
+            "kpiCount": len(analytics.get("kpis", [])),
+        },
+    )
 
     return JSONResponse(content=_sanitize({
         "status": "success",
@@ -496,6 +679,18 @@ async def download_report(uid: str = Depends(get_current_user)):
         filename=session_store["filename"],
         row_count=session_store["row_count"],
         analysis=session_store["analysis"],
+    )
+
+    ins = session_store.get("analysis", {}).get("insights", {})
+    _save_generated_report(
+        uid,
+        "pdf_report",
+        {
+            "summary": f"PDF report generated for {session_store.get('filename', 'dataset')}",
+            "top_issue": ins.get("narrative"),
+            "action": "Review prioritized actions in report sections Diagnose -> Prioritize -> Act.",
+            "trend": ins.get("trend_lock", {}).get("direction", "unknown"),
+        },
     )
 
     return StreamingResponse(
@@ -1782,6 +1977,19 @@ async def smart_alerts(uid: str = Depends(get_current_user)):
             anomalies=ctx["anomalies"],
             forecasts=ctx["forecasts"],
             logs=ctx["logs"],
+            history_context=_build_history_context(uid),
+        )
+        top = alerts[0] if alerts else {}
+        _save_generated_report(
+            uid,
+            "smart_alerts",
+            {
+                "summary": f"Generated {len(alerts)} smart alerts",
+                "top_issue": top.get("title"),
+                "action": top.get("action"),
+                "trend": top.get("category", "alerts"),
+                "count": len(alerts),
+            },
         )
         return JSONResponse(content=_sanitize({"alerts": alerts}))
     except Exception as e:
@@ -1801,6 +2009,17 @@ async def business_chat(payload: ChatRequest, uid: str = Depends(get_current_use
             category=payload.category or "general",
             correlations=ctx["correlations"],
             forecasts=ctx["forecasts"],
+            history_context=_build_history_context(uid),
+        )
+        _save_generated_report(
+            uid,
+            "business_chat",
+            {
+                "summary": f"Q: {payload.question[:100]}",
+                "top_issue": result.get("answer"),
+                "action": result.get("action"),
+                "trend": result.get("confidence", "unknown"),
+            },
         )
         return JSONResponse(content=_sanitize(result))
     except Exception as e:
@@ -1819,6 +2038,18 @@ async def weekly_digest(uid: str = Depends(get_current_user)):
             forecasts=ctx["forecasts"],
             insights=ctx["insights"],
             logs=ctx["logs"],
+            history_context=_build_history_context(uid),
+        )
+        top_action = (digest.get("actions") or [{}])[0].get("action") if isinstance(digest, dict) else None
+        _save_generated_report(
+            uid,
+            "weekly_digest",
+            {
+                "summary": digest.get("trend_word") if isinstance(digest, dict) else "weekly digest",
+                "top_issue": digest.get("top_insight_title") if isinstance(digest, dict) else None,
+                "action": top_action,
+                "trend": digest.get("week_change") if isinstance(digest, dict) else "unknown",
+            },
         )
         return JSONResponse(content=_sanitize(digest))
     except Exception as e:
@@ -1848,6 +2079,17 @@ async def pricing_insights(uid: str = Depends(get_current_user)):
             logs=ctx["logs"],
             category=category,
         )
+        top = insights[0] if insights else {}
+        _save_generated_report(
+            uid,
+            "pricing_insights",
+            {
+                "summary": f"Pricing analysis for {category}",
+                "top_issue": top.get("title"),
+                "action": top.get("action"),
+                "trend": top.get("priority", "unknown"),
+            },
+        )
         return JSONResponse(content=_sanitize({"insights": insights}))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1862,8 +2104,20 @@ async def forecast_actions(uid: str = Depends(get_current_user)):
         actions = generate_actionable_forecast_summary(
             forecasts=ctx["forecasts"],
             logs=ctx["logs"],
+            history_context=_build_history_context(uid),
         )
-        return JSONResponse(content=_sanitize({"actions": actions}))
+        top = actions[0] if actions else {}
+        _save_generated_report(
+            uid,
+            "forecast_actions",
+            {
+                "summary": f"Generated {len(actions)} forecast action cards",
+                "top_issue": top.get("headline"),
+                "action": top.get("action"),
+                "trend": top.get("urgency", "unknown"),
+            },
+        )
+        return JSONResponse(content=_sanitize({"actions": actions, "forecast_actions": actions}))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

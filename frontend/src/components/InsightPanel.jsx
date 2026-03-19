@@ -58,7 +58,14 @@ const TYPE_CONFIG = {
 	},
 };
 
-const PRIORITY_MAP = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+const PRIORITY_MAP = {
+	critical: 0,
+	high: 1,
+	medium: 2,
+	moderate: 2,
+	low: 3,
+	info: 4,
+};
 const PRIORITY_COLORS = {
 	critical: "bg-red-50 text-red-500 border-red-200",
 	high: "bg-amber-50 text-amber-500 border-amber-200",
@@ -70,8 +77,18 @@ const PRIORITY_LABELS = {
 	critical: "Urgent",
 	high: "Important",
 	medium: "Review",
+	moderate: "Review",
 	low: "Good news",
 	info: "FYI",
+};
+
+const SECTION_LABELS = {
+	diagnose: "1. Diagnose",
+	prioritize: "2. Prioritize",
+	act: "3. Act",
+	measure: "4. Measure",
+	optimize: "Optimize",
+	levers: "Levers",
 };
 
 export default function InsightPanel({ insights }) {
@@ -87,6 +104,27 @@ export default function InsightPanel({ insights }) {
 
 	const filtered =
 		filter === "all" ? sorted : sorted.filter((i) => i.type === filter);
+
+	const grouped = filtered.reduce((acc, item) => {
+		const section = item.section || "act";
+		if (!acc[section]) acc[section] = [];
+		acc[section].push(item);
+		return acc;
+	}, {});
+
+	const orderedSections = Object.keys(grouped).sort((a, b) => {
+		const order = [
+			"diagnose",
+			"prioritize",
+			"act",
+			"measure",
+			"optimize",
+			"levers",
+		];
+		const ai = order.indexOf(a);
+		const bi = order.indexOf(b);
+		return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+	});
 
 	const typeCount = {};
 	insights.forEach((i) => {
@@ -154,17 +192,30 @@ export default function InsightPanel({ insights }) {
 			</div>
 
 			{/* Insights List */}
-			<div className="space-y-2 max-h-[560px] overflow-y-auto pr-1">
-				{filtered.map((insight, idx) => (
-					<InsightCard
-						key={insight.id}
-						insight={insight}
-						index={idx}
-						expanded={expandedId === insight.id}
-						onToggle={() =>
-							setExpandedId(expandedId === insight.id ? null : insight.id)
-						}
-					/>
+			<div className="space-y-4 max-h-140 overflow-y-auto pr-1">
+				{orderedSections.map((section) => (
+					<div key={section}>
+						<div className="flex items-center gap-2 mb-2 px-1">
+							<div className="h-px flex-1 bg-surface-200" />
+							<p className="text-[10px] uppercase tracking-wide text-surface-500 font-semibold">
+								{SECTION_LABELS[section] || section}
+							</p>
+							<div className="h-px flex-1 bg-surface-200" />
+						</div>
+						<div className="space-y-2">
+							{grouped[section].map((insight, idx) => (
+								<InsightCard
+									key={`${section}-${insight.id}`}
+									insight={insight}
+									index={idx}
+									expanded={expandedId === insight.id}
+									onToggle={() =>
+										setExpandedId(expandedId === insight.id ? null : insight.id)
+									}
+								/>
+							))}
+						</div>
+					</div>
 				))}
 			</div>
 		</div>
@@ -240,6 +291,28 @@ function InsightCard({ insight, index, expanded, onToggle }) {
 						{insight.description}
 					</p>
 
+					{insight.reason && (
+						<div className="rounded-lg border border-surface-200 bg-surface-50 px-3 py-2.5">
+							<p className="text-[10px] text-surface-500 font-semibold mb-0.5">
+								Why this happened
+							</p>
+							<p className="text-[11px] text-surface-700 leading-relaxed">
+								{insight.reason}
+							</p>
+						</div>
+					)}
+
+					{insight.evidence && (
+						<div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5">
+							<p className="text-[10px] text-blue-600 font-semibold mb-0.5">
+								Evidence
+							</p>
+							<p className="text-[11px] text-blue-700 leading-relaxed">
+								{insight.evidence}
+							</p>
+						</div>
+					)}
+
 					{insight.recommendation && (
 						<div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-gold-50 border border-gold-200">
 							<ArrowRight size={10} className="text-gold-600 mt-0.5 shrink-0" />
@@ -251,6 +324,17 @@ function InsightCard({ insight, index, expanded, onToggle }) {
 									{insight.recommendation}
 								</p>
 							</div>
+						</div>
+					)}
+
+					{insight.expected_impact && (
+						<div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2.5">
+							<p className="text-[10px] text-green-600 font-semibold mb-0.5">
+								Expected business impact
+							</p>
+							<p className="text-[11px] text-green-700 leading-relaxed">
+								{insight.expected_impact}
+							</p>
 						</div>
 					)}
 				</div>

@@ -117,6 +117,28 @@ export default function DashboardPage() {
 		setSavedReports((prev) => prev.filter((r) => r.id !== reportId));
 	};
 
+	const parseAnalysisData = (raw) => {
+		if (!raw) return null;
+		if (typeof raw === "object") return raw;
+		if (typeof raw !== "string") return null;
+		try {
+			return JSON.parse(raw);
+		} catch {
+			return null;
+		}
+	};
+
+	const pickPreviousReport = (reports, currentAnalysis) => {
+		if (!Array.isArray(reports) || reports.length === 0) return null;
+		const currentSerialized = JSON.stringify(currentAnalysis || {});
+		for (const rep of reports) {
+			if (rep?.analysisData && rep.analysisData !== currentSerialized) {
+				return rep;
+			}
+		}
+		return reports.length > 1 ? reports[1] : null;
+	};
+
 	const category = getBusinessCategory(userProfile?.businessType || "");
 	const analysisReady = !!analysis;
 
@@ -132,6 +154,8 @@ export default function DashboardPage() {
 	// ── If we have analysis data, show the full dashboard ──
 	if (analysis) {
 		const kpis = analysis.kpis || [];
+		const previousReport = pickPreviousReport(savedReports, analysis);
+		const previousAnalysis = parseAnalysisData(previousReport?.analysisData);
 
 		return (
 			<div>
@@ -141,13 +165,16 @@ export default function DashboardPage() {
 					onReset={handleReset}
 					token={token}
 					analysisReady={analysisReady}
+					businessType={userProfile?.businessType || ""}
+					previousAnalysis={previousAnalysis}
+					previousReportDate={previousReport?.date || null}
 				/>
 
 				{/* ── AI BUSINESS ADVISOR SECTION ── */}
-				<div className="max-w-[1200px] mx-auto px-4 sm:px-6 pb-12">
+				<div className="max-w-300 mx-auto px-4 sm:px-6 pb-12">
 					<div className="mb-6">
 						<div className="flex items-center gap-3 mb-2">
-							<div className="p-2 rounded-lg bg-gradient-to-br from-indigo-50 to-purple-50">
+							<div className="p-2 rounded-lg bg-linear-to-br from-indigo-50 to-purple-50">
 								<Brain size={20} className="text-indigo-600" />
 							</div>
 							<div>
@@ -159,7 +186,7 @@ export default function DashboardPage() {
 									do.
 								</p>
 							</div>
-							<span className="ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 text-indigo-600 text-[10px] font-semibold">
+							<span className="ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-linear-to-r from-indigo-50 to-purple-50 border border-indigo-200 text-indigo-600 text-[10px] font-semibold">
 								<Sparkles size={10} />
 								AI-Powered
 							</span>
@@ -222,7 +249,7 @@ export default function DashboardPage() {
 
 				{/* Past Reports */}
 				{savedReports.length > 1 && (
-					<div className="max-w-[1200px] mx-auto px-6 pb-10">
+					<div className="max-w-300 mx-auto px-6 pb-10">
 						<ReportHistory
 							reports={savedReports.filter(
 								(r) => r.analysisData !== JSON.stringify(analysis),
