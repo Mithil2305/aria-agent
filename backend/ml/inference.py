@@ -38,7 +38,7 @@ def _load_model():
 
     config_path = MODEL_DIR / "yukti_config.json"
     if not config_path.exists():
-        log.warning("⚠  Yukti model not found at %s — will use AI fallback", MODEL_DIR)
+        log.warning("⚠  Yukti model not found at %s — will use rule-based fallback", MODEL_DIR)
         return False
 
     try:
@@ -69,8 +69,16 @@ def _load_model():
         log.info("✅ Yukti model loaded successfully on %s", device)
         return True
 
+    except ModuleNotFoundError as e:
+        log.warning(
+            "⚠  Failed to load Yukti model: %s — install ML deps with: pip install -r backend/requirements.txt",
+            e,
+        )
+        _model = None
+        _tokenizer = None
+        return False
     except Exception as e:
-        log.warning("⚠  Failed to load Yukti model: %s — will use AI fallback", e)
+        log.warning("⚠  Failed to load Yukti model: %s — will use rule-based fallback", e)
         _model = None
         _tokenizer = None
         return False

@@ -57,7 +57,7 @@ export default function TrendCharts({ trends, expanded }) {
 
 			<div
 				className={expanded ? "h-80" : "h-64"}
-				style={{ minWidth: 0, minHeight: 0 }}
+				style={{ width: "100%", minWidth: 0, height: 300 }}
 			>
 				<ResponsiveContainer
 					width="100%"

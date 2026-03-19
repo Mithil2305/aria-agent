@@ -47,6 +47,7 @@ import {
 } from "lucide-react";
 import TrendCharts from "./TrendCharts";
 import ForecastPanel from "./ForecastPanel";
+import YuktiAdvisorPanel from "./YuktiAdvisorPanel";
 import { getStrategyAdvice } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
@@ -69,7 +70,13 @@ const PRIORITY_STYLES = {
 	low: "bg-green-50 text-green-600 border-green-200",
 };
 
-export default function Dashboard({ analysis, rowCount, onReset }) {
+export default function Dashboard({
+	analysis,
+	rowCount,
+	onReset,
+	token,
+	analysisReady,
+}) {
 	const [activeTab, setActiveTab] = useState("khata");
 	const [expandedInsight, setExpandedInsight] = useState(null);
 	const [exporting, setExporting] = useState(false);
@@ -486,7 +493,6 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 		{ id: "footfall", label: "Footfall & Orders", icon: Footprints },
 		{ id: "godown", label: "Smart Godown", icon: Warehouse },
 		{ id: "customer", label: "Customers", icon: UserCheck },
-		{ id: "advisor", label: "Yukti Advisor", icon: BrainCircuit },
 		{ id: "predictions", label: "Predictions", icon: LineChart },
 		{ id: "alerts", label: "Alerts", icon: Bell, badge: alertTotal },
 		{ id: "strategy", label: "Strategy", icon: Target },
@@ -575,6 +581,17 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 				{/* AI Provider Badge */}
 				<AIProviderBadge provider={aiProvider} />
 
+				{/* Combined Yukti Advisor + AI Business Advisor — pinned at top */}
+				<YuktiAdvisorPanel
+					token={token}
+					analysisReady={analysisReady}
+					insights={insightsByCategory}
+					allInsights={insights}
+					trendLock={trendLock}
+					expandedInsight={expandedInsight}
+					setExpandedInsight={setExpandedInsight}
+				/>
+
 				{/* Tabs */}
 				<div className="flex items-center gap-1 mb-6 p-1 bg-surface-100 rounded-xl border border-surface-300 overflow-x-auto">
 					{TABS.map((tab) => {
@@ -625,15 +642,6 @@ export default function Dashboard({ analysis, rowCount, onReset }) {
 							kpis={kpis}
 							insights={insightsByCategory}
 							correlations={correlations}
-						/>
-					)}
-					{activeTab === "advisor" && (
-						<AdvisorSection
-							insights={insightsByCategory}
-							allInsights={insights}
-							trendLock={trendLock}
-							expandedInsight={expandedInsight}
-							setExpandedInsight={setExpandedInsight}
 						/>
 					)}
 					{activeTab === "predictions" && (

@@ -388,3 +388,70 @@ function normalizeInsight(ins, idx) {
 		type: ins.category ?? ins.type ?? "info",
 	};
 }
+
+/**
+ * API Service additions for Smart Advisor features
+ * Add these to frontend/src/services/api.js
+ */
+
+// ─── ADD TO EXISTING api.js ───────────────────────────────────
+
+export async function getSmartAlerts(token) {
+	const { data } = await API.post(
+		"/api/smart-alerts",
+		{},
+		{
+			headers: authHeaders(token),
+		},
+	);
+	return data;
+}
+
+export async function askBusinessQuestion(question, category, token) {
+	const { data } = await API.post(
+		"/api/chat",
+		{ question, category },
+		{ headers: { "Content-Type": "application/json", ...authHeaders(token) } },
+	);
+	return data;
+}
+
+export async function getWeeklyDigest(token) {
+	const { data } = await API.post(
+		"/api/weekly-digest",
+		{},
+		{
+			headers: authHeaders(token),
+		},
+	);
+	return data;
+}
+
+export async function getMarketBenchmark(category, token) {
+	const { data } = await API.get(`/api/market-benchmark?category=${category}`, {
+		headers: authHeaders(token),
+	});
+	return data;
+}
+
+export async function getPricingInsights(token) {
+	const { data } = await API.post(
+		"/api/pricing-insights",
+		{},
+		{
+			headers: authHeaders(token),
+		},
+	);
+	return data;
+}
+
+export async function getForecastActions(token) {
+	const { data } = await API.post(
+		"/api/forecast-actions",
+		{},
+		{
+			headers: authHeaders(token),
+		},
+	);
+	return data;
+}

@@ -34,8 +34,8 @@ def generate_insights(
     kpis = analytics.get("kpis", [])
     anomalies = predictions.get("anomalies", [])
     forecasts = predictions.get("forecasts", [])
-    correlations = analytics.get("correlations", [])
-    trends = analytics.get("trends", {})
+    correlations = decisions.get("correlations", [])
+    trends = analytics.get("trends", [])
 
     # ── Step 1: Lock primary trend (contradiction prevention) ──
     trend_lock = _lock_primary_trend(kpis, trends)
@@ -356,7 +356,7 @@ def _forecast_insights_simple(forecasts: list, trend_lock: dict) -> list:
     declining = []
 
     for f in forecasts:
-        gr = f.get("growthRate", 0)
+        gr = f.get("growth_rate", f.get("growthRate", 0))
         label = f.get("label", f.get("column", "metric"))
         if gr > 5:
             growing.append(label)
@@ -435,7 +435,7 @@ def _ai_advisor_insights(
 ) -> list:
     """Use AI (Gemini/Groq/Claude) to generate advisor insights."""
     if not is_any_ai_available():
-        return _fallback_advisor_insights(kpis, trend_lock)
+        return _fallback_advisor_insights(kpis, trend_lock), "rule_based"
 
     # Build context for the AI
     kpi_summary = []

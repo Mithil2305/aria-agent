@@ -18,4 +18,4 @@ compatibility_date = "2024-12-01"
 #
 # Allowed origins for CORS (comma-separated):
 [vars]
-ALLOWED_ORIGINS = "http://localhost:5173,https://aria-agent-alpha.vercel.app,https://mudmedia-yukti.vercel.app"
+ALLOWED_ORIGINS = "http://localhost:5173, https://aria-agent-alpha.vercel.app, https://mudmedia-yukti.vercel.app"

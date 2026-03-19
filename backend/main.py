@@ -10,7 +10,14 @@ Architecture Layers:
   5. Decision Intelligence  - Correlations, risk scoring, feature importance
   6. AI Reasoning          - Insight generation, narratives, recommendations
 """
-
+from engine.smart_advisor import (
+    generate_smart_alerts,
+    generate_pricing_insights,
+    answer_business_question,
+    generate_weekly_digest,
+    generate_actionable_forecast_summary,
+    MARKET_BENCHMARKS,
+)
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -1542,7 +1549,7 @@ No markdown, no explanation, no code fences. Just the JSON."""
                 from google.genai import types as _gtypes
 
                 response = _gemini_client.models.generate_content(
-                    model="gemini-2.0-flash",
+                    model="gemini-3.1-flash",
                     contents=[
                         _gtypes.Content(
                             parts=[
@@ -1704,6 +1711,161 @@ No markdown, no explanation, no code fences. Just the JSON."""
 # ═══════════════════════════════════════════════════════════════════════════
 #  RATE LIMITS — Usage Dashboard Endpoint  (REMOVED — tracked via Firestore)
 # ═══════════════════════════════════════════════════════════════════════════
+
+
+# ---------------------------------------------------------------------------
+# Smart Advisor Routes
+# ---------------------------------------------------------------------------
+
+class ChatRequest(BaseModel):
+    question: str
+    category: Optional[str] = "general"
+
+
+def _get_advisor_context() -> dict:
+    """
+    Extract KPIs, anomalies, forecasts, and raw log rows from session.
+    Falls back to empty lists so routes never crash on missing keys.
+    """
+    global session_store
+    if "raw_data" not in session_store:
+        session_store = _load_session()
+
+    analysis = session_store.get("analysis", {})
+    analytics = analysis.get("analytics", {})
+    predictions = analysis.get("predictions", {})
+    decisions = analysis.get("decisions", {})
+
+    kpis = analytics.get("kpis", [])
+    anomalies = predictions.get("anomalies", [])
+    forecasts = predictions.get("forecasts", [])
+
+    # Convert raw DataFrame rows to plain dicts for the advisor functions
+    raw = session_store.get("raw_data")
+    if raw is None:
+        logs = []
+    elif isinstance(raw, pd.DataFrame):
+        logs = raw.to_dict(orient="records")
+    else:
+        logs = list(raw)
+
+    correlations = decisions.get("correlations", [])
+    insights = analysis.get("insights", {}).get("insights", [])
+
+    return {
+        "kpis": kpis,
+        "anomalies": anomalies,
+        "forecasts": forecasts,
+        "logs": logs,
+        "correlations": correlations,
+        "insights": insights,
+    }
+
+
+def _require_data():
+    """Raise 400 if no dataset has been loaded yet."""
+    global session_store
+    if "raw_data" not in session_store:
+        session_store = _load_session()
+    if "raw_data" not in session_store:
+        raise HTTPException(status_code=400, detail="No dataset loaded. Upload or analyse first.")
+
+
+@app.post("/api/smart-alerts")
+async def smart_alerts(uid: str = Depends(get_current_user)):
+    """Generate proactive smart alerts from the current session data."""
+    _require_data()
+    try:
+        ctx = _get_advisor_context()
+        alerts = generate_smart_alerts(
+            kpis=ctx["kpis"],
+            anomalies=ctx["anomalies"],
+            forecasts=ctx["forecasts"],
+            logs=ctx["logs"],
+        )
+        return JSONResponse(content=_sanitize({"alerts": alerts}))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/chat")
+async def business_chat(payload: ChatRequest, uid: str = Depends(get_current_user)):
+    """Answer a natural-language business question about the loaded data."""
+    _require_data()
+    try:
+        ctx = _get_advisor_context()
+        result = answer_business_question(
+            question=payload.question,
+            kpis=ctx["kpis"],
+            logs=ctx["logs"],
+            category=payload.category or "general",
+            correlations=ctx["correlations"],
+            forecasts=ctx["forecasts"],
+        )
+        return JSONResponse(content=_sanitize(result))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/weekly-digest")
+async def weekly_digest(uid: str = Depends(get_current_user)):
+    """Generate a week-over-week digest with top 3 prioritised actions."""
+    _require_data()
+    try:
+        ctx = _get_advisor_context()
+        digest = generate_weekly_digest(
+            kpis=ctx["kpis"],
+            anomalies=ctx["anomalies"],
+            forecasts=ctx["forecasts"],
+            insights=ctx["insights"],
+            logs=ctx["logs"],
+        )
+        return JSONResponse(content=_sanitize(digest))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/market-benchmark")
+async def market_benchmark(category: str = "general", uid: str = Depends(get_current_user)):
+    """Return Tamil Nadu market benchmarks for the given business category."""
+    cat = category.lower().strip()
+    benchmark = MARKET_BENCHMARKS.get(cat, MARKET_BENCHMARKS.get("general", {}))
+    return JSONResponse(content=_sanitize({"category": cat, "benchmark": benchmark}))
+
+
+@app.post("/api/pricing-insights")
+async def pricing_insights(uid: str = Depends(get_current_user)):
+    """Generate pricing insights by comparing margins vs market benchmarks."""
+    _require_data()
+    try:
+        ctx = _get_advisor_context()
+        # Derive category from logs if possible
+        category = "general"
+        if ctx["logs"]:
+            category = str(ctx["logs"][0].get("business_category", "general") or "general").lower()
+        insights = generate_pricing_insights(
+            kpis=ctx["kpis"],
+            logs=ctx["logs"],
+            category=category,
+        )
+        return JSONResponse(content=_sanitize({"insights": insights}))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/forecast-actions")
+async def forecast_actions(uid: str = Depends(get_current_user)):
+    """Convert forecast trends into plain-language action cards."""
+    _require_data()
+    try:
+        ctx = _get_advisor_context()
+        actions = generate_actionable_forecast_summary(
+            forecasts=ctx["forecasts"],
+            logs=ctx["logs"],
+        )
+        return JSONResponse(content=_sanitize({"actions": actions}))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 """
 Shared AI Client — Gemini-first, Groq-fallback, Claude-backup
 Provides a single `generate_ai_content(prompt)` function that:
-  1. Tries Google Gemini (gemini-2.0-flash)
+  1. Tries Google Gemini (gemini-3.1-flash)
   2. On failure → falls back to Groq (kimi-k2-instruct)
   3. On failure → falls back to Claude (claude-sonnet-4-20250514)
   4. Returns (text, provider) or raises if all fail
@@ -70,7 +70,7 @@ def _call_gemini(prompt: str) -> str:
         raise RuntimeError("Gemini not configured")
 
     response = _gemini_client.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-3.1-flash",
         contents=prompt,
     )
     return response.text.strip()
@@ -152,7 +152,7 @@ def generate_ai_content(prompt: str) -> tuple[str, str]:
 
     # ── Attempt 1: Gemini ──
     if _gemini_available:
-        log.info("   🔄 Trying Gemini (gemini-2.0-flash)…")
+        log.info("   🔄 Trying Gemini (gemini-3.1-flash)…")
         try:
             raw = _call_gemini(prompt)
             log.info("   ✅ Gemini responded — %d chars", len(raw))
