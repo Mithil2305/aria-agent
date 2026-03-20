@@ -16,6 +16,63 @@ import { saveSectionReport } from "../services/reportMemory";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
+function getStoredAnalysis() {
+	try {
+		const raw = sessionStorage.getItem("yukti_analysis");
+		return raw ? JSON.parse(raw) : null;
+	} catch {
+		return null;
+	}
+}
+
+function buildFallbackDigest(analysis) {
+	if (!analysis) return null;
+
+	const kpis = analysis.kpis || [];
+	const anomalies = analysis.anomalies || [];
+	const insights = analysis.insights || [];
+	const revenueKpi = kpis.find((k) =>
+		(k.label || "").toLowerCase().includes("revenue"),
+	);
+	const weekChange = Number(revenueKpi?.change || 0);
+	const trendWord =
+		weekChange > 5 ? "Growing" : weekChange < -5 ? "Declining" : "Steady";
+	const topInsightTitle =
+		insights[0]?.title ||
+		(anomalies[0]?.label
+			? `Watch unusual movement in ${anomalies[0].label}`
+			: "Keep up the momentum");
+
+	const actions = [
+		insights[0]?.recommendation,
+		anomalies[0]?.label
+			? `Review ${anomalies[0].label} today and verify root cause.`
+			: null,
+		"Log data daily to sharpen next week predictions.",
+	]
+		.filter(Boolean)
+		.slice(0, 3)
+		.map((action, index) => ({
+			priority: index + 1,
+			action,
+			impact:
+				index === 0
+					? "Immediate business impact"
+					: "Improves weekly performance",
+		}));
+
+	return {
+		week_revenue: Number(revenueKpi?.current || 0) * 7,
+		week_change: Number.isFinite(weekChange) ? weekChange : 0,
+		trend_word: trendWord,
+		top_insight_title: topInsightTitle,
+		actions,
+		alert_count: anomalies.filter((a) =>
+			["critical", "high"].includes(a.severity),
+		).length,
+	};
+}
+
 function formatINR(value) {
 	if (value == null) return "---";
 	const num = Number(value);
@@ -40,15 +97,21 @@ export default function WeeklyDigest({ token, analysisReady }) {
 				{},
 				{ headers: token ? { Authorization: `Bearer ${token}` } : {} },
 			);
-			setDigest(data.digest);
+			const normalizedDigest = data?.digest || data;
+			setDigest(
+				normalizedDigest && Object.keys(normalizedDigest).length > 0
+					? normalizedDigest
+					: buildFallbackDigest(getStoredAnalysis()),
+			);
 			saveSectionReport(user, "weekly_digest", {
-				summary: data.digest?.trend_word || "Weekly digest generated",
-				top_issue: data.digest?.top_insight_title || null,
-				action: data.digest?.actions?.[0]?.action || null,
-				trend: data.digest?.week_change ?? null,
+				summary: normalizedDigest?.trend_word || "Weekly digest generated",
+				top_issue: normalizedDigest?.top_insight_title || null,
+				action: normalizedDigest?.actions?.[0]?.action || null,
+				trend: normalizedDigest?.week_change ?? null,
 			}).catch(() => {});
 		} catch (err) {
 			console.error("Weekly digest failed:", err);
+			setDigest(buildFallbackDigest(getStoredAnalysis()));
 		} finally {
 			setLoading(false);
 		}
@@ -71,7 +134,15 @@ export default function WeeklyDigest({ token, analysisReady }) {
 		);
 	}
 
-	if (!digest) return null;
+	if (!digest) {
+		return (
+			<div className="card p-5">
+				<p className="text-sm text-surface-600">
+					Weekly digest will appear after you run an analysis with enough data.
+				</p>
+			</div>
+		);
+	}
 
 	const isUp = digest.week_change > 0;
 	const isDown = digest.week_change < -5;

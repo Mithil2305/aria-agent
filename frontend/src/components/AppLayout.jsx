@@ -12,8 +12,13 @@ import {
 	Lightbulb,
 	Crown,
 	Gauge,
+	Loader2,
+	Sparkles,
+	CheckCircle2,
+	AlertCircle,
 } from "lucide-react";
 import { needsStockManagement } from "../config/businessTypes";
+import { useAnalysisJob } from "../contexts/AnalysisJobContext";
 
 const NAV_ITEMS = [
 	{ to: "/daily-log", icon: ClipboardEdit, label: "Daily Log" },
@@ -27,6 +32,7 @@ const NAV_ITEMS = [
 
 export default function AppLayout() {
 	const { user, userProfile, logout } = useAuth();
+	const { job } = useAnalysisJob();
 	const navigate = useNavigate();
 
 	const handleLogout = async () => {
@@ -126,6 +132,60 @@ export default function AppLayout() {
 
 			{/* Main content */}
 			<main className="flex-1 ml-60">
+				{job.status === "running" && (
+					<div className="mx-6 mt-4 px-4 py-3 rounded-lg border border-indigo-200 bg-indigo-50 flex items-start gap-3">
+						<Loader2
+							size={16}
+							className="text-indigo-600 animate-spin mt-0.5"
+						/>
+						<div className="text-xs text-indigo-700">
+							<p className="font-semibold">
+								Analysis is running in the background
+							</p>
+							<p className="mt-0.5">
+								Feel free to explore other pages while Yukti processes your
+								data.
+							</p>
+							<p className="mt-0.5 text-indigo-600/90">
+								{job.fileName ? `${job.fileName} · ` : ""}
+								{job.rowCount
+									? `${job.rowCount.toLocaleString()} rows`
+									: "Preparing analysis"}
+							</p>
+						</div>
+					</div>
+				)}
+
+				{job.status === "success" && (
+					<div className="mx-6 mt-4 px-4 py-3 rounded-lg border border-green-200 bg-green-50 flex items-start gap-3">
+						<CheckCircle2 size={16} className="text-green-600 mt-0.5" />
+						<div className="text-xs text-green-700">
+							<p className="font-semibold">Analysis complete</p>
+							<p className="mt-0.5">
+								Your latest insights are ready in Dashboard.
+							</p>
+						</div>
+						<button
+							onClick={() => navigate("/dashboard")}
+							className="ml-auto text-xs px-3 py-1.5 rounded-md border border-green-300 bg-white text-green-700 hover:bg-green-100"
+						>
+							<Sparkles size={12} className="inline mr-1" />
+							View Results
+						</button>
+					</div>
+				)}
+
+				{job.status === "error" && (
+					<div className="mx-6 mt-4 px-4 py-3 rounded-lg border border-red-200 bg-red-50 flex items-start gap-3">
+						<AlertCircle size={16} className="text-red-600 mt-0.5" />
+						<div className="text-xs text-red-700">
+							<p className="font-semibold">Analysis failed</p>
+							<p className="mt-0.5">
+								{job.error || "Please retry from Analyse page."}
+							</p>
+						</div>
+					</div>
+				)}
 				<Outlet />
 			</main>
 		</div>

@@ -1,18 +1,16 @@
 import { useState, useCallback } from "react";
 import UploadZone from "../components/UploadZone";
-import ProcessingView from "../components/ProcessingView";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { uploadFile, loadDemo, runAnalysis } from "../services/api";
+import { uploadFile, loadDemo } from "../services/api";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
+import { useAnalysisJob } from "../contexts/AnalysisJobContext";
 
 export default function UploadPage() {
-	const [stage, setStage] = useState("upload");
-	const [fileName, setFileName] = useState("");
-	const [rowCount, setRowCount] = useState(0);
 	const [error, setError] = useState(null);
 	const { user, userProfile, getIdToken } = useAuth();
+	const { startAnalysisJob, isRunning } = useAnalysisJob();
 	const navigate = useNavigate();
 	const role = userProfile?.role || "paid-user";
 
@@ -22,9 +20,29 @@ export default function UploadPage() {
 				setError(null);
 				const token = await getIdToken();
 				const result = await uploadFile(file, token, user?.uid, role);
-				setFileName(result.filename);
-				setRowCount(result.row_count);
-				setStage("processing");
+
+				await startAnalysisJob({
+					getToken: getIdToken,
+					uid: user?.uid,
+					role,
+					fileName: result.filename,
+					rowCount: result.row_count,
+					onSuccess: async (analysisResult) => {
+						if (!user) return;
+						try {
+							await setDoc(doc(db, "users", user.uid, "analyses", "latest"), {
+								filename: analysisResult.filename,
+								rowCount: analysisResult.row_count || result.row_count || 0,
+								analysisData: JSON.stringify(analysisResult),
+								createdAt: serverTimestamp(),
+							});
+						} catch {
+							// Ignore Firestore save failures
+						}
+					},
+				});
+
+				navigate("/dashboard");
 			} catch (err) {
 				setError(
 					err.response?.data?.detail ||
@@ -32,7 +50,7 @@ export default function UploadPage() {
 				);
 			}
 		},
-		[getIdToken, user, role],
+		[getIdToken, user, role, startAnalysisJob, navigate],
 	);
 
 	const handleDemoLoad = useCallback(async () => {
@@ -40,67 +58,51 @@ export default function UploadPage() {
 			setError(null);
 			const token = await getIdToken();
 			const result = await loadDemo(token);
-			setFileName(result.filename);
-			setRowCount(result.row_count);
-			setStage("processing");
+
+			await startAnalysisJob({
+				getToken: getIdToken,
+				uid: user?.uid,
+				role,
+				fileName: result.filename,
+				rowCount: result.row_count,
+				onSuccess: async (analysisResult) => {
+					if (!user) return;
+					try {
+						await setDoc(doc(db, "users", user.uid, "analyses", "latest"), {
+							filename: analysisResult.filename,
+							rowCount: analysisResult.row_count || result.row_count || 0,
+							analysisData: JSON.stringify(analysisResult),
+							createdAt: serverTimestamp(),
+						});
+					} catch {
+						// Ignore Firestore save failures
+					}
+				},
+			});
+
+			navigate("/dashboard");
 		} catch (err) {
 			setError(
 				err.response?.data?.detail ||
 					"Failed to load demo. Is the backend running?",
 			);
 		}
-	}, [getIdToken]);
-
-	const handleProcessingComplete = useCallback(async () => {
-		try {
-			setError(null);
-			const token = await getIdToken();
-			const result = await runAnalysis(token, user?.uid, role);
-
-			// Save analysis to Firestore under user
-			if (user) {
-				try {
-					await setDoc(doc(db, "users", user.uid, "analyses", "latest"), {
-						filename: result.filename,
-						rowCount: result.rowCount,
-						analysisData: JSON.stringify(result),
-						createdAt: serverTimestamp(),
-					});
-				} catch {
-					// Silently fail Firestore save — analysis still works locally
-				}
-			}
-
-			// Store in sessionStorage for the dashboard
-			sessionStorage.setItem("yukti_analysis", JSON.stringify(result));
-			sessionStorage.setItem("yukti_rowCount", rowCount.toString());
-			navigate("/dashboard");
-		} catch (err) {
-			setError(err.response?.data?.detail || "Analysis failed.");
-			setStage("upload");
-		}
-	}, [getIdToken, user, role, rowCount, navigate]);
+	}, [getIdToken, startAnalysisJob, user, role, navigate]);
 
 	return (
 		<div className="min-h-screen">
+			{isRunning && (
+				<div className="max-w-2xl mx-auto mt-4 px-4 py-3 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm text-center">
+					Analysis is running in the background. Feel free to explore other
+					pages while we process your data.
+				</div>
+			)}
 			{error && (
 				<div className="max-w-2xl mx-auto mt-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm text-center">
 					{error}
 				</div>
 			)}
-			{stage === "upload" && (
-				<UploadZone
-					onFileSelect={handleFileSelect}
-					onDemoLoad={handleDemoLoad}
-				/>
-			)}
-			{stage === "processing" && (
-				<ProcessingView
-					onComplete={handleProcessingComplete}
-					fileName={fileName}
-					rowCount={rowCount}
-				/>
-			)}
+			<UploadZone onFileSelect={handleFileSelect} onDemoLoad={handleDemoLoad} />
 		</div>
 	);
 }

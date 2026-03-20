@@ -47,7 +47,6 @@ import {
 } from "lucide-react";
 import TrendCharts from "./TrendCharts";
 import ForecastPanel from "./ForecastPanel";
-import YuktiAdvisorPanel from "./YuktiAdvisorPanel";
 import { getStrategyAdvice } from "../services/api";
 import { useAuth } from "../contexts/AuthContext";
 import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
@@ -79,9 +78,9 @@ export default function Dashboard({
 	businessType = "",
 	previousAnalysis = null,
 	previousReportDate = null,
+	advisorSection = null,
 }) {
 	const [activeTab, setActiveTab] = useState("khata");
-	const [expandedInsight, setExpandedInsight] = useState(null);
 	const [exporting, setExporting] = useState(false);
 
 	const {
@@ -581,6 +580,8 @@ export default function Dashboard({
 					dataPoints={rowCount}
 				/>
 
+				{advisorSection}
+
 				<WhatChangedStrip
 					summary={changeSummary}
 					previousReportDate={previousReportDate}
@@ -588,17 +589,6 @@ export default function Dashboard({
 
 				{/* AI Provider Badge */}
 				<AIProviderBadge provider={aiProvider} />
-
-				{/* Combined Yukti Advisor + AI Business Advisor — pinned at top */}
-				<YuktiAdvisorPanel
-					token={token}
-					analysisReady={analysisReady}
-					insights={insightsByCategory}
-					allInsights={insights}
-					trendLock={trendLock}
-					expandedInsight={expandedInsight}
-					setExpandedInsight={setExpandedInsight}
-				/>
 
 				{/* Tabs */}
 				<div className="flex items-center gap-1 mb-6 p-1 bg-surface-100 rounded-xl border border-surface-300 overflow-x-auto">

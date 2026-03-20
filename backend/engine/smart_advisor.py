@@ -520,7 +520,7 @@ def generate_actionable_forecast_summary(
 
     for fc in forecasts[:4]:
         label = fc.get("label", fc.get("column", "metric"))
-        growth = fc.get("growthRate", 0)
+        growth = fc.get("growth_rate", fc.get("growthRate", 0))
         trend = fc.get("trend", "flat")
         predictions = fc.get("predictions", fc.get("forecast", []))
         next_val = predictions[0].get("value", predictions[0].get("predicted", 0)) if predictions else 0

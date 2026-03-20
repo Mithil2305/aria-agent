@@ -12,6 +12,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 import { db } from "../firebase";
 import { getBusinessCategory } from "../config/businessTypes";
+import { useAnalysisJob } from "../contexts/AnalysisJobContext";
 import {
 	TrendingUp,
 	Target,
@@ -42,6 +43,7 @@ export default function DashboardPage() {
 	const [token, setToken] = useState(null);
 	const navigate = useNavigate();
 	const { user, userProfile, getIdToken } = useAuth();
+	const { job } = useAnalysisJob();
 
 	// Load current session analysis
 	useEffect(() => {
@@ -65,6 +67,21 @@ export default function DashboardPage() {
 				.catch(() => {});
 		}
 	}, [user, getIdToken]);
+
+	// If a background analysis completes while user is on another page,
+	// hydrate dashboard from session storage immediately.
+	useEffect(() => {
+		if (job.status !== "success") return;
+		const stored = sessionStorage.getItem("yukti_analysis");
+		const storedRows = sessionStorage.getItem("yukti_rowCount");
+		if (!stored) return;
+		try {
+			setAnalysis(JSON.parse(stored));
+			setRowCount(Number(storedRows) || 0);
+		} catch {
+			// Ignore bad cache payloads
+		}
+	}, [job.status]);
 
 	// Fetch saved reports from Firestore
 	useEffect(() => {
@@ -156,6 +173,79 @@ export default function DashboardPage() {
 		const kpis = analysis.kpis || [];
 		const previousReport = pickPreviousReport(savedReports, analysis);
 		const previousAnalysis = parseAnalysisData(previousReport?.analysisData);
+		const advisorSection = (
+			<div className="mb-6 animate-fade-in-up">
+				<div className="mb-6">
+					<div className="flex items-center gap-3 mb-2">
+						<div className="p-2 rounded-lg bg-linear-to-br from-indigo-50 to-purple-50">
+							<Brain size={20} className="text-indigo-600" />
+						</div>
+						<div>
+							<h2 className="text-lg font-semibold text-surface-900">
+								AI Business Advisor
+							</h2>
+							<p className="text-xs text-surface-500">
+								Real actions, not just charts. Yukti tells you exactly what to
+								do.
+							</p>
+						</div>
+						<span className="ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-linear-to-r from-indigo-50 to-purple-50 border border-indigo-200 text-indigo-600 text-[10px] font-semibold">
+							<Sparkles size={10} />
+							AI-Powered
+						</span>
+					</div>
+				</div>
+
+				<div className="flex gap-1 bg-surface-100 rounded-xl p-1 mb-6 overflow-x-auto">
+					{ADVISOR_TABS.map((tab) => {
+						const TabIcon = tab.icon;
+						const isActive = advisorTab === tab.key;
+						return (
+							<button
+								key={tab.key}
+								onClick={() => setAdvisorTab(tab.key)}
+								className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
+									isActive
+										? "bg-white shadow-sm text-indigo-600 border border-surface-300"
+										: "text-surface-500 hover:text-surface-700 hover:bg-white/60"
+								}`}
+							>
+								<TabIcon
+									size={13}
+									className={isActive ? "text-indigo-500" : "text-surface-400"}
+								/>
+								{tab.label}
+							</button>
+						);
+					})}
+				</div>
+
+				<div className="animate-fade-in-up">
+					{advisorTab === "alerts" && (
+						<SmartAlerts token={token} analysisReady={analysisReady} />
+					)}
+					{advisorTab === "chat" && (
+						<BusinessChat
+							token={token}
+							category={category}
+							analysisReady={analysisReady}
+						/>
+					)}
+					{advisorTab === "forecast" && (
+						<ActionableForecast token={token} analysisReady={analysisReady} />
+					)}
+					{advisorTab === "pricing" && (
+						<PricingInsights token={token} analysisReady={analysisReady} />
+					)}
+					{advisorTab === "benchmark" && (
+						<MarketBenchmark token={token} category={category} kpis={kpis} />
+					)}
+					{advisorTab === "digest" && (
+						<WeeklyDigest token={token} analysisReady={analysisReady} />
+					)}
+				</div>
+			</div>
+		);
 
 		return (
 			<div>
@@ -168,84 +258,8 @@ export default function DashboardPage() {
 					businessType={userProfile?.businessType || ""}
 					previousAnalysis={previousAnalysis}
 					previousReportDate={previousReport?.date || null}
+					advisorSection={advisorSection}
 				/>
-
-				{/* ── AI BUSINESS ADVISOR SECTION ── */}
-				<div className="max-w-300 mx-auto px-4 sm:px-6 pb-12">
-					<div className="mb-6">
-						<div className="flex items-center gap-3 mb-2">
-							<div className="p-2 rounded-lg bg-linear-to-br from-indigo-50 to-purple-50">
-								<Brain size={20} className="text-indigo-600" />
-							</div>
-							<div>
-								<h2 className="text-lg font-semibold text-surface-900">
-									AI Business Advisor
-								</h2>
-								<p className="text-xs text-surface-500">
-									Real actions, not just charts. Yukti tells you exactly what to
-									do.
-								</p>
-							</div>
-							<span className="ml-auto inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-linear-to-r from-indigo-50 to-purple-50 border border-indigo-200 text-indigo-600 text-[10px] font-semibold">
-								<Sparkles size={10} />
-								AI-Powered
-							</span>
-						</div>
-					</div>
-
-					{/* Advisor Tab Navigation */}
-					<div className="flex gap-1 bg-surface-100 rounded-xl p-1 mb-6 overflow-x-auto">
-						{ADVISOR_TABS.map((tab) => {
-							const TabIcon = tab.icon;
-							const isActive = advisorTab === tab.key;
-							return (
-								<button
-									key={tab.key}
-									onClick={() => setAdvisorTab(tab.key)}
-									className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
-										isActive
-											? "bg-white shadow-sm text-indigo-600 border border-surface-300"
-											: "text-surface-500 hover:text-surface-700 hover:bg-white/60"
-									}`}
-								>
-									<TabIcon
-										size={13}
-										className={
-											isActive ? "text-indigo-500" : "text-surface-400"
-										}
-									/>
-									{tab.label}
-								</button>
-							);
-						})}
-					</div>
-
-					{/* Tab Content */}
-					<div className="animate-fade-in-up">
-						{advisorTab === "alerts" && (
-							<SmartAlerts token={token} analysisReady={analysisReady} />
-						)}
-						{advisorTab === "chat" && (
-							<BusinessChat
-								token={token}
-								category={category}
-								analysisReady={analysisReady}
-							/>
-						)}
-						{advisorTab === "forecast" && (
-							<ActionableForecast token={token} analysisReady={analysisReady} />
-						)}
-						{advisorTab === "pricing" && (
-							<PricingInsights token={token} analysisReady={analysisReady} />
-						)}
-						{advisorTab === "benchmark" && (
-							<MarketBenchmark token={token} category={category} kpis={kpis} />
-						)}
-						{advisorTab === "digest" && (
-							<WeeklyDigest token={token} analysisReady={analysisReady} />
-						)}
-					</div>
-				</div>
 
 				{/* Past Reports */}
 				{savedReports.length > 1 && (
@@ -273,6 +287,12 @@ export default function DashboardPage() {
 	return (
 		<div className="min-h-screen py-10 px-6">
 			<div className="max-w-4xl mx-auto">
+				{job.status === "running" && (
+					<div className="mb-6 px-4 py-3 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm">
+						Analysis is in progress. Feel free to explore other sections while
+						Yukti prepares your insights.
+					</div>
+				)}
 				{/* Hero greeting */}
 				<div className="mb-12 animate-fade-in-up">
 					<h1 className="text-2xl font-semibold text-surface-900 mb-2">

@@ -14,6 +14,91 @@ import { saveSectionReport } from "../services/reportMemory";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
+function getStoredAnalysis() {
+	try {
+		const raw = sessionStorage.getItem("yukti_analysis");
+		return raw ? JSON.parse(raw) : null;
+	} catch {
+		return null;
+	}
+}
+
+function formatValue(label, value) {
+	if (value == null || value === "") return "--";
+	const lower = String(label || "").toLowerCase();
+	const numeric = Number(value);
+	if (!Number.isFinite(numeric)) return String(value);
+	if (
+		["revenue", "sales", "income", "expense", "cost", "profit"].some((k) =>
+			lower.includes(k),
+		)
+	) {
+		return `Rs ${numeric.toLocaleString("en-IN")}`;
+	}
+	return numeric.toLocaleString("en-IN");
+}
+
+function buildFallbackForecasts(analysis) {
+	if (!analysis) return [];
+	const fromPredictions = (analysis.forecasts || []).slice(0, 4).map((fc) => {
+		const growth = Number(fc.growth_rate ?? fc.growthRate ?? 0);
+		const trend = fc.trend || "flat";
+		const nextValue = fc.forecast?.[0]?.predicted;
+		const label = fc.label || fc.column || "Business metric";
+
+		if (trend === "downward" && growth < -5) {
+			return {
+				type: "warning",
+				icon: "⚠",
+				headline: `${label} may dip by ${Math.abs(growth).toFixed(0)}% soon`,
+				detail: `Projected next value: ${formatValue(label, nextValue)}`,
+				action:
+					"Run a short promotion and trim non-essential spend for the next cycle.",
+				urgency: "high",
+			};
+		}
+
+		if (trend === "upward" && growth > 5) {
+			return {
+				type: "opportunity",
+				icon: "↗",
+				headline: `${label} is trending up by ${growth.toFixed(0)}%`,
+				detail: `Projected next value: ${formatValue(label, nextValue)}`,
+				action: "Increase ready stock and staffing to capture this upside.",
+				urgency: "medium",
+			};
+		}
+
+		return {
+			type: "neutral",
+			icon: "→",
+			headline: `${label} is likely to stay steady`,
+			detail: `Projected next value: ${formatValue(label, nextValue)}`,
+			action: "Test one focused experiment this week to break the plateau.",
+			urgency: "low",
+		};
+	});
+
+	if (fromPredictions.length > 0) return fromPredictions;
+
+	const topInsight = analysis.insights?.[0];
+	if (!topInsight) return [];
+
+	return [
+		{
+			type: "neutral",
+			icon: "→",
+			headline: topInsight.title || "Near-term outlook is stable",
+			detail:
+				"Forecast-specific signals are limited, using your latest analysis insights.",
+			action:
+				topInsight.recommendation ||
+				"Keep tracking daily data to unlock richer forecasts.",
+			urgency: "low",
+		},
+	];
+}
+
 const TYPE_STYLES = {
 	warning: {
 		bg: "bg-amber-50",
@@ -62,7 +147,9 @@ export default function ActionableForecast({ token, analysisReady }) {
 				{ headers: token ? { Authorization: `Bearer ${token}` } : {} },
 			);
 			const cards = data.forecast_actions || data.actions || [];
-			setForecasts(cards);
+			setForecasts(
+				cards.length > 0 ? cards : buildFallbackForecasts(getStoredAnalysis()),
+			);
 			saveSectionReport(user, "forecast_actions", {
 				summary: `Generated ${cards.length} forecast action cards`,
 				top_issue: cards[0]?.headline || null,
@@ -71,6 +158,7 @@ export default function ActionableForecast({ token, analysisReady }) {
 			}).catch(() => {});
 		} catch (err) {
 			console.error("Forecast actions failed:", err);
+			setForecasts(buildFallbackForecasts(getStoredAnalysis()));
 		} finally {
 			setLoading(false);
 		}
@@ -93,7 +181,16 @@ export default function ActionableForecast({ token, analysisReady }) {
 		);
 	}
 
-	if (!forecasts.length) return null;
+	if (!forecasts.length) {
+		return (
+			<div className="card p-5">
+				<p className="text-sm text-surface-600">
+					No forecast cards yet. Add a few more days of logs to unlock What to
+					Expect insights.
+				</p>
+			</div>
+		);
+	}
 
 	return (
 		<div className="card p-5">

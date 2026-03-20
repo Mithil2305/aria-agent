@@ -16,50 +16,53 @@ import IntegrationsPage from "./pages/IntegrationsPage";
 import StrategyAdvisorPage from "./pages/StrategyAdvisorPage";
 import PremiumAnalysisPage from "./pages/PremiumAnalysisPage";
 import LimitsPage from "./pages/LimitsPage";
+import { AnalysisJobProvider } from "./contexts/AnalysisJobContext";
 
 function App() {
 	return (
 		<BrowserRouter>
 			<AuthProvider>
-				<Routes>
-					{/* Public routes */}
-					<Route path="/" element={<HomePage />} />
-					<Route path="/login" element={<LoginPage />} />
-					<Route path="/register" element={<RegisterPage />} />
+				<AnalysisJobProvider>
+					<Routes>
+						{/* Public routes */}
+						<Route path="/" element={<HomePage />} />
+						<Route path="/login" element={<LoginPage />} />
+						<Route path="/register" element={<RegisterPage />} />
 
-					{/* Trial expired — protected but outside AppLayout */}
-					<Route
-						path="/trial-expired"
-						element={
-							<ProtectedRoute>
-								<TrialExpiredPage />
-							</ProtectedRoute>
-						}
-					/>
+						{/* Trial expired — protected but outside AppLayout */}
+						<Route
+							path="/trial-expired"
+							element={
+								<ProtectedRoute>
+									<TrialExpiredPage />
+								</ProtectedRoute>
+							}
+						/>
 
-					{/* Protected routes — wrapped in SaaS sidebar layout */}
-					<Route
-						element={
-							<ProtectedRoute>
-								<AppLayout />
-							</ProtectedRoute>
-						}
-					>
-						<Route path="/dashboard" element={<DashboardPage />} />
-						<Route path="/upload" element={<UploadPage />} />
-						<Route path="/daily-log" element={<DailyLogPage />} />
-						<Route path="/profile" element={<ProfilePage />} />
-						<Route path="/analyse" element={<AnalysePage />} />
-						<Route path="/stock" element={<StockManagementPage />} />
-						<Route path="/integrations" element={<IntegrationsPage />} />
-						<Route path="/strategy" element={<StrategyAdvisorPage />} />
-						<Route path="/premium" element={<PremiumAnalysisPage />} />
-						<Route path="/limits" element={<LimitsPage />} />
-					</Route>
+						{/* Protected routes — wrapped in SaaS sidebar layout */}
+						<Route
+							element={
+								<ProtectedRoute>
+									<AppLayout />
+								</ProtectedRoute>
+							}
+						>
+							<Route path="/dashboard" element={<DashboardPage />} />
+							<Route path="/upload" element={<UploadPage />} />
+							<Route path="/daily-log" element={<DailyLogPage />} />
+							<Route path="/profile" element={<ProfilePage />} />
+							<Route path="/analyse" element={<AnalysePage />} />
+							<Route path="/stock" element={<StockManagementPage />} />
+							<Route path="/integrations" element={<IntegrationsPage />} />
+							<Route path="/strategy" element={<StrategyAdvisorPage />} />
+							<Route path="/premium" element={<PremiumAnalysisPage />} />
+							<Route path="/limits" element={<LimitsPage />} />
+						</Route>
 
-					{/* Catch-all */}
-					<Route path="*" element={<Navigate to="/" replace />} />
-				</Routes>
+						{/* Catch-all */}
+						<Route path="*" element={<Navigate to="/" replace />} />
+					</Routes>
+				</AnalysisJobProvider>
 			</AuthProvider>
 		</BrowserRouter>
 	);

@@ -54,7 +54,12 @@ export default function BusinessChat({ token, category, analysisReady }) {
 				{ question: q, category: category || "general" },
 				{ headers: token ? { Authorization: `Bearer ${token}` } : {} },
 			);
-			const ans = data.answer || {};
+			const ans =
+				data && typeof data === "object"
+					? data.answer && typeof data.answer === "object"
+						? data.answer
+						: data
+					: {};
 			saveSectionReport(user, "business_chat", {
 				summary: `Q: ${q}`,
 				top_issue: ans.answer || null,

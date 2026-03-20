@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { uploadDailyLogs, uploadFile, runAnalysis } from "../services/api";
+import { uploadDailyLogs, uploadFile } from "../services/api";
 import {
 	collection,
 	getDocs,
@@ -11,7 +11,7 @@ import {
 	serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import ProcessingView from "../components/ProcessingView";
+import { useAnalysisJob } from "../contexts/AnalysisJobContext";
 import {
 	BarChart3,
 	Loader2,
@@ -30,10 +30,10 @@ export default function AnalysePage() {
 	const { user, userProfile, getIdToken } = useAuth();
 	const navigate = useNavigate();
 	const role = userProfile?.role || "paid-user";
+	const { startAnalysisJob, isRunning } = useAnalysisJob();
 
 	const [logs, setLogs] = useState([]);
 	const [loadingLogs, setLoadingLogs] = useState(true);
-	const [stage, setStage] = useState("prepare"); // prepare | processing
 	const [error, setError] = useState(null);
 	const [dataSource, setDataSource] = useState("logs"); // logs | csv
 	const [csvFile, setCsvFile] = useState(null);
@@ -86,7 +86,39 @@ export default function AnalysePage() {
 				const result = await uploadFile(csvFile, token, user?.uid, role);
 				setFileName(result.filename);
 				setRowCount(result.row_count);
-				setStage("processing");
+
+				await startAnalysisJob({
+					getToken: getIdToken,
+					uid: user?.uid,
+					role,
+					fileName: result.filename,
+					rowCount: result.row_count,
+					onSuccess: async (analysisResult) => {
+						if (!user) return;
+						try {
+							const reportData = {
+								filename:
+									analysisResult.filename || result.filename || "Unknown",
+								rowCount: analysisResult.row_count || result.row_count || 0,
+								ai_provider: analysisResult.ai_provider || "unknown",
+								narrative: (analysisResult.narrative || "").slice(0, 800),
+								kpiCount: analysisResult.kpis?.length || 0,
+								insightCount: analysisResult.insights?.length || 0,
+								createdAt: serverTimestamp(),
+								date: new Date().toISOString(),
+								analysisData: JSON.stringify(analysisResult),
+							};
+							await addDoc(
+								collection(db, "users", user.uid, "reports"),
+								reportData,
+							);
+						} catch {
+							// Ignore Firestore save failures
+						}
+					},
+				});
+
+				navigate("/dashboard");
 			} catch (err) {
 				setError(
 					err.response?.data?.detail ||
@@ -119,7 +151,39 @@ export default function AnalysePage() {
 				const result = await uploadDailyLogs(logPayload, token);
 				setFileName(result.filename);
 				setRowCount(result.row_count);
-				setStage("processing");
+
+				await startAnalysisJob({
+					getToken: getIdToken,
+					uid: user?.uid,
+					role,
+					fileName: result.filename,
+					rowCount: result.row_count,
+					onSuccess: async (analysisResult) => {
+						if (!user) return;
+						try {
+							const reportData = {
+								filename:
+									analysisResult.filename || result.filename || "Unknown",
+								rowCount: analysisResult.row_count || result.row_count || 0,
+								ai_provider: analysisResult.ai_provider || "unknown",
+								narrative: (analysisResult.narrative || "").slice(0, 800),
+								kpiCount: analysisResult.kpis?.length || 0,
+								insightCount: analysisResult.insights?.length || 0,
+								createdAt: serverTimestamp(),
+								date: new Date().toISOString(),
+								analysisData: JSON.stringify(analysisResult),
+							};
+							await addDoc(
+								collection(db, "users", user.uid, "reports"),
+								reportData,
+							);
+						} catch {
+							// Ignore Firestore save failures
+						}
+					},
+				});
+
+				navigate("/dashboard");
 			} catch (err) {
 				setError(
 					err.response?.data?.detail ||
@@ -129,66 +193,22 @@ export default function AnalysePage() {
 		}
 	};
 
-	const handleProcessingComplete = useCallback(async () => {
-		try {
-			setError(null);
-			const token = await getIdToken();
-			const result = await runAnalysis(token, user?.uid, role);
-
-			// Save report to Firestore for history
-			if (user) {
-				try {
-					const reportData = {
-						filename: result.filename || fileName || "Unknown",
-						rowCount: result.row_count || rowCount || 0,
-						ai_provider: result.ai_provider || "unknown",
-						narrative: (result.narrative || "").slice(0, 800),
-						kpiCount: result.kpis?.length || 0,
-						insightCount: result.insights?.length || 0,
-						createdAt: serverTimestamp(),
-						date: new Date().toISOString(),
-						analysisData: JSON.stringify(result),
-					};
-					await addDoc(
-						collection(db, "users", user.uid, "reports"),
-						reportData,
-					);
-				} catch {
-					// Silently fail Firestore save — don't block navigation
-				}
-			}
-
-			sessionStorage.setItem("yukti_analysis", JSON.stringify(result));
-			sessionStorage.setItem("yukti_rowCount", rowCount.toString());
-			navigate("/dashboard");
-		} catch (err) {
-			setError(err.response?.data?.detail || "Analysis failed.");
-			setStage("prepare");
-		}
-	}, [getIdToken, user, role, rowCount, fileName, navigate]);
-
-	// ── Processing stage ──
-	if (stage === "processing") {
-		return (
-			<div className="min-h-screen">
-				{error && (
-					<div className="max-w-2xl mx-auto mt-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm text-center">
-						{error}
-					</div>
-				)}
-				<ProcessingView
-					onComplete={handleProcessingComplete}
-					fileName={fileName}
-					rowCount={rowCount}
-				/>
-			</div>
-		);
-	}
-
 	// ── Prepare stage ──
 	return (
 		<div className="min-h-screen py-10 px-6">
 			<div className="max-w-3xl mx-auto">
+				{isRunning && (
+					<div className="mb-6 px-4 py-3 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm">
+						Analysis is already running in the background. You can explore other
+						pages while it completes.
+						<button
+							onClick={() => navigate("/dashboard")}
+							className="ml-2 text-indigo-700 font-medium hover:underline"
+						>
+							Go to Dashboard
+						</button>
+					</div>
+				)}
 				{/* Header */}
 				<div className="mb-8 animate-fade-in-up">
 					<h1 className="text-xl font-semibold text-surface-900 mb-1 flex items-center gap-3">
@@ -417,15 +437,24 @@ export default function AnalysePage() {
 					<button
 						onClick={handleStartAnalysis}
 						disabled={
+							isRunning ||
 							(dataSource === "logs" && (loadingLogs || logs.length < 3)) ||
 							(dataSource === "csv" && !csvFile)
 						}
 						className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2.5 px-8 py-3 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
 					>
 						<Sparkles size={16} />
-						Start Analysis & Prediction
+						{isRunning
+							? "Analysis Running in Background"
+							: "Start Analysis & Prediction"}
 						<ArrowRight size={15} />
 					</button>
+					{!isRunning && (fileName || rowCount) && (
+						<p className="text-xs text-indigo-600 mt-2.5">
+							Once started, analysis will continue in background while you
+							explore other pages.
+						</p>
+					)}
 
 					{dataSource === "logs" && !loadingLogs && logs.length < 3 && (
 						<p className="text-xs text-amber-500 mt-2.5 flex items-center gap-1.5">
