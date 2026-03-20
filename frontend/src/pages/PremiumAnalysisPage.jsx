@@ -13,6 +13,11 @@ import {
 	CalendarCheck,
 	Zap,
 	BarChart3,
+	Target,
+	ShieldAlert,
+	Gauge,
+	ListChecks,
+	Lightbulb,
 } from "lucide-react";
 import { getPremiumAnalysis, getPremiumAnalysisStatus } from "../services/api";
 import {
@@ -202,7 +207,7 @@ export default function PremiumAnalysisPage() {
 			<div className="flex items-start justify-between">
 				<div>
 					<div className="flex items-center gap-2">
-						<div className="w-9 h-9 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+						<div className="w-9 h-9 rounded-lg bg-linear-to-br from-amber-400 to-orange-500 flex items-center justify-center">
 							<Crown size={18} className="text-white" />
 						</div>
 						<div>
@@ -239,9 +244,9 @@ export default function PremiumAnalysisPage() {
 
 			{/* ── Explainer Card ──────────────────────── */}
 			{!result && !loading && (
-				<div className="bg-gradient-to-br from-amber-50/80 via-orange-50/50 to-white rounded-xl border border-amber-200/60 p-6">
+				<div className="bg-linear-to-br from-amber-50/80 via-orange-50/50 to-white rounded-xl border border-amber-200/60 p-6">
 					<div className="flex items-start gap-4">
-						<div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0">
+						<div className="w-12 h-12 rounded-xl bg-linear-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0">
 							<Sparkles size={22} className="text-white" />
 						</div>
 						<div className="space-y-3">
@@ -294,7 +299,7 @@ export default function PremiumAnalysisPage() {
 								<button
 									onClick={handleGenerate}
 									disabled={loading}
-									className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-sm transition-all"
+									className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-sm transition-all"
 								>
 									<Crown size={15} />
 									Generate Premium Report
@@ -311,7 +316,7 @@ export default function PremiumAnalysisPage() {
 				<div className="bg-white rounded-xl border border-surface-200 p-8">
 					<div className="max-w-sm mx-auto space-y-6">
 						<div className="text-center">
-							<div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mx-auto mb-4">
+							<div className="w-14 h-14 rounded-2xl bg-linear-to-br from-amber-400 to-orange-500 flex items-center justify-center mx-auto mb-4">
 								<Crown size={26} className="text-white animate-pulse" />
 							</div>
 							<h3 className="text-sm font-semibold text-surface-900">
@@ -414,7 +419,7 @@ export default function PremiumAnalysisPage() {
 
 					{/* Report content */}
 					<div className="bg-white rounded-xl border border-surface-200 overflow-hidden">
-						<div className="px-6 py-4 border-b border-surface-100 bg-gradient-to-r from-amber-50/50 to-white">
+						<div className="px-6 py-4 border-b border-surface-100 bg-linear-to-r from-amber-50/50 to-white">
 							<div className="flex items-center gap-2">
 								<Crown size={16} className="text-amber-500" />
 								<h2 className="text-sm font-semibold text-surface-900">
@@ -423,9 +428,7 @@ export default function PremiumAnalysisPage() {
 							</div>
 						</div>
 						<div className="px-6 py-5">
-							<div className="prose prose-sm prose-surface max-w-none text-surface-700 leading-relaxed premium-report">
-								{renderMarkdown(result.analysis)}
-							</div>
+							<PremiumStructuredReport analysis={result.analysis} />
 						</div>
 					</div>
 
@@ -477,6 +480,334 @@ export default function PremiumAnalysisPage() {
 			)}
 		</div>
 	);
+}
+
+function PremiumStructuredReport({ analysis }) {
+	const sections = splitPremiumSections(analysis || "");
+	const [copiedMap, setCopiedMap] = useState({});
+	const [copiedFull, setCopiedFull] = useState(false);
+	const fullChecklist = buildFullExecutionChecklist(sections);
+
+	if (!sections.length) {
+		return (
+			<div className="prose prose-sm prose-surface max-w-none text-surface-700 leading-relaxed premium-report">
+				{renderMarkdown(analysis)}
+			</div>
+		);
+	}
+
+	return (
+		<div className="space-y-4 premium-report">
+			{fullChecklist ? (
+				<div className="rounded-xl border border-amber-200 bg-amber-50/40 p-3 flex items-center gap-3">
+					<ListChecks size={14} className="text-amber-600 shrink-0" />
+					<div className="min-w-0 flex-1">
+						<p className="text-xs font-semibold text-amber-700 uppercase tracking-wide">
+							Execution Toolkit
+						</p>
+						<p className="text-xs text-amber-700/90">
+							Copy a consolidated 30-day checklist from all actionable sections.
+						</p>
+					</div>
+					<button
+						onClick={async () => {
+							const ok = await copyText(fullChecklist);
+							if (!ok) return;
+							setCopiedFull(true);
+							setTimeout(() => setCopiedFull(false), 1800);
+						}}
+						className="text-[11px] px-3 py-1.5 rounded-lg font-medium border border-amber-300 bg-white text-amber-700 hover:bg-amber-50 transition-colors"
+					>
+						{copiedFull ? "Copied" : "Copy full 30-day plan"}
+					</button>
+				</div>
+			) : null}
+
+			{sections.map((section, idx) => {
+				const cfg = getSectionConfig(section.title);
+				const Icon = cfg.icon;
+				const sectionKey = `${section.title}-${idx}`;
+				const actionPayload = buildActionCopyPayload(
+					section.title,
+					section.content,
+				);
+
+				const onCopy = async () => {
+					if (!actionPayload) return;
+					const ok = await copyText(actionPayload);
+					if (!ok) return;
+					setCopiedMap((prev) => ({ ...prev, [sectionKey]: true }));
+					setTimeout(() => {
+						setCopiedMap((prev) => ({ ...prev, [sectionKey]: false }));
+					}, 1800);
+				};
+
+				return (
+					<div
+						key={`${section.title}-${idx}`}
+						className={`rounded-xl border ${cfg.border} ${cfg.bg} overflow-hidden`}
+					>
+						<div className="px-4 py-3 border-b border-white/50 flex items-center gap-2">
+							<Icon size={14} className={cfg.iconColor} />
+							<h3 className="text-sm font-semibold text-surface-900">
+								{section.title}
+							</h3>
+							{actionPayload ? (
+								<button
+									onClick={onCopy}
+									className="ml-auto text-[10px] px-2 py-0.5 rounded-full font-medium border border-surface-300 bg-white text-surface-600 hover:bg-surface-50 transition-colors"
+								>
+									{copiedMap[sectionKey] ? "Copied" : "Copy action plan"}
+								</button>
+							) : null}
+							{cfg.badge ? (
+								<span
+									className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${cfg.badge}`}
+								>
+									{cfg.badgeLabel}
+								</span>
+							) : null}
+						</div>
+						<div className="px-4 py-3 bg-white/70">
+							<div className="prose prose-sm max-w-none text-surface-700 leading-relaxed">
+								{renderMarkdown(section.content)}
+							</div>
+						</div>
+					</div>
+				);
+			})}
+		</div>
+	);
+}
+
+function buildFullExecutionChecklist(sections) {
+	if (!sections?.length) return "";
+
+	const blocks = [];
+	const seen = new Set();
+
+	for (const section of sections) {
+		const payload = buildActionCopyPayload(section.title, section.content);
+		if (!payload) continue;
+
+		const lines = payload
+			.split("\n")
+			.map((l) => l.trim())
+			.filter(Boolean);
+
+		const header = lines[0] || `${section.title} - Action Plan`;
+		const actions = lines.slice(1).filter((line) => {
+			const normalized = line
+				.replace(/^\d+\.\s+/, "")
+				.trim()
+				.toLowerCase();
+			if (!normalized || seen.has(normalized)) return false;
+			seen.add(normalized);
+			return true;
+		});
+
+		if (!actions.length) continue;
+
+		blocks.push([header, ...actions].join("\n"));
+	}
+
+	if (!blocks.length) return "";
+
+	return [
+		"Yukti Premium - 30-Day Execution Checklist",
+		`Generated: ${new Date().toLocaleString("en-IN")}`,
+		"",
+		...blocks,
+	].join("\n\n");
+}
+
+function buildActionCopyPayload(title, content) {
+	if (!content) return "";
+	const lines = content
+		.split("\n")
+		.map((l) => l.trim())
+		.filter(Boolean);
+
+	const actionable = lines.filter((line) => {
+		const isBullet =
+			line.startsWith("-") || line.startsWith("•") || /^\d+\.\s/.test(line);
+		const hasActionVerb =
+			/(run|launch|track|set|review|reduce|increase|create|plan|audit|monitor|prepare|negotiate|optimi[sz]e|execute|measure|implement|prioritize)/i.test(
+				line,
+			);
+		const hasTimeSignal = /(week|day|month|today|tomorrow|next)/i.test(line);
+		return isBullet || hasActionVerb || hasTimeSignal;
+	});
+
+	if (!actionable.length) return "";
+
+	return [
+		`${title} - Action Plan`,
+		...actionable.map(
+			(line, idx) =>
+				`${idx + 1}. ${line.replace(/^[-•]\s+/, "").replace(/^\d+\.\s+/, "")}`,
+		),
+	].join("\n");
+}
+
+async function copyText(text) {
+	try {
+		if (navigator?.clipboard?.writeText) {
+			await navigator.clipboard.writeText(text);
+			return true;
+		}
+	} catch {
+		// Fallback path below
+	}
+
+	try {
+		const textarea = document.createElement("textarea");
+		textarea.value = text;
+		textarea.setAttribute("readonly", "");
+		textarea.style.position = "absolute";
+		textarea.style.left = "-9999px";
+		document.body.appendChild(textarea);
+		textarea.select();
+		document.execCommand("copy");
+		document.body.removeChild(textarea);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+function splitPremiumSections(text) {
+	if (!text) return [];
+	const lines = text.split("\n");
+	const sections = [];
+	let currentTitle = "";
+	let buffer = [];
+
+	const pushSection = () => {
+		if (!currentTitle && buffer.length === 0) return;
+		const content = buffer.join("\n").trim();
+		if (currentTitle || content) {
+			sections.push({
+				title: currentTitle || "Summary",
+				content,
+			});
+		}
+	};
+
+	for (const rawLine of lines) {
+		const line = rawLine.trim();
+		if (line.startsWith("## ")) {
+			pushSection();
+			currentTitle = line.replace(/^##\s+/, "").trim();
+			buffer = [];
+		} else {
+			buffer.push(rawLine);
+		}
+	}
+
+	pushSection();
+
+	if (!sections.length && text.trim()) {
+		return [{ title: "Premium Analysis", content: text }];
+	}
+
+	return sections;
+}
+
+function getSectionConfig(title) {
+	const t = (title || "").toLowerCase();
+	if (t.includes("executive")) {
+		return {
+			icon: Crown,
+			bg: "bg-amber-50/50",
+			border: "border-amber-200",
+			iconColor: "text-amber-600",
+			badge: "bg-amber-100 text-amber-700",
+			badgeLabel: "High Priority",
+		};
+	}
+	if (
+		t.includes("top issue") ||
+		t.includes("root-cause") ||
+		t.includes("root cause")
+	) {
+		return {
+			icon: AlertCircle,
+			bg: "bg-red-50/40",
+			border: "border-red-200",
+			iconColor: "text-red-500",
+			badge: "bg-red-100 text-red-700",
+			badgeLabel: "Decision Critical",
+		};
+	}
+	if (
+		t.includes("strategic") ||
+		t.includes("trade-off") ||
+		t.includes("tradeoff")
+	) {
+		return {
+			icon: Target,
+			bg: "bg-indigo-50/50",
+			border: "border-indigo-200",
+			iconColor: "text-indigo-600",
+			badge: "bg-indigo-100 text-indigo-700",
+			badgeLabel: "Strategic",
+		};
+	}
+	if (
+		t.includes("30-day") ||
+		t.includes("week") ||
+		t.includes("plan") ||
+		t.includes("roadmap")
+	) {
+		return {
+			icon: ListChecks,
+			bg: "bg-blue-50/40",
+			border: "border-blue-200",
+			iconColor: "text-blue-600",
+			badge: "bg-blue-100 text-blue-700",
+			badgeLabel: "Execution",
+		};
+	}
+	if (t.includes("kpi") || t.includes("scorecard") || t.includes("metric")) {
+		return {
+			icon: Gauge,
+			bg: "bg-emerald-50/40",
+			border: "border-emerald-200",
+			iconColor: "text-emerald-600",
+			badge: "bg-emerald-100 text-emerald-700",
+			badgeLabel: "Measurable",
+		};
+	}
+	if (t.includes("risk") || t.includes("contingency")) {
+		return {
+			icon: ShieldAlert,
+			bg: "bg-orange-50/40",
+			border: "border-orange-200",
+			iconColor: "text-orange-600",
+			badge: "bg-orange-100 text-orange-700",
+			badgeLabel: "Risk Watch",
+		};
+	}
+	if (t.includes("closing") || t.includes("recommendation")) {
+		return {
+			icon: Lightbulb,
+			bg: "bg-violet-50/40",
+			border: "border-violet-200",
+			iconColor: "text-violet-600",
+			badge: "bg-violet-100 text-violet-700",
+			badgeLabel: "Final Call",
+		};
+	}
+
+	return {
+		icon: Sparkles,
+		bg: "bg-surface-50",
+		border: "border-surface-200",
+		iconColor: "text-surface-500",
+		badge: "",
+		badgeLabel: "",
+	};
 }
 
 /* ── Simple Markdown → JSX renderer ─────────────────── */

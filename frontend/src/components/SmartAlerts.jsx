@@ -122,7 +122,6 @@ export default function SmartAlerts({ token, analysisReady }) {
 	}
 
 	const criticalCount = alerts.filter((a) => a.severity === "critical").length;
-	const highCount = alerts.filter((a) => a.severity === "high").length;
 
 	return (
 		<div className="card p-5">

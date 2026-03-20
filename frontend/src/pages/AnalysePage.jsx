@@ -160,7 +160,7 @@ export default function AnalysePage() {
 
 			sessionStorage.setItem("yukti_analysis", JSON.stringify(result));
 			sessionStorage.setItem("yukti_rowCount", rowCount.toString());
-			navigate("/");
+			navigate("/dashboard");
 		} catch (err) {
 			setError(err.response?.data?.detail || "Analysis failed.");
 			setStage("prepare");

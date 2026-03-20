@@ -4,13 +4,13 @@ Yukti — Premium Analysis Inference Engine
 Loads the fine-tuned Yukti model (LoRA adapter on TinyLlama) and
 generates premium month-end business analysis from user data.
 
-This is the EXCLUSIVE premium engine — it does NOT fall back to
-external AI APIs (Gemini / Groq). The premium feature is powered
-entirely by Yukti's own custom-trained model.
+Premium uses a two-stage flow for deeper value:
+    1) Detect critical issues and decision levers from user data + Yukti model context
+    2) Use the existing AI stack (Gemini/Groq/Claude fallback) to produce
+         convincing, detailed reasoning and curated action plans.
 
-If the model is not yet trained, it uses the built-in data-driven
-rule-based engine (which uses statistical analysis on the user's
-actual data — no external API calls).
+If the local model is not available, the system still mines issues from
+data and synthesizes a premium report with AI reasoning.
 """
 
 import os
@@ -18,6 +18,8 @@ import json
 import logging
 from pathlib import Path
 from datetime import datetime
+
+from engine.ai_client import generate_ai_content, is_any_ai_available
 
 log = logging.getLogger("yukti.premium")
 
@@ -199,47 +201,270 @@ def generate_premium_analysis(business_data: dict) -> dict:
       1. Local fine-tuned Yukti model (custom trained on curated datasets)
       2. Data-driven rule-based engine (statistical analysis — no external APIs)
 
-    This function NEVER calls Gemini, Groq, or any external AI API.
+    This function can use existing AI providers for reasoning synthesis.
     """
     import time
     t_start = time.time()
 
     prompt, data_text = build_premium_prompt(business_data)
+    issues = _mine_business_issues(business_data)
+    issue_context = _format_issue_context(issues)
 
     # ── Attempt 1: Local Yukti model ──
+    local_output = ""
     if _load_model():
         log.info("🤖 Generating premium analysis with Yukti custom model…")
         try:
-            raw_output = _generate_with_local_model(prompt)
-            elapsed = time.time() - t_start
-            log.info("✅ Yukti model generated %d chars in %.1fs", len(raw_output), elapsed)
-
-            return {
-                "status": "success",
-                "generated_by": "yukti_model",
-                "provider_label": "Yukti Custom Model",
-                "analysis": raw_output,
-                "generation_time": round(elapsed, 2),
-            }
+            local_output = _generate_with_local_model(prompt)
+            log.info("✅ Yukti model generated %d chars", len(local_output))
         except Exception as e:
             log.warning("⚠  Yukti model inference failed: %s — using rule-based engine", e)
 
-    # ── Fallback: Data-driven rule-based engine (NO external APIs) ──
+    # ── Core fallback/report body from data-driven engine ──
     if not _load_model():
         log.info("📋 Yukti model not trained yet — using data-driven rule-based engine")
     else:
         log.info("🔧 Falling back to data-driven rule-based engine…")
 
     analysis = _build_premium_rule_based(business_data, data_text)
+
+    # ── Stage 2: AI reasoning synthesis for premium depth ──
+    ai_provider = None
+    ai_synthesized = None
+    if is_any_ai_available():
+        try:
+            synthesis_prompt = _build_premium_synthesis_prompt(
+                business_data=business_data,
+                issue_context=issue_context,
+                local_output=local_output,
+                rule_based_output=analysis,
+            )
+            ai_synthesized, ai_provider = generate_ai_content(synthesis_prompt)
+            log.info("✨ Premium synthesis generated via %s", ai_provider)
+        except Exception as e:
+            log.warning("⚠  Premium AI synthesis failed: %s", e)
+
+    final_analysis = ai_synthesized or _compose_non_ai_premium_report(
+        issue_context=issue_context,
+        local_output=local_output,
+        rule_based_output=analysis,
+    )
+
+    generated_by = "yukti_rule_based"
+    provider_label = "Yukti Data-Driven Engine"
+    if local_output and ai_provider:
+        generated_by = f"yukti_model+{ai_provider}"
+        provider_label = f"Yukti Model + {ai_provider.title()} Reasoning"
+    elif local_output:
+        generated_by = "yukti_model"
+        provider_label = "Yukti Custom Model"
+    elif ai_provider:
+        generated_by = f"yukti_rule_based+{ai_provider}"
+        provider_label = f"Yukti Data + {ai_provider.title()} Reasoning"
+
     elapsed = time.time() - t_start
 
     return {
         "status": "success",
-        "generated_by": "yukti_rule_based",
-        "provider_label": "Yukti Data-Driven Engine",
-        "analysis": analysis,
+        "generated_by": generated_by,
+        "provider_label": provider_label,
+        "analysis": final_analysis,
         "generation_time": round(elapsed, 2),
+        "issue_count": len(issues),
     }
+
+
+def _mine_business_issues(business_data: dict) -> list[dict]:
+    """Find high-impact issues and decisions from data before AI narration."""
+    stats = business_data.get("stats", {})
+    logs = business_data.get("logSummary", [])
+
+    avg_rev = float(stats.get("avg_daily_revenue", 0) or 0)
+    max_rev = float(stats.get("max_revenue_day", 0) or 0)
+    min_rev = float(stats.get("min_revenue_day", 0) or 0)
+    avg_customers = float(stats.get("avg_daily_customers", 0) or 0)
+    avg_orders = float(stats.get("avg_daily_orders", 0) or 0)
+
+    revenues = []
+    expenses = []
+    for row in logs:
+        try:
+            if row.get("revenue") is not None:
+                revenues.append(float(row.get("revenue", 0)))
+            if row.get("expenses") is not None:
+                expenses.append(float(row.get("expenses", 0)))
+        except (ValueError, TypeError):
+            continue
+
+    exp_ratio = 0.0
+    if revenues and expenses:
+        exp_ratio = (sum(expenses) / max(sum(revenues), 1)) * 100
+
+    trend_pct = 0.0
+    if len(revenues) >= 6:
+        mid = len(revenues) // 2
+        first_half = sum(revenues[:mid]) / max(mid, 1)
+        second_half = sum(revenues[mid:]) / max(len(revenues) - mid, 1)
+        if first_half > 0:
+            trend_pct = ((second_half - first_half) / first_half) * 100
+
+    volatility = 0.0
+    if avg_rev > 0:
+        volatility = ((max_rev - min_rev) / avg_rev) * 100
+
+    basket = avg_rev / max(avg_orders, 1) if avg_orders else 0.0
+
+    issues = []
+
+    if trend_pct < -6:
+        issues.append({
+            "title": "Demand contraction risk",
+            "severity": "critical",
+            "signal": f"Revenue trend {trend_pct:+.1f}% over tracked period",
+            "reason": "Sales momentum is declining, likely from weaker repeat behavior or conversion drop.",
+            "decision": "Trigger a 14-day recovery sprint with customer win-back campaign and conversion tracking.",
+            "expected_impact": "Recover 8-15% monthly revenue if executed consistently.",
+            "priority_score": 95,
+        })
+
+    if exp_ratio > 58:
+        issues.append({
+            "title": "Margin compression",
+            "severity": "high",
+            "signal": f"Expense ratio is {exp_ratio:.1f}%",
+            "reason": "Cost structure is too heavy for SMB sustainability and likely eroding take-home profit.",
+            "decision": "Run cost-per-order audit and renegotiate top suppliers while pruning low-margin SKUs.",
+            "expected_impact": "Improve net margin by 3-7 percentage points.",
+            "priority_score": 88,
+        })
+
+    if volatility > 45:
+        issues.append({
+            "title": "Revenue volatility instability",
+            "severity": "high",
+            "signal": f"Best-to-worst day spread is {volatility:.0f}%",
+            "reason": "Daily demand swings indicate weak planning and inconsistent demand capture.",
+            "decision": "Introduce weekday-specific offers and stock/staff planning by day-part.",
+            "expected_impact": "Reduce downside days and stabilize cash flow.",
+            "priority_score": 81,
+        })
+
+    if avg_customers > 0 and basket > 0 and basket < 250:
+        issues.append({
+            "title": "Low basket monetization",
+            "severity": "medium",
+            "signal": f"Average basket is ₹{basket:,.0f}",
+            "reason": "Customer traffic is not translating into enough value per transaction.",
+            "decision": "Deploy bundle architecture and checkout upsell scripts for top categories.",
+            "expected_impact": "Raise basket size by 10-20% and improve operating leverage.",
+            "priority_score": 70,
+        })
+
+    if not issues:
+        issues.append({
+            "title": "Growth headroom unlocked",
+            "severity": "info",
+            "signal": "Core metrics are stable without critical red flags",
+            "reason": "Business appears operationally steady with room to scale efficiently.",
+            "decision": "Shift focus from firefighting to expansion experiments and retention loops.",
+            "expected_impact": "Compounded growth through disciplined execution.",
+            "priority_score": 55,
+        })
+
+    issues.sort(key=lambda x: x.get("priority_score", 0), reverse=True)
+    return issues
+
+
+def _format_issue_context(issues: list[dict]) -> str:
+    lines = []
+    for idx, issue in enumerate(issues, 1):
+        lines.append(
+            f"{idx}. {issue['title']} [{issue['severity']}]\n"
+            f"   Signal: {issue['signal']}\n"
+            f"   Why: {issue['reason']}\n"
+            f"   Decision: {issue['decision']}\n"
+            f"   Expected Impact: {issue['expected_impact']}"
+        )
+    return "\n".join(lines)
+
+
+def _build_premium_synthesis_prompt(
+    business_data: dict,
+    issue_context: str,
+    local_output: str,
+    rule_based_output: str,
+) -> str:
+    """Prompt for convincing premium reasoning with strong decision depth."""
+    biz_type = business_data.get("businessType", "General")
+    biz_cat = business_data.get("businessCategory", "general")
+    region = business_data.get("region", "India")
+    stats = business_data.get("stats", {})
+    history = business_data.get("historyContext", {})
+
+    return f"""You are Yukti Premium Intelligence.
+Your task is to convert issue mining + model outputs into an executive-grade, deeply reasoned premium report.
+
+BUSINESS:
+- Type: {biz_type} ({biz_cat})
+- Region: {region}
+- Stats: {json.dumps(stats, indent=2)}
+
+ISSUE MINING OUTPUT:
+{issue_context}
+
+LOCAL MODEL OUTPUT (if available):
+{local_output[:4000] if local_output else 'Not available'}
+
+RULE-BASED ANALYSIS:
+{rule_based_output[:4500]}
+
+HISTORICAL MEMORY CONTEXT:
+{json.dumps(history, indent=2) if history else 'Not available'}
+
+QUALITY REQUIREMENTS:
+1. Make this clearly PREMIUM: depth, clarity, strong reasoning, specific numbers.
+2. For every major issue, explain:
+   - Why it is happening (root cause)
+   - How severe it is
+   - What decision should be taken now
+   - What trade-off/risk comes with that decision
+   - Expected impact range and timeline
+3. Include complex decisions: pricing vs volume, margin vs growth, inventory depth vs cashflow, acquisition vs retention.
+4. Prioritize actions into now/next/later and define measurable KPIs.
+5. Use convincing business language for owners/investors, but keep it practical.
+6. Integrate insights from historical memory where relevant.
+
+OUTPUT FORMAT (Markdown only):
+- Executive Verdict
+- Top Issues (ranked)
+- Root-Cause Analysis
+- Strategic Decisions & Trade-offs
+- 30-Day Transformation Plan (Week 1-4)
+- KPI Scorecard (targets)
+- Risk Radar & Contingency Triggers
+- Closing Recommendation (boardroom-style)
+
+Return only the final markdown report.
+"""
+
+
+def _compose_non_ai_premium_report(issue_context: str, local_output: str, rule_based_output: str) -> str:
+    """Fallback premium composition when AI synthesis is unavailable."""
+    parts = [
+        "# Yukti Premium Intelligence Report",
+        "## Top Issues (Data-Mined)",
+        issue_context,
+    ]
+    if local_output:
+        parts.extend([
+            "## Local Model Findings",
+            local_output,
+        ])
+    parts.extend([
+        "## Detailed Operational Plan",
+        rule_based_output,
+    ])
+    return "\n\n".join(parts)
 
 
 def _build_premium_rule_based(business_data: dict, data_text: str) -> str:

@@ -83,7 +83,6 @@ export default function Dashboard({
 	const [activeTab, setActiveTab] = useState("khata");
 	const [expandedInsight, setExpandedInsight] = useState(null);
 	const [exporting, setExporting] = useState(false);
-	const { user, userProfile, getIdToken } = useAuth();
 
 	const {
 		schema,
@@ -770,12 +769,24 @@ function WhatChangedStrip({ summary, previousReportDate }) {
 				{summary.cards.map((card) => {
 					const isUp = card.delta > 0;
 					const isFlat = Math.abs(card.delta) < 0.5;
+					const isTopImpact = summary.topImpactLabel === card.label;
 					return (
 						<div
 							key={card.label}
-							className="rounded-lg bg-white border border-surface-200 p-3"
+							className={`rounded-lg bg-white border p-3 ${
+								isTopImpact
+									? "border-indigo-300 ring-1 ring-indigo-200"
+									: "border-surface-200"
+							}`}
 						>
-							<p className="text-[11px] text-surface-500 mb-1">{card.label}</p>
+							<div className="flex items-center justify-between mb-1">
+								<p className="text-[11px] text-surface-500">{card.label}</p>
+								{isTopImpact && (
+									<span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700">
+										Top impact
+									</span>
+								)}
+							</div>
 							<p className="text-sm font-semibold text-surface-900">
 								{card.currentText}
 							</p>
@@ -2144,7 +2155,7 @@ function extractAnomalies(analysis) {
 
 function computeWhatChangedSummary(currentAnalysis, previousAnalysis) {
 	if (!currentAnalysis || !previousAnalysis) {
-		return { hasPrevious: false, cards: [] };
+		return { hasPrevious: false, cards: [], topImpactLabel: null };
 	}
 
 	const currentKpis = extractKpis(currentAnalysis);
@@ -2189,6 +2200,12 @@ function computeWhatChangedSummary(currentAnalysis, previousAnalysis) {
 	).length;
 
 	const cards = [];
+	const impactWeights = {
+		Revenue: 1,
+		Orders: 0.85,
+		Customers: 0.75,
+		"Critical Alerts": 0.9,
+	};
 	const addCard = (
 		label,
 		currentVal,
@@ -2197,13 +2214,16 @@ function computeWhatChangedSummary(currentAnalysis, previousAnalysis) {
 	) => {
 		if (currentVal == null || previousVal == null || Number(previousVal) === 0)
 			return;
+		const delta =
+			((Number(currentVal) - Number(previousVal)) /
+				Math.abs(Number(previousVal))) *
+			100;
+		const impactScore = Math.abs(delta) * (impactWeights[label] || 0.6);
 		cards.push({
 			label,
 			currentText: formatter(currentVal),
-			delta:
-				((Number(currentVal) - Number(previousVal)) /
-					Math.abs(Number(previousVal))) *
-				100,
+			delta,
+			impactScore,
 		});
 	};
 
@@ -2227,9 +2247,16 @@ function computeWhatChangedSummary(currentAnalysis, previousAnalysis) {
 	);
 	addCard("Critical Alerts", currentCritical, previousCritical, (v) => `${v}`);
 
+	const topImpact = cards.reduce(
+		(best, current) =>
+			!best || current.impactScore > best.impactScore ? current : best,
+		null,
+	);
+
 	return {
 		hasPrevious: cards.length > 0,
 		cards,
+		topImpactLabel: topImpact?.label || null,
 	};
 }
 

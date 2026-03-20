@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./components/AppLayout";
+import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import TrialExpiredPage from "./pages/TrialExpiredPage";
@@ -22,6 +23,7 @@ function App() {
 			<AuthProvider>
 				<Routes>
 					{/* Public routes */}
+					<Route path="/" element={<HomePage />} />
 					<Route path="/login" element={<LoginPage />} />
 					<Route path="/register" element={<RegisterPage />} />
 
@@ -43,7 +45,7 @@ function App() {
 							</ProtectedRoute>
 						}
 					>
-						<Route path="/" element={<DashboardPage />} />
+						<Route path="/dashboard" element={<DashboardPage />} />
 						<Route path="/upload" element={<UploadPage />} />
 						<Route path="/daily-log" element={<DailyLogPage />} />
 						<Route path="/profile" element={<ProfilePage />} />

@@ -74,7 +74,7 @@ export default function BusinessChat({ token, category, analysisReady }) {
 					type: "answer",
 				},
 			]);
-		} catch (err) {
+		} catch {
 			setMessages((prev) => [
 				...prev,
 				{

@@ -2,9 +2,13 @@ import { createContext, useContext, useState, useEffect } from "react";
 import {
 	createUserWithEmailAndPassword,
 	signInWithEmailAndPassword,
+	GoogleAuthProvider,
+	signInWithPopup,
 	signOut,
 	onAuthStateChanged,
 	updateProfile,
+	sendEmailVerification,
+	reload,
 } from "firebase/auth";
 import {
 	doc,
@@ -17,6 +21,7 @@ import { auth, db } from "../firebase";
 
 const AuthContext = createContext(null);
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
 	const ctx = useContext(AuthContext);
 	if (!ctx) throw new Error("useAuth must be used within AuthProvider");
@@ -27,16 +32,79 @@ export function AuthProvider({ children }) {
 	const [user, setUser] = useState(null);
 	const [userProfile, setUserProfile] = useState(null);
 	const [loading, setLoading] = useState(true);
+	const googleProvider = new GoogleAuthProvider();
+	googleProvider.setCustomParameters({ prompt: "select_account" });
+
+	const ensureUserProfileDoc = async (firebaseUser, profileData = {}) => {
+		if (!firebaseUser) return null;
+
+		const ref = doc(db, "users", firebaseUser.uid);
+		const snap = await getDoc(ref);
+
+		if (!snap.exists()) {
+			const profile = {
+				email: firebaseUser.email || "",
+				ownerName:
+					profileData.ownerName ||
+					firebaseUser.displayName ||
+					firebaseUser.email?.split("@")[0] ||
+					"",
+				businessName: profileData.businessName || "",
+				businessType: profileData.businessType || "",
+				phone: profileData.phone || firebaseUser.phoneNumber || "",
+				address: profileData.address || "",
+				currency: profileData.currency || "INR",
+				createdAt: serverTimestamp(),
+				plan: "free",
+				role: "free-tier",
+				trialStartDate: serverTimestamp(),
+			};
+			await setDoc(ref, profile);
+			setUserProfile(profile);
+			return profile;
+		}
+
+		const existing = snap.data();
+		const patch = {};
+		if (
+			!existing.ownerName &&
+			(profileData.ownerName || firebaseUser.displayName)
+		) {
+			patch.ownerName = profileData.ownerName || firebaseUser.displayName;
+		}
+		if (!existing.phone && (profileData.phone || firebaseUser.phoneNumber)) {
+			patch.phone = profileData.phone || firebaseUser.phoneNumber;
+		}
+		if (!existing.businessName && profileData.businessName) {
+			patch.businessName = profileData.businessName;
+		}
+		if (!existing.businessType && profileData.businessType) {
+			patch.businessType = profileData.businessType;
+		}
+		if (!existing.address && profileData.address) {
+			patch.address = profileData.address;
+		}
+		if (!existing.currency && profileData.currency) {
+			patch.currency = profileData.currency;
+		}
+
+		if (Object.keys(patch).length > 0) {
+			await updateDoc(ref, {
+				...patch,
+				updatedAt: serverTimestamp(),
+			});
+		}
+
+		setUserProfile({ ...existing, ...patch });
+		return { ...existing, ...patch };
+	};
 
 	useEffect(() => {
 		const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
 			setUser(firebaseUser);
 			if (firebaseUser) {
 				try {
-					const profileDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-					if (profileDoc.exists()) {
-						setUserProfile(profileDoc.data());
-					}
+					await ensureUserProfileDoc(firebaseUser);
 				} catch {
 					setUserProfile(null);
 				}
@@ -52,6 +120,7 @@ export function AuthProvider({ children }) {
 		const cred = await createUserWithEmailAndPassword(auth, email, password);
 		const ownerName = profileData.ownerName || "";
 		await updateProfile(cred.user, { displayName: ownerName });
+		await sendEmailVerification(cred.user);
 		const profile = {
 			email,
 			ownerName,
@@ -67,13 +136,49 @@ export function AuthProvider({ children }) {
 		};
 		await setDoc(doc(db, "users", cred.user.uid), profile);
 		setUserProfile(profile);
+		await signOut(auth);
 		return cred.user;
 	};
 
 	const login = async (email, password) => {
 		const cred = await signInWithEmailAndPassword(auth, email, password);
+		await reload(cred.user);
+		if (!cred.user.emailVerified) {
+			try {
+				await sendEmailVerification(cred.user);
+			} catch {
+				// Best effort only; sign-in should still be blocked when unverified.
+			}
+			await signOut(auth);
+			const err = new Error("Email not verified");
+			err.code = "auth/email-not-verified";
+			throw err;
+		}
 		return cred.user;
 	};
+
+	const resendVerificationEmail = async (email, password) => {
+		const cred = await signInWithEmailAndPassword(auth, email, password);
+		await reload(cred.user);
+		if (cred.user.emailVerified) {
+			await signOut(auth);
+			return { alreadyVerified: true };
+		}
+		await sendEmailVerification(cred.user);
+		await signOut(auth);
+		return { alreadyVerified: false };
+	};
+
+	const continueWithGoogle = async (profileData = {}) => {
+		const cred = await signInWithPopup(auth, googleProvider);
+		await ensureUserProfileDoc(cred.user, profileData);
+		return cred.user;
+	};
+
+	const loginWithGoogle = async () => continueWithGoogle();
+
+	const registerWithGoogle = async (profileData = {}) =>
+		continueWithGoogle(profileData);
 
 	const logout = async () => {
 		await signOut(auth);
@@ -147,6 +252,9 @@ export function AuthProvider({ children }) {
 				loading,
 				register,
 				login,
+				loginWithGoogle,
+				resendVerificationEmail,
+				registerWithGoogle,
 				logout,
 				getIdToken,
 				updateUserProfile,

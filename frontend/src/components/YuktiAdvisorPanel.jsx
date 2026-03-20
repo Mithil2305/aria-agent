@@ -207,6 +207,7 @@ export default function YuktiAdvisorPanel({
 
 /* ── Sub-tab button ── */
 function TabButton({ active, onClick, icon: Icon, label, badge, badgeColor }) {
+	const IconComponent = Icon;
 	return (
 		<button
 			onClick={onClick}
@@ -216,7 +217,7 @@ function TabButton({ active, onClick, icon: Icon, label, badge, badgeColor }) {
 					: "border-transparent text-surface-500 hover:text-surface-700 hover:bg-white/60"
 			}`}
 		>
-			<Icon
+			<IconComponent
 				size={13}
 				className={active ? "text-indigo-500" : "text-surface-400"}
 			/>

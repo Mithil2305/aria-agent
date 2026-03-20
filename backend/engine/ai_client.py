@@ -8,11 +8,33 @@ Provides a single `generate_ai_content(prompt)` function that:
 """
 
 import os
-import json
 import logging
 import requests as _requests
 
 log = logging.getLogger("yukti.ai_client")
+
+
+# Shared high-precision instruction applied across providers.
+_COMMON_SYSTEM_INSTRUCTION = (
+    "You are Yukti, an expert SMB business strategy and analytics copilot. "
+    "Follow the user's requested schema exactly. "
+    "Never return markdown fences, headings, or commentary outside the requested format. "
+    "If JSON is requested, output valid JSON only. "
+    "Use concrete, data-backed reasoning with clear actions and expected impact. "
+    "If a value is unknown, use null instead of inventing facts."
+)
+
+
+def _with_common_instruction(prompt: str) -> str:
+    """Attach a provider-agnostic quality and formatting contract to prompts."""
+    return (
+        "SYSTEM INSTRUCTION:\n"
+        f"{_COMMON_SYSTEM_INSTRUCTION}\n\n"
+        "TASK INPUT:\n"
+        f"{prompt}\n\n"
+        "FINAL OUTPUT RULE:\n"
+        "Return only the final answer in the required format."
+    )
 
 # ---------------------------------------------------------------------------
 # Gemini setup
@@ -71,7 +93,7 @@ def _call_gemini(prompt: str) -> str:
 
     response = _gemini_client.models.generate_content(
         model="gemini-3.1-flash",
-        contents=prompt,
+        contents=_with_common_instruction(prompt),
     )
     return response.text.strip()
 
@@ -90,11 +112,12 @@ def _call_groq(prompt: str) -> str:
         "messages": [
             {
                 "role": "system",
-                "content": "You are an expert business analytics AI. Always respond with valid JSON only, no markdown fences or extra text.",
+                "content": _COMMON_SYSTEM_INSTRUCTION,
             },
             {"role": "user", "content": prompt},
         ],
-        "temperature": 0.7,
+        "temperature": 0.3,
+        "top_p": 0.9,
         "max_tokens": 4096,
     }
 
@@ -120,8 +143,8 @@ def _call_claude(prompt: str) -> str:
                 "content": prompt,
             },
         ],
-        system="You are an expert business analytics AI. Always respond with valid JSON only, no markdown fences or extra text.",
-        temperature=0.7,
+        system=_COMMON_SYSTEM_INSTRUCTION,
+        temperature=0.3,
     )
     return message.content[0].text.strip()
 
@@ -136,6 +159,53 @@ def _clean_ai_response(text: str) -> str:
     if text.startswith("json"):
         text = text[4:].strip()
     return text
+
+
+def _extract_json_block(text: str) -> str | None:
+    """Extract first complete top-level JSON object/array from mixed text."""
+    if not text:
+        return None
+
+    start = -1
+    opening = ""
+    for ch in ("{", "["):
+        i = text.find(ch)
+        if i != -1 and (start == -1 or i < start):
+            start = i
+            opening = ch
+
+    if start == -1:
+        return None
+
+    closing = "}" if opening == "{" else "]"
+    depth = 0
+    in_string = False
+    escaped = False
+
+    for idx in range(start, len(text)):
+        ch = text[idx]
+
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            continue
+
+        if ch == '"':
+            in_string = True
+            continue
+
+        if ch == opening:
+            depth += 1
+        elif ch == closing:
+            depth -= 1
+            if depth == 0:
+                return text[start : idx + 1]
+
+    return None
 
 
 def generate_ai_content(prompt: str) -> tuple[str, str]:
@@ -156,7 +226,9 @@ def generate_ai_content(prompt: str) -> tuple[str, str]:
         try:
             raw = _call_gemini(prompt)
             log.info("   ✅ Gemini responded — %d chars", len(raw))
-            return _clean_ai_response(raw), "gemini"
+            cleaned = _clean_ai_response(raw)
+            json_block = _extract_json_block(cleaned)
+            return (json_block or cleaned), "gemini"
         except Exception as e:
             log.warning("   ❌ Gemini failed: %s", e)
             errors.append(f"Gemini: {e}")
@@ -169,7 +241,9 @@ def generate_ai_content(prompt: str) -> tuple[str, str]:
         try:
             raw = _call_groq(prompt)
             log.info("   ✅ Groq responded — %d chars", len(raw))
-            return _clean_ai_response(raw), "groq"
+            cleaned = _clean_ai_response(raw)
+            json_block = _extract_json_block(cleaned)
+            return (json_block or cleaned), "groq"
         except Exception as e:
             log.warning("   ❌ Groq failed: %s", e)
             errors.append(f"Groq: {e}")
@@ -182,7 +256,9 @@ def generate_ai_content(prompt: str) -> tuple[str, str]:
         try:
             raw = _call_claude(prompt)
             log.info("   ✅ Claude responded — %d chars", len(raw))
-            return _clean_ai_response(raw), "claude"
+            cleaned = _clean_ai_response(raw)
+            json_block = _extract_json_block(cleaned)
+            return (json_block or cleaned), "claude"
         except Exception as e:
             log.warning("   ❌ Claude failed: %s", e)
             errors.append(f"Claude: {e}")

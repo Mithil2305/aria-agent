@@ -15,6 +15,11 @@ export default function ProtectedRoute({ children }) {
 	}
 
 	if (!user) return <Navigate to="/login" replace />;
+	if (!user.emailVerified) {
+		return (
+			<Navigate to="/login" replace state={{ unverifiedAccessBlocked: true }} />
+		);
+	}
 
 	// Check if free-tier trial has expired
 	const { isFreeTier, isTrialExpired } = getTrialStatus();
