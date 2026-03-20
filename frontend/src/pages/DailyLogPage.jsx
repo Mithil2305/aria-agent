@@ -12,9 +12,6 @@ import {
 	CheckCircle2,
 	AlertCircle,
 	Trash2,
-	Upload,
-	ChevronDown,
-	ChevronUp,
 	Loader2,
 	FileSpreadsheet,
 	Plus,
@@ -25,6 +22,8 @@ import {
 	ClipboardEdit,
 	Armchair,
 	Store,
+	Pencil,
+	X,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import {
@@ -32,10 +31,10 @@ import {
 	doc,
 	addDoc,
 	getDocs,
+	updateDoc,
 	deleteDoc,
 	query,
 	orderBy,
-	limit,
 	serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
@@ -73,6 +72,22 @@ function todayISO() {
 	return new Date().toISOString().split("T")[0];
 }
 
+function monthKey(dateStr) {
+	if (!dateStr || typeof dateStr !== "string") return "";
+	return dateStr.slice(0, 7);
+}
+
+function monthLabel(key) {
+	if (!key || key.length !== 7) return "Unknown";
+	const [y, m] = key.split("-");
+	const dt = new Date(Number(y), Number(m) - 1, 1);
+	if (Number.isNaN(dt.getTime())) return key;
+	return dt.toLocaleDateString("en-IN", {
+		month: "long",
+		year: "numeric",
+	});
+}
+
 export default function DailyLogPage() {
 	const { user, userProfile } = useAuth();
 	const [date, setDate] = useState(todayISO());
@@ -83,8 +98,10 @@ export default function DailyLogPage() {
 	const [error, setError] = useState(null);
 	const [logs, setLogs] = useState([]);
 	const [loadingLogs, setLoadingLogs] = useState(true);
-	const [showHistory, setShowHistory] = useState(true);
 	const [csvUploading, setCsvUploading] = useState(false);
+	const [showAdvanced, setShowAdvanced] = useState(false);
+	const [editingLogId, setEditingLogId] = useState(null);
+	const [selectedMonth, setSelectedMonth] = useState(monthKey(todayISO()));
 
 	// Dynamic fields based on business type
 	const businessType = userProfile?.businessType || "";
@@ -93,6 +110,19 @@ export default function DailyLogPage() {
 	const metricFields = useMemo(
 		() => getMetricFields(businessType),
 		[businessType],
+	);
+	const numericFields = useMemo(
+		() => metricFields.filter((f) => f.type === "number"),
+		[metricFields],
+	);
+	const quickFieldKeys = ["revenue", "expenses", "customers", "orders"];
+	const quickFields = useMemo(
+		() => metricFields.filter((f) => quickFieldKeys.includes(f.key)),
+		[metricFields],
+	);
+	const advancedFields = useMemo(
+		() => metricFields.filter((f) => !quickFieldKeys.includes(f.key)),
+		[metricFields],
 	);
 
 	// Load recent logs from Firestore
@@ -103,11 +133,13 @@ export default function DailyLogPage() {
 			const q = query(
 				collection(db, "users", user.uid, "dailyLogs"),
 				orderBy("date", "desc"),
-				limit(30),
 			);
 			const snapshot = await getDocs(q);
 			const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 			setLogs(data);
+			if (data.length > 0) {
+				setSelectedMonth((prev) => prev || monthKey(data[0].date));
+			}
 		} catch {
 			// Silent fail
 		} finally {
@@ -119,8 +151,61 @@ export default function DailyLogPage() {
 		loadLogs();
 	}, [loadLogs]);
 
+	const monthOptions = useMemo(() => {
+		const set = new Set();
+		for (const log of logs) {
+			const key = monthKey(log.date);
+			if (key) set.add(key);
+		}
+		return Array.from(set).sort((a, b) => b.localeCompare(a));
+	}, [logs]);
+
+	const filteredLogs = useMemo(() => {
+		if (!selectedMonth || selectedMonth === "all") return logs;
+		return logs.filter((log) => monthKey(log.date) === selectedMonth);
+	}, [logs, selectedMonth]);
+
 	const handleFieldChange = (key, value) => {
 		setFormData((prev) => ({ ...prev, [key]: value }));
+		setSaved(false);
+	};
+
+	const resetForm = () => {
+		setEditingLogId(null);
+		setDate(todayISO());
+		setFormData({});
+		setNotes("");
+		setShowAdvanced(false);
+	};
+
+	const handleEdit = (log) => {
+		const next = {};
+		for (const field of metricFields) {
+			if (log[field.key] !== undefined && log[field.key] !== null) {
+				next[field.key] = String(log[field.key]);
+			}
+		}
+		setEditingLogId(log.id);
+		setDate(log.date || todayISO());
+		setFormData(next);
+		setNotes(log.notes || "");
+		setShowAdvanced(true);
+		setError(null);
+		setSaved(false);
+		window.scrollTo({ top: 0, behavior: "smooth" });
+	};
+
+	const applyLastLogTemplate = () => {
+		if (logs.length === 0) return;
+		const latest = logs[0];
+		const next = {};
+		for (const field of metricFields) {
+			if (latest[field.key] !== undefined && latest[field.key] !== null) {
+				next[field.key] = String(latest[field.key]);
+			}
+		}
+		setFormData(next);
+		setNotes("");
 		setSaved(false);
 	};
 
@@ -147,22 +232,36 @@ export default function DailyLogPage() {
 				}
 			}
 
-			await addDoc(collection(db, "users", user.uid, "dailyLogs"), {
+			const payload = {
 				date,
 				...cleanData,
 				notes: notes.trim() || null,
 				businessType: businessType || null,
 				businessCategory: category,
-				createdAt: serverTimestamp(),
-			});
+			};
+
+			if (editingLogId) {
+				await updateDoc(doc(db, "users", user.uid, "dailyLogs", editingLogId), {
+					...payload,
+					updatedAt: serverTimestamp(),
+				});
+			} else {
+				await addDoc(collection(db, "users", user.uid, "dailyLogs"), {
+					...payload,
+					createdAt: serverTimestamp(),
+				});
+			}
 
 			setSaved(true);
-			setFormData({});
-			setNotes("");
+			resetForm();
 			setTimeout(() => setSaved(false), 3000);
 			loadLogs();
 		} catch {
-			setError("Failed to save. Please try again.");
+			setError(
+				editingLogId
+					? "Failed to update entry."
+					: "Failed to save. Please try again.",
+			);
 		} finally {
 			setSaving(false);
 		}
@@ -303,9 +402,37 @@ export default function DailyLogPage() {
 					</div>
 				)}
 
-				{/* ── Entry Form ── */}
+				{/* Rapid Entry Form */}
 				<div className="card-elevated p-6 mb-6">
-					{/* Date picker */}
+					<div className="flex items-start justify-between gap-4 mb-5">
+						<div>
+							<h2 className="text-sm font-semibold text-surface-900">
+								{editingLogId ? "Edit Log Entry" : "Quick Daily Entry"}
+							</h2>
+							<p className="text-xs text-surface-500 mt-0.5">
+								Fast fields first so you can log in under a minute.
+							</p>
+						</div>
+						<div className="flex items-center gap-2">
+							{logs.length > 0 && !editingLogId && (
+								<button
+									onClick={applyLastLogTemplate}
+									className="px-3 py-1.5 rounded-lg border border-surface-300 bg-surface-50 text-surface-600 text-xs font-medium hover:bg-surface-100"
+								>
+									Use Last Entry
+								</button>
+							)}
+							{editingLogId && (
+								<button
+									onClick={resetForm}
+									className="px-3 py-1.5 rounded-lg border border-surface-300 bg-white text-surface-600 text-xs font-medium hover:bg-surface-50"
+								>
+									Cancel Edit
+								</button>
+							)}
+						</div>
+					</div>
+
 					<div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
 						<div className="flex-1">
 							<label className="block text-xs font-medium text-surface-400 mb-1.5">
@@ -344,9 +471,9 @@ export default function DailyLogPage() {
 						</div>
 					</div>
 
-					{/* Metric fields — dynamic per business type */}
-					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-						{metricFields.map((field) => {
+					{/* Quick metrics */}
+					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+						{quickFields.map((field) => {
 							const Icon = resolveIcon(field.icon);
 							return (
 								<div key={field.key}>
@@ -365,34 +492,88 @@ export default function DailyLogPage() {
 												{field.prefix}
 											</span>
 										)}
-										{field.type === "text" ? (
-											<input
-												type="text"
-												placeholder={field.placeholder}
-												value={formData[field.key] ?? ""}
-												onChange={(e) =>
-													handleFieldChange(field.key, e.target.value)
-												}
-												className="input-field w-full"
-											/>
-										) : (
-											<input
-												type="number"
-												min="0"
-												step="any"
-												placeholder={field.placeholder}
-												value={formData[field.key] ?? ""}
-												onChange={(e) =>
-													handleFieldChange(field.key, e.target.value)
-												}
-												className={`input-field w-full ${field.prefix ? "pl-7" : ""}`}
-											/>
-										)}
+										<input
+											type="number"
+											inputMode="decimal"
+											min="0"
+											step="any"
+											placeholder={field.placeholder}
+											value={formData[field.key] ?? ""}
+											onChange={(e) =>
+												handleFieldChange(field.key, e.target.value)
+											}
+											className={`input-field w-full ${field.prefix ? "pl-7" : ""}`}
+										/>
 									</div>
 								</div>
 							);
 						})}
 					</div>
+
+					{advancedFields.length > 0 && (
+						<div className="mb-5">
+							<button
+								type="button"
+								onClick={() => setShowAdvanced((s) => !s)}
+								className="text-xs font-medium text-indigo-600 hover:underline"
+							>
+								{showAdvanced
+									? "Hide extra fields"
+									: "Add more details (optional)"}
+							</button>
+						</div>
+					)}
+
+					{showAdvanced && advancedFields.length > 0 && (
+						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+							{advancedFields.map((field) => {
+								const Icon = resolveIcon(field.icon);
+								return (
+									<div key={field.key}>
+										<label className="flex items-center gap-1.5 text-xs font-medium text-surface-400 mb-1.5">
+											<Icon
+												size={12}
+												strokeWidth={1.5}
+												className="text-surface-500"
+											/>
+											{field.label}
+										</label>
+										<div className="relative">
+											{field.prefix && (
+												<span className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-500 text-sm">
+													{field.prefix}
+												</span>
+											)}
+											{field.type === "text" ? (
+												<input
+													type="text"
+													placeholder={field.placeholder}
+													value={formData[field.key] ?? ""}
+													onChange={(e) =>
+														handleFieldChange(field.key, e.target.value)
+													}
+													className="input-field w-full"
+												/>
+											) : (
+												<input
+													type="number"
+													inputMode="decimal"
+													min="0"
+													step="any"
+													placeholder={field.placeholder}
+													value={formData[field.key] ?? ""}
+													onChange={(e) =>
+														handleFieldChange(field.key, e.target.value)
+													}
+													className={`input-field w-full ${field.prefix ? "pl-7" : ""}`}
+												/>
+											)}
+										</div>
+									</div>
+								);
+							})}
+						</div>
+					)}
 
 					{/* Notes */}
 					<div className="mb-6">
@@ -431,8 +612,22 @@ export default function DailyLogPage() {
 							) : (
 								<Save size={15} />
 							)}
-							{saving ? "Saving…" : "Save Log Entry"}
+							{saving
+								? editingLogId
+									? "Updating…"
+									: "Saving…"
+								: editingLogId
+									? "Update Entry"
+									: "Save Log Entry"}
 						</button>
+						{editingLogId && (
+							<button
+								onClick={resetForm}
+								className="btn-secondary flex items-center gap-1.5"
+							>
+								<X size={14} /> Cancel
+							</button>
+						)}
 						{saved && (
 							<span className="flex items-center gap-1.5 text-green-600 text-sm font-medium animate-fade-in-up">
 								<CheckCircle2 size={15} /> Saved successfully!
@@ -441,112 +636,121 @@ export default function DailyLogPage() {
 					</div>
 				</div>
 
-				{/* ── Log History ── */}
-				<div className="card overflow-hidden">
-					<button
-						onClick={() => setShowHistory(!showHistory)}
-						className="w-full flex items-center justify-between px-6 py-4 hover:bg-surface-50 transition-colors"
-					>
-						<div className="flex items-center gap-2">
-							<h2 className="text-sm font-medium text-surface-900">
-								Recent Entries
+				{/* Month-wise complete logs with edit */}
+				<div className="card p-5">
+					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+						<div>
+							<h2 className="text-sm font-semibold text-surface-900">
+								Monthly Log History
 							</h2>
-							<span className="px-2 py-0.5 rounded-full bg-surface-100 text-surface-500 text-[10px] font-bold">
-								{logs.length}
-							</span>
+							<p className="text-xs text-surface-500 mt-0.5">
+								Filter by month and edit any entry quickly.
+							</p>
 						</div>
-						{showHistory ? (
-							<ChevronUp size={16} className="text-surface-500" />
-						) : (
-							<ChevronDown size={16} className="text-surface-500" />
-						)}
-					</button>
+						<div className="flex items-center gap-2">
+							<label className="text-xs text-surface-500">Month</label>
+							<select
+								value={selectedMonth || "all"}
+								onChange={(e) => setSelectedMonth(e.target.value)}
+								className="input-field text-sm py-2"
+							>
+								<option value="all">All months</option>
+								{monthOptions.map((key) => (
+									<option key={key} value={key}>
+										{monthLabel(key)}
+									</option>
+								))}
+							</select>
+						</div>
+					</div>
 
-					{showHistory && (
-						<div className="border-t border-surface-300">
-							{loadingLogs ? (
-								<div className="flex items-center justify-center py-12">
-									<Loader2 size={20} className="text-gold-600 animate-spin" />
-								</div>
-							) : logs.length === 0 ? (
-								<div className="text-center py-12">
-									<Plus size={24} className="text-surface-600 mx-auto mb-2" />
-									<p className="text-sm text-surface-500">
-										No entries yet. Start logging today!
-									</p>
-								</div>
-							) : (
-								<div className="overflow-x-auto">
-									<table className="w-full text-sm">
-										<thead>
-											<tr className="border-b border-surface-300">
-												<th className="text-left px-6 py-3 text-xs font-medium text-surface-500">
-													Date
-												</th>
-												{metricFields
-													.filter((f) => f.type === "number")
-													.slice(0, 5)
-													.map((col) => (
-														<th
-															key={col.key}
-															className="text-right px-4 py-3 text-xs font-medium text-surface-500 hidden sm:table-cell"
-														>
-															{col.label}
-														</th>
-													))}
-												<th className="px-4 py-3 text-xs font-medium text-surface-500">
-													Notes
-												</th>
-												<th className="px-4 py-3"></th>
-											</tr>
-										</thead>
-										<tbody>
-											{logs.map((log) => (
-												<tr
-													key={log.id}
-													className="border-b border-surface-200 hover:bg-surface-50 transition-colors"
+					{loadingLogs ? (
+						<div className="flex items-center justify-center py-10">
+							<Loader2 size={20} className="text-gold-600 animate-spin" />
+						</div>
+					) : filteredLogs.length === 0 ? (
+						<div className="text-center py-10">
+							<Plus size={24} className="text-surface-600 mx-auto mb-2" />
+							<p className="text-sm text-surface-500">
+								No logs for this month.
+							</p>
+						</div>
+					) : (
+						<div className="space-y-3">
+							{filteredLogs.map((log) => (
+								<div
+									key={log.id}
+									className="rounded-xl border border-surface-300 bg-white p-4"
+								>
+									<div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+										<div className="flex items-center gap-2">
+											<span className="text-sm font-semibold text-surface-900">
+												{log.date}
+											</span>
+											{log.source && (
+												<span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-500 text-[10px] font-semibold uppercase tracking-wide">
+													via {log.source}
+												</span>
+											)}
+										</div>
+										<div className="flex items-center gap-1">
+											<button
+												onClick={() => handleEdit(log)}
+												className="p-2 rounded-lg hover:bg-indigo-50 text-surface-500 hover:text-indigo-600 transition-colors"
+												title="Edit entry"
+											>
+												<Pencil size={14} />
+											</button>
+											<button
+												onClick={() => handleDelete(log.id)}
+												className="p-2 rounded-lg hover:bg-red-50 text-surface-500 hover:text-red-500 transition-colors"
+												title="Delete entry"
+											>
+												<Trash2 size={14} />
+											</button>
+										</div>
+									</div>
+
+									<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
+										{metricFields.map((field) => {
+											const value = log[field.key];
+											if (
+												value === undefined ||
+												value === null ||
+												value === ""
+											) {
+												return null;
+											}
+											return (
+												<div
+													key={field.key}
+													className="px-2.5 py-2 rounded-lg bg-surface-50 border border-surface-200"
 												>
-													<td className="px-6 py-3 text-surface-900 font-medium whitespace-nowrap">
-														<span>{log.date}</span>
-														{log.source && (
-															<span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-500 text-[9px] font-semibold uppercase tracking-wide">
-																via {log.source}
-															</span>
-														)}
-													</td>
-													{metricFields
-														.filter((f) => f.type === "number")
-														.slice(0, 5)
-														.map((col) => (
-															<td
-																key={col.key}
-																className="text-right px-4 py-3 text-surface-600 hidden sm:table-cell"
-															>
-																{log[col.key] != null
-																	? col.prefix
-																		? `${col.prefix}${Number(log[col.key]).toLocaleString()}`
-																		: Number(log[col.key]).toLocaleString()
-																	: "—"}
-															</td>
-														))}
-													<td className="px-4 py-3 text-surface-500 text-xs max-w-30 truncate">
-														{log.notes || "—"}
-													</td>
-													<td className="px-4 py-3">
-														<button
-															onClick={() => handleDelete(log.id)}
-															className="p-1.5 rounded-lg hover:bg-red-50 text-surface-400 hover:text-red-500 transition-all"
-															title="Delete entry"
-														>
-															<Trash2 size={13} />
-														</button>
-													</td>
-												</tr>
-											))}
-										</tbody>
-									</table>
+													<p className="text-[10px] text-surface-400 font-medium truncate">
+														{field.label}
+													</p>
+													<p className="text-xs text-surface-700 font-semibold mt-0.5 truncate">
+														{field.prefix
+															? `${field.prefix}${Number(value).toLocaleString("en-IN")}`
+															: typeof value === "number"
+																? value.toLocaleString("en-IN")
+																: String(value)}
+													</p>
+												</div>
+											);
+										})}
+									</div>
+
+									{log.notes && (
+										<p className="mt-3 text-xs text-surface-600 leading-relaxed">
+											<span className="font-medium text-surface-500">
+												Notes:
+											</span>{" "}
+											{log.notes}
+										</p>
+									)}
 								</div>
-							)}
+							))}
 						</div>
 					)}
 				</div>
@@ -557,19 +761,11 @@ export default function DailyLogPage() {
 						CSV Import Format
 					</h3>
 					<p className="text-[11px] text-surface-500 font-mono leading-relaxed">
-						date,{" "}
-						{metricFields
-							.filter((f) => f.type === "number")
-							.map((f) => f.key)
-							.join(", ")}
+						date, {numericFields.map((f) => f.key).join(", ")}
 						, notes
 						<br />
-						2025-01-15,{" "}
-						{metricFields
-							.filter((f) => f.type === "number")
-							.map(() => "0")
-							.join(", ")}
-						, &quot;Notes here&quot;
+						2025-01-15, {numericFields.map(() => "0").join(", ")}, &quot;Notes
+						here&quot;
 					</p>
 				</div>
 			</div>
