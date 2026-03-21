@@ -7,9 +7,9 @@ Provides a single `generate_ai_content(prompt)` function that:
   4. Returns (text, provider) or raises if all fail
 """
 
-import os
 import logging
 import requests as _requests
+from config import GEMINI_API_KEY, GROQ_API_KEY, ANTHROPIC_API_KEY
 
 log = logging.getLogger("yukti.ai_client")
 
@@ -44,32 +44,32 @@ _gemini_client = None
 try:
     from google import genai as _genai
 
-    _gemini_key = os.environ.get("GEMINI_API_KEY", "")
+    _gemini_key = GEMINI_API_KEY
     if _gemini_key:
         _gemini_client = _genai.Client(api_key=_gemini_key)
         _gemini_available = True
-        log.info("🟢 Gemini configured (key …%s)", _gemini_key[-6:])
+        log.info("[OK] Gemini configured (key ...%s)", _gemini_key[-6:])
     else:
-        log.warning("🟡 Gemini key not set — skipping")
+        log.warning("[WARN] Gemini key not set - skipping")
 except ImportError:
-    log.warning("🔴 google-genai not installed — Gemini unavailable")
+    log.warning("[ERROR] google-genai not installed - Gemini unavailable")
 
 # ---------------------------------------------------------------------------
 # Groq setup (OpenAI-compatible REST API)
 # ---------------------------------------------------------------------------
-_GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+_GROQ_API_KEY = GROQ_API_KEY
 _GROQ_ENDPOINT = "https://api.groq.com/openai/v1/chat/completions"
 _GROQ_MODEL = "moonshotai/kimi-k2-instruct"
 _groq_available = bool(_GROQ_API_KEY)
 if _groq_available:
-    log.info("🟢 Groq configured (key …%s, model %s)", _GROQ_API_KEY[-6:], _GROQ_MODEL)
+    log.info("[OK] Groq configured (key ...%s, model %s)", _GROQ_API_KEY[-6:], _GROQ_MODEL)
 else:
-    log.warning("🟡 Groq key not set — skipping")
+    log.warning("[WARN] Groq key not set - skipping")
 
 # ---------------------------------------------------------------------------
 # Claude (Anthropic) setup
 # ---------------------------------------------------------------------------
-_ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+_ANTHROPIC_API_KEY = ANTHROPIC_API_KEY
 _CLAUDE_MODEL = "claude-sonnet-4-20250514"
 _claude_available = False
 _claude_client = None
@@ -79,11 +79,11 @@ try:
     if _ANTHROPIC_API_KEY:
         _claude_client = _anthropic.Anthropic(api_key=_ANTHROPIC_API_KEY)
         _claude_available = True
-        log.info("🟢 Claude configured (key …%s, model %s)", _ANTHROPIC_API_KEY[-6:], _CLAUDE_MODEL)
+        log.info("[OK] Claude configured (key ...%s, model %s)", _ANTHROPIC_API_KEY[-6:], _CLAUDE_MODEL)
     else:
-        log.warning("🟡 Anthropic key not set — skipping")
+        log.warning("[WARN] Anthropic key not set - skipping")
 except ImportError:
-    log.warning("🔴 anthropic not installed — Claude unavailable")
+    log.warning("[ERROR] anthropic not installed - Claude unavailable")
 
 
 def _call_gemini(prompt: str) -> str:
@@ -222,51 +222,51 @@ def generate_ai_content(prompt: str) -> tuple[str, str]:
 
     # ── Attempt 1: Gemini ──
     if _gemini_available:
-        log.info("   🔄 Trying Gemini (gemini-3.1-flash)…")
+        log.info("   [TRY] Trying Gemini (gemini-3.1-flash)...")
         try:
             raw = _call_gemini(prompt)
-            log.info("   ✅ Gemini responded — %d chars", len(raw))
+            log.info("   [OK] Gemini responded - %d chars", len(raw))
             cleaned = _clean_ai_response(raw)
             json_block = _extract_json_block(cleaned)
             return (json_block or cleaned), "gemini"
         except Exception as e:
-            log.warning("   ❌ Gemini failed: %s", e)
+            log.warning("   [FAIL] Gemini failed: %s", e)
             errors.append(f"Gemini: {e}")
     else:
-        log.info("   ⏭  Gemini not available — skipping")
+        log.info("   [SKIP] Gemini not available - skipping")
 
     # ── Attempt 2: Groq (kimi-k2-instruct) ──
     if _groq_available:
-        log.info("   🔄 Trying Groq (%s)…", _GROQ_MODEL)
+        log.info("   [TRY] Trying Groq (%s)...", _GROQ_MODEL)
         try:
             raw = _call_groq(prompt)
-            log.info("   ✅ Groq responded — %d chars", len(raw))
+            log.info("   [OK] Groq responded - %d chars", len(raw))
             cleaned = _clean_ai_response(raw)
             json_block = _extract_json_block(cleaned)
             return (json_block or cleaned), "groq"
         except Exception as e:
-            log.warning("   ❌ Groq failed: %s", e)
+            log.warning("   [FAIL] Groq failed: %s", e)
             errors.append(f"Groq: {e}")
     else:
-        log.info("   ⏭  Groq not available — skipping")
+        log.info("   [SKIP] Groq not available - skipping")
 
     # ── Attempt 3: Claude (Anthropic) ──
     if _claude_available:
-        log.info("   🔄 Trying Claude (%s)…", _CLAUDE_MODEL)
+        log.info("   [TRY] Trying Claude (%s)...", _CLAUDE_MODEL)
         try:
             raw = _call_claude(prompt)
-            log.info("   ✅ Claude responded — %d chars", len(raw))
+            log.info("   [OK] Claude responded - %d chars", len(raw))
             cleaned = _clean_ai_response(raw)
             json_block = _extract_json_block(cleaned)
             return (json_block or cleaned), "claude"
         except Exception as e:
-            log.warning("   ❌ Claude failed: %s", e)
+            log.warning("   [FAIL] Claude failed: %s", e)
             errors.append(f"Claude: {e}")
     else:
-        log.info("   ⏭  Claude not available — skipping")
+        log.info("   [SKIP] Claude not available - skipping")
 
     # All failed
-    log.error("   🔴 All AI providers failed: %s", "; ".join(errors))
+    log.error("   [ERROR] All AI providers failed: %s", "; ".join(errors))
     raise RuntimeError(f"All AI providers failed: {'; '.join(errors)}")
 
 

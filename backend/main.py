@@ -20,20 +20,23 @@ from engine.smart_advisor import (
 )
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import uvicorn
 import json
 import io
 import base64
 import pickle
-import tempfile
 import os
 import logging
 import numpy as np
 import pandas as pd
+from pathlib import Path
 from datetime import datetime, date
 from dotenv import load_dotenv
+from setup_route import router as setup_router
 
 load_dotenv()
 
@@ -71,22 +74,22 @@ if (_SECRETS_WORKER_URL or _SECRETS_WORKER_FALLBACK_URLS) and _SECRETS_AUTH_TOKE
                     if _val:
                         os.environ.setdefault(_key, _val)
                 print(
-                    f"  🔐 Loaded {len([v for v in _secrets.values() if v])} secrets from Cloudflare Worker"
+                    f"  [INFO] Loaded {len([v for v in _secrets.values() if v])} secrets from Cloudflare Worker"
                 )
                 _loaded = True
                 break
 
             print(
-                f"  ⚠️  Secrets worker {_worker_url} returned {_resp.status_code}: {_resp.text[:200]}"
+                f"  [WARN] Secrets worker {_worker_url} returned {_resp.status_code}: {_resp.text[:200]}"
             )
         except Exception as _e:
-            print(f"  ⚠️  Could not reach secrets worker {_worker_url}: {_e}")
+            print(f"  [WARN] Could not reach secrets worker {_worker_url}: {_e}")
 
     if not _loaded:
-        print("  ℹ️  Worker fetch failed — using local environment API keys")
+        print("  [INFO] Worker fetch failed - using local environment API keys")
 else:
     if not os.environ.get("GEMINI_API_KEY"):
-        print("  ℹ️  No secrets worker config set — using .env for API keys")
+        print("  [INFO] No secrets worker config set - using .env for API keys")
 
 # ── Configure logging ──
 logging.basicConfig(
@@ -206,22 +209,38 @@ app = FastAPI(
     version="1.0.0",
 )
 
+app.include_router(setup_router)
+
+
+def _env_csv(name: str) -> list[str]:
+    raw = os.getenv(name, "")
+    return [value.strip() for value in raw.split(",") if value.strip()]
+
+
+default_origins = [
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://localhost:4173",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
+    "http://127.0.0.1:4173",
+    "http://127.0.0.1:8765",
+]
+
+allowed_origins = _env_csv("YUKTI_CORS_ALLOW_ORIGINS") or default_origins
+allowed_hosts = _env_csv("YUKTI_ALLOWED_HOSTS") or ["127.0.0.1", "localhost", "*.localhost"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:4173",
-        "http://127.0.0.1:5173",
-        "https://aria-agent-alpha.vercel.app",
-        "https://mudmedia-yukti.vercel.app"
-    ],
+    allow_origins=allowed_origins,
 
     
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
 
 @app.exception_handler(Exception)
@@ -253,7 +272,11 @@ async def get_current_user(
 # ---------------------------------------------------------------------------
 # Session store — persisted to a temp file so data survives uvicorn --reload
 # ---------------------------------------------------------------------------
-_SESSION_PATH = os.path.join(tempfile.gettempdir(), "yukti_session.pkl")
+_APPDATA_ROOT = Path(os.getenv("APPDATA", str(Path.home()))) / "Yukti"
+_APPDATA_ROOT.mkdir(parents=True, exist_ok=True)
+_SESSION_DIR = _APPDATA_ROOT / "sessions"
+_SESSION_DIR.mkdir(parents=True, exist_ok=True)
+_SESSION_PATH = str(_SESSION_DIR / "yukti_session.pkl")
 
 
 def _load_session() -> dict:
@@ -1764,7 +1787,11 @@ No markdown, no explanation, no code fences. Just the JSON."""
         if _gemini_available and _gemini_client:
             log.info("   🔄 [Fallback] Using Gemini Vision for direct OCR…")
             try:
-                from google.genai import types as _gtypes
+                from engine import ai_client as _ai_client
+
+                _gtypes = getattr(getattr(_ai_client, "_genai", None), "types", None)
+                if _gtypes is None:
+                    raise RuntimeError("google-genai types unavailable")
 
                 response = _gemini_client.models.generate_content(
                     model="gemini-3.1-flash",
@@ -2145,5 +2172,29 @@ async def forecast_actions(uid: str = Depends(get_current_user)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
+
+if os.path.exists(STATIC_DIR):
+    app.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")
+
+    @app.exception_handler(404)
+    async def spa_fallback(request: Request, exc):
+        return FileResponse(os.path.join(STATIC_DIR, "index.html"))
+
+
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Yukti Backend")
+    parser.add_argument("--port", type=int, default=8000, help="Port to listen on")
+    parser.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind")
+    args = parser.parse_args()
+
+    uvicorn.run(
+        app,
+        host=args.host,
+        port=args.port,
+        log_level="warning",
+        log_config=None,
+        access_log=False,
+    )

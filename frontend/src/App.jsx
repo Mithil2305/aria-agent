@@ -16,6 +16,7 @@ import IntegrationsPage from "./pages/IntegrationsPage";
 import StrategyAdvisorPage from "./pages/StrategyAdvisorPage";
 import PremiumAnalysisPage from "./pages/PremiumAnalysisPage";
 import LimitsPage from "./pages/LimitsPage";
+import SetupPage from "./pages/SetupPage";
 import { AnalysisJobProvider } from "./contexts/AnalysisJobContext";
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
 					<Routes>
 						{/* Public routes */}
 						<Route path="/" element={<HomePage />} />
+						<Route path="/setup" element={<SetupPage />} />
 						<Route path="/login" element={<LoginPage />} />
 						<Route path="/register" element={<RegisterPage />} />
 

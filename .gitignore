@@ -7,8 +7,6 @@ __pycache__/
 *.so
 *.egg
 *.egg-info/
-dist/
-build/
 *.whl
 *.pyo
 *.pyd
@@ -17,24 +15,49 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 # Virtual environments
-backend/venv/
-backend/.venv/
 venv/
 .venv/
+backend/venv/
+backend/.venv/
 
-# Environment variables & secrets (NEVER commit)
+# Python build / packaging outputs
+dist/
+build/
+backend/build/
+backend/build_*/
+backend/dist/
+backend/dist_*/
+
+# PyInstaller and runtime artifacts
+*.spec.bak
+*.manifest
+*.exit
+
+# ========================
+# Node.js / Frontend / Electron
+# ========================
+node_modules/
+frontend/node_modules/
+electron/node_modules/
+
+# Frontend build outputs
+frontend/dist/
+frontend/dist-ssr/
+frontend/.vite/
+
+# Worker outputs (worker removed)
+worker/
+
+# ========================
+# Environment variables & secrets
+# ========================
 .env
+*.env
+!.env.example
 *.env.local
 *.env.*.local
 service-account.json
 **/service-account*.json
-
-# ========================
-# Node.js / Frontend
-# ========================
-node_modules/
-frontend/dist/
-frontend/dist-ssr/
 
 # ========================
 # Logs
@@ -80,23 +103,16 @@ Desktop.ini
 backend/_sft_fields.txt
 
 # ========================
-# Cloudflare Worker
-# ========================
-worker/node_modules/
-worker/.dev.vars
-worker/.wrangler/
-
-# ========================
 # ML — Large / Generated Files
 # ========================
 
-# Raw datasets (large — download separately, see datasets/README.md)
+# Raw datasets (large — download separately)
 backend/datasets/
 
-# Processed training data (regenerate via: python -m ml.prepare_dataset)
+# Processed training data
 backend/ml/data/
 
-# Model checkpoints & weights (regenerate via: python -m ml.train)
+# Model checkpoints / weights
 backend/ml/checkpoints/
 
 # Hugging Face cache

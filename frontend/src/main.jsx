@@ -6,7 +6,7 @@ import { initFirebase } from "./firebase";
 
 const root = createRoot(document.getElementById("root"));
 
-// Show a minimal loader while Firebase config is fetched from the worker
+// Show a minimal loader while Firebase initializes
 root.render(
 	<div
 		style={{
