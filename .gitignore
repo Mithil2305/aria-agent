@@ -15,49 +15,40 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 # Virtual environments
-venv/
-.venv/
 backend/venv/
 backend/.venv/
+venv/
+.venv/
 
-# Python build / packaging outputs
+# Backend generated build artifacts
+backend/build/
+backend/build_debug/
+backend/build_fresh/
+backend/build_fresh2/
+backend/dist/
+backend/dist_debug/
+backend/dist_fresh/
+backend/dist_fresh2/
+backend/*.spec
+backend/*.exit
+
+# Generic build outputs
 dist/
 build/
-backend/build/
-backend/build_*/
-backend/dist/
-backend/dist_*/
 
-# PyInstaller and runtime artifacts
-*.spec.bak
-*.manifest
-*.exit
-
-# ========================
-# Node.js / Frontend / Electron
-# ========================
-node_modules/
-frontend/node_modules/
-electron/node_modules/
-
-# Frontend build outputs
-frontend/dist/
-frontend/dist-ssr/
-frontend/.vite/
-
-# Worker outputs (worker removed)
-worker/
-
-# ========================
-# Environment variables & secrets
-# ========================
+# Environment variables & secrets (NEVER commit)
 .env
-*.env
-!.env.example
 *.env.local
 *.env.*.local
 service-account.json
 **/service-account*.json
+
+# ========================
+# Node.js / Frontend
+# ========================
+node_modules/
+frontend/dist/
+frontend/dist-ssr/
 
 # ========================
 # Logs
@@ -106,13 +97,13 @@ backend/_sft_fields.txt
 # ML — Large / Generated Files
 # ========================
 
-# Raw datasets (large — download separately)
+# Raw datasets (large — download separately, see datasets/README.md)
 backend/datasets/
 
-# Processed training data
+# Processed training data (regenerate via: python -m ml.prepare_dataset)
 backend/ml/data/
 
-# Model checkpoints / weights
+# Model checkpoints & weights (regenerate via: python -m ml.train)
 backend/ml/checkpoints/
 
 # Hugging Face cache
