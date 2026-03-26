@@ -154,15 +154,15 @@ export default function LoginPage() {
 			<div className="relative z-10 max-w-6xl mx-auto grid lg:grid-cols-2 gap-6 items-stretch">
 				<section className="auth-hero-card p-7 sm:p-9 hidden lg:flex flex-col justify-between">
 					<div>
-						<div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-cyan-300/30 bg-white/5 text-cyan-100 text-xs tracking-wide uppercase">
+						<div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-amber-200 bg-white/80 text-amber-700 text-xs tracking-wide uppercase">
 							<Sparkles size={14} /> Yukti Intelligence
 						</div>
-						<h1 className="text-white text-4xl font-semibold leading-tight mt-6">
+						<h1 className="text-slate-900 text-4xl font-semibold leading-tight mt-6">
 							Predict smarter.
 							<br />
 							Grow faster.
 						</h1>
-						<p className="text-slate-200 mt-4 max-w-md">
+						<p className="text-slate-600 mt-4 max-w-md">
 							A 6-layer analytics pipeline with resilient AI fallback and
 							strategy outputs designed for Indian businesses.
 						</p>
@@ -170,21 +170,23 @@ export default function LoginPage() {
 
 					<div className="auth-hero-stack">
 						<div className="auth-float-card">
-							<Orbit size={16} className="text-cyan-300" />
+							<Orbit size={16} className="text-amber-700" />
 							<div>
-								<p className="text-white text-sm font-medium">4 AI Providers</p>
-								<p className="text-slate-300 text-xs">
+								<p className="text-slate-900 text-sm font-medium">
+									4 AI Providers
+								</p>
+								<p className="text-slate-600 text-xs">
 									Auto-fallback reliability chain
 								</p>
 							</div>
 						</div>
 						<div className="auth-float-card auth-float-card-offset">
-							<ShieldCheck size={16} className="text-cyan-300" />
+							<ShieldCheck size={16} className="text-amber-700" />
 							<div>
-								<p className="text-white text-sm font-medium">
+								<p className="text-slate-900 text-sm font-medium">
 									Secure by Firebase Auth
 								</p>
-								<p className="text-slate-300 text-xs">
+								<p className="text-slate-600 text-xs">
 									Built-in account protection
 								</p>
 							</div>
@@ -194,11 +196,13 @@ export default function LoginPage() {
 
 				<section className="auth-form-card p-6 sm:p-8">
 					<div className="text-center mb-6">
-						<div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gold-600 mb-3">
+						<div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gold-600 mb-3 shadow-sm">
 							<Sparkles size={22} className="text-white" />
 						</div>
-						<h2 className="text-xl font-semibold text-white">Welcome Back</h2>
-						<p className="text-slate-300 text-sm mt-1">
+						<h2 className="text-xl font-semibold text-slate-900">
+							Welcome Back
+						</h2>
+						<p className="text-slate-600 text-sm mt-1">
 							Sign in to continue with Yukti
 						</p>
 						{successState ? (
@@ -290,11 +294,11 @@ export default function LoginPage() {
 						</button>
 					</form>
 
-					<p className="text-center text-sm text-slate-300 mt-5">
+					<p className="text-center text-sm text-slate-600 mt-5">
 						Don't have an account?{" "}
 						<Link
 							to="/register"
-							className="text-cyan-200 hover:text-cyan-100 font-medium transition-colors"
+							className="text-amber-700 hover:text-amber-800 font-medium transition-colors"
 						>
 							Create one
 						</Link>

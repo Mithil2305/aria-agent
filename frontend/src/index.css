@@ -1,8 +1,9 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 @theme {
-	--font-sans: "Space Grotesk", "Sora", ui-sans-serif, system-ui, sans-serif;
+	--font-sans:
+		"Inter", "SF Pro Text", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
 
 	/* ── Light SaaS palette ── */
 
@@ -19,17 +20,17 @@
 	--color-surface-900: #111827;
 	--color-surface-950: #030712;
 
-	/* Primary — clean indigo/blue */
-	--color-gold-50: #eef2ff;
-	--color-gold-100: #e0e7ff;
-	--color-gold-200: #c7d2fe;
-	--color-gold-300: #a5b4fc;
-	--color-gold-400: #818cf8;
-	--color-gold-500: #6366f1;
-	--color-gold-600: #4f46e5;
-	--color-gold-700: #4338ca;
-	--color-gold-800: #3730a3;
-	--color-gold-900: #312e81;
+	/* Primary — warm luxury accent */
+	--color-gold-50: #fdf8ef;
+	--color-gold-100: #f6eddc;
+	--color-gold-200: #eddab8;
+	--color-gold-300: #e3c791;
+	--color-gold-400: #d5ad64;
+	--color-gold-500: #c59643;
+	--color-gold-600: #b68435;
+	--color-gold-700: #966826;
+	--color-gold-800: #73501f;
+	--color-gold-900: #513916;
 
 	/* Brand — neutral warm */
 	--color-brand-50: #f9fafb;
@@ -52,7 +53,7 @@ html {
 }
 
 body {
-	background: #f8f9fb;
+	background: #f8f6f2;
 	color: #1f2937;
 }
 
@@ -249,26 +250,26 @@ tbody tr {
 	overflow: hidden;
 	background:
 		radial-gradient(
-			circle at 10% 0%,
-			rgba(34, 211, 238, 0.18),
-			transparent 40%
+			circle at 10% -8%,
+			rgba(230, 214, 181, 0.45),
+			transparent 45%
 		),
 		radial-gradient(
-			circle at 80% 10%,
-			rgba(56, 189, 248, 0.2),
-			transparent 35%
+			circle at 94% 2%,
+			rgba(214, 227, 245, 0.52),
+			transparent 43%
 		),
-		linear-gradient(140deg, #041122 0%, #081429 38%, #0d1f36 100%);
+		linear-gradient(165deg, #fdfbf8 0%, #f7f3ec 46%, #f4f1eb 100%);
 }
 
 .landing-grid-bg {
 	position: absolute;
 	inset: 0;
 	background-image:
-		linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
-		linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+		linear-gradient(rgba(180, 168, 147, 0.09) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(180, 168, 147, 0.09) 1px, transparent 1px);
 	background-size: 38px 38px;
-	mask-image: radial-gradient(circle at center, black 40%, transparent 90%);
+	mask-image: radial-gradient(circle at center, black 54%, transparent 95%);
 	pointer-events: none;
 }
 
@@ -276,20 +277,20 @@ tbody tr {
 	position: absolute;
 	width: 30rem;
 	height: 30rem;
-	filter: blur(60px);
-	opacity: 0.5;
+	filter: blur(90px);
+	opacity: 0.38;
 	animation: aurora-float 10s ease-in-out infinite alternate;
 	pointer-events: none;
 }
 .landing-aurora-a {
 	left: -8rem;
 	top: 10rem;
-	background: #22d3ee;
+	background: #e4cfa4;
 }
 .landing-aurora-b {
 	right: -10rem;
 	top: -3rem;
-	background: #3b82f6;
+	background: #d8e5f9;
 	animation-delay: 1.4s;
 }
 
@@ -303,54 +304,58 @@ tbody tr {
 .auth-form-card,
 .auth-float-card {
 	background: linear-gradient(
-		140deg,
-		rgba(255, 255, 255, 0.12) 0%,
-		rgba(255, 255, 255, 0.05) 100%
+		145deg,
+		rgba(255, 255, 255, 0.96) 0%,
+		rgba(250, 246, 240, 0.92) 100%
 	);
-	border: 1px solid rgba(148, 163, 184, 0.24);
-	backdrop-filter: blur(14px);
+	border: 1px solid #e9e2d6;
+	backdrop-filter: blur(8px);
 	box-shadow:
-		0 18px 50px rgba(2, 6, 23, 0.35),
-		inset 0 1px 0 rgba(255, 255, 255, 0.24);
+		0 22px 52px rgba(27, 33, 45, 0.08),
+		0 2px 12px rgba(18, 24, 37, 0.05),
+		inset 0 1px 0 rgba(255, 255, 255, 0.7);
 }
 
 .landing-btn-solid,
 .auth-submit-btn {
-	background: linear-gradient(100deg, #22d3ee 0%, #0ea5e9 45%, #2563eb 100%);
-	color: #041122;
+	background: linear-gradient(120deg, #1f2937 0%, #111827 100%);
+	color: #fdfcf9;
 	font-weight: 700;
 	font-size: 0.88rem;
-	padding: 0.68rem 1.05rem;
-	border-radius: 0.75rem;
+	padding: 0.72rem 1.12rem;
+	border-radius: 0.82rem;
 	transition:
 		transform 0.2s ease,
-		box-shadow 0.2s ease;
-	box-shadow: 0 12px 24px rgba(14, 165, 233, 0.28);
+		box-shadow 0.2s ease,
+		filter 0.2s ease;
+	box-shadow: 0 10px 22px rgba(15, 23, 42, 0.18);
 	border: none;
 }
 .landing-btn-solid:hover,
 .auth-submit-btn:hover {
 	transform: translateY(-1px);
-	box-shadow: 0 16px 32px rgba(14, 165, 233, 0.33);
+	box-shadow: 0 16px 28px rgba(15, 23, 42, 0.24);
+	filter: saturate(1.04);
 }
 
 .landing-btn-ghost,
 .auth-back-btn,
 .auth-google-btn {
-	background: rgba(15, 23, 42, 0.46);
-	color: #dbeafe;
+	background: rgba(255, 255, 255, 0.88);
+	color: #1f2937;
 	font-size: 0.88rem;
 	font-weight: 600;
-	padding: 0.68rem 1.05rem;
-	border-radius: 0.75rem;
-	border: 1px solid rgba(148, 163, 184, 0.32);
+	padding: 0.72rem 1.12rem;
+	border-radius: 0.82rem;
+	border: 1px solid #ddd4c5;
 	transition: all 0.2s ease;
 }
 .landing-btn-ghost:hover,
 .auth-back-btn:hover,
 .auth-google-btn:hover {
-	background: rgba(15, 23, 42, 0.65);
-	border-color: rgba(125, 211, 252, 0.7);
+	background: #ffffff;
+	border-color: #cdbb9a;
+	box-shadow: 0 10px 24px rgba(64, 55, 39, 0.12);
 }
 
 .landing-feature-card,
@@ -358,8 +363,22 @@ tbody tr {
 .landing-stat-card,
 .landing-mini-stat,
 .auth-float-card {
-	padding: 1rem;
+	padding: 1.05rem;
 	border-radius: 1rem;
+	transition:
+		transform 0.22s ease,
+		box-shadow 0.22s ease,
+		border-color 0.22s ease;
+}
+
+.landing-feature-card:hover,
+.landing-step-card:hover,
+.landing-stat-card:hover,
+.landing-mini-stat:hover,
+.auth-float-card:hover {
+	transform: translateY(-2px);
+	border-color: #d1c0a1;
+	box-shadow: 0 16px 28px rgba(27, 33, 45, 0.1);
 }
 
 .reveal-on-scroll {
@@ -398,13 +417,9 @@ tbody tr {
 	padding: 1.2rem;
 	text-align: center;
 	border-radius: 1rem;
-	background: linear-gradient(
-		120deg,
-		rgba(15, 23, 42, 0.75),
-		rgba(8, 47, 73, 0.58)
-	);
-	border: 1px solid rgba(125, 211, 252, 0.45);
-	box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+	background: linear-gradient(130deg, #ffffff 0%, #f7f3ec 100%);
+	border: 1px solid #e2d9cb;
+	box-shadow: 0 24px 40px rgba(15, 23, 42, 0.12);
 }
 
 .landing-orbit {
@@ -416,9 +431,10 @@ tbody tr {
 	border-radius: 999px;
 	font-size: 0.75rem;
 	font-weight: 600;
-	color: #cffafe;
-	background: rgba(8, 47, 73, 0.62);
-	border: 1px solid rgba(125, 211, 252, 0.4);
+	color: #4f3a1f;
+	background: rgba(255, 255, 255, 0.9);
+	border: 1px solid #d9c8aa;
+	box-shadow: 0 8px 20px rgba(54, 46, 34, 0.12);
 }
 
 .landing-orbit-a {
@@ -438,19 +454,19 @@ tbody tr {
 	position: absolute;
 	width: 28rem;
 	height: 28rem;
-	filter: blur(65px);
-	opacity: 0.45;
+	filter: blur(95px);
+	opacity: 0.35;
 	pointer-events: none;
 }
 .auth-bg-glow-a {
 	left: -10rem;
 	top: -8rem;
-	background: #22d3ee;
+	background: #e6d8bd;
 }
 .auth-bg-glow-b {
 	right: -12rem;
 	bottom: -10rem;
-	background: #2563eb;
+	background: #d7e4f9;
 }
 
 .auth-hero-stack {
@@ -478,9 +494,9 @@ tbody tr {
 }
 
 .auth-input {
-	background: rgba(15, 23, 42, 0.42);
-	border: 1px solid rgba(148, 163, 184, 0.35);
-	color: #f8fafc;
+	background: rgba(255, 255, 255, 0.96);
+	border: 1px solid #ded7cb;
+	color: #111827;
 	border-radius: 10px;
 	font-size: 14px;
 	padding: 10px 14px;
@@ -490,19 +506,19 @@ tbody tr {
 }
 
 .auth-input::placeholder {
-	color: #94a3b8;
+	color: #9aa0ac;
 }
 
 .auth-input:focus {
 	outline: none;
-	border-color: #67e8f9;
-	box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.2);
+	border-color: #c7ab7a;
+	box-shadow: 0 0 0 3px rgba(198, 167, 118, 0.2);
 }
 
 .auth-divider {
 	position: relative;
 	height: 1px;
-	background: rgba(148, 163, 184, 0.3);
+	background: rgba(163, 147, 122, 0.35);
 	text-align: center;
 }
 
@@ -511,8 +527,60 @@ tbody tr {
 	top: -0.55rem;
 	padding: 0 0.6rem;
 	font-size: 0.75rem;
-	color: #94a3b8;
-	background: rgba(7, 17, 33, 0.88);
+	color: #7a7f88;
+	background: #faf7f2;
+}
+
+.landing-shell .text-white,
+.auth-shell .text-white {
+	color: #111827;
+}
+
+.landing-shell .text-slate-200,
+.landing-shell .text-slate-200\/90,
+.landing-shell .text-slate-300,
+.auth-shell .text-slate-200,
+.auth-shell .text-slate-300,
+.auth-shell .text-slate-400 {
+	color: #5d6674;
+}
+
+.landing-shell .text-cyan-100,
+.landing-shell .text-cyan-100\/85,
+.landing-shell .text-cyan-200,
+.landing-shell .text-cyan-200\/70,
+.auth-shell .text-cyan-100,
+.auth-shell .text-cyan-200,
+.auth-shell .text-cyan-300 {
+	color: #8b6b3e;
+}
+
+.landing-shell .bg-slate-800\/60,
+.landing-shell .bg-cyan-300\/20,
+.landing-shell .bg-white\/5,
+.auth-shell .bg-slate-800\/60,
+.auth-shell .bg-cyan-300\/20,
+.auth-shell .bg-white\/5 {
+	background: rgba(255, 255, 255, 0.82);
+}
+
+.landing-shell .border-slate-600,
+.landing-shell .border-cyan-300\/30,
+.auth-shell .border-slate-600,
+.auth-shell .border-cyan-300\/30 {
+	border-color: #d9cfbf;
+}
+
+.landing-shell .bg-cyan-300,
+.auth-shell .bg-cyan-300 {
+	background: #d3ba8f;
+}
+
+.landing-shell .text-slate-900,
+.landing-shell .text-cyan-100,
+.auth-shell .text-slate-900,
+.auth-shell .text-cyan-100 {
+	color: #3f2f1b;
 }
 
 @keyframes aurora-float {

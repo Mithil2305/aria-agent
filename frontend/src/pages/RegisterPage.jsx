@@ -270,15 +270,15 @@ export default function RegisterPage() {
 			<div className="relative z-10 max-w-6xl mx-auto grid lg:grid-cols-2 gap-6 items-stretch">
 				<section className="auth-hero-card p-7 sm:p-9 hidden lg:flex flex-col justify-between">
 					<div>
-						<div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-cyan-300/30 bg-white/5 text-cyan-100 text-xs tracking-wide uppercase">
+						<div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-amber-200 bg-white/80 text-amber-700 text-xs tracking-wide uppercase">
 							<Workflow size={14} /> Guided onboarding
 						</div>
-						<h1 className="text-white text-4xl font-semibold leading-tight mt-6">
+						<h1 className="text-slate-900 text-4xl font-semibold leading-tight mt-6">
 							Build your data engine.
 							<br />
 							From day one.
 						</h1>
-						<p className="text-slate-200 mt-4 max-w-md">
+						<p className="text-slate-600 mt-4 max-w-md">
 							Create your Yukti workspace, upload data, and receive
 							strategy-ready insights in minutes.
 						</p>
@@ -286,23 +286,23 @@ export default function RegisterPage() {
 
 					<div className="auth-hero-stack">
 						<div className="auth-float-card">
-							<BadgeCheck size={16} className="text-cyan-300" />
+							<BadgeCheck size={16} className="text-amber-700" />
 							<div>
-								<p className="text-white text-sm font-medium">
+								<p className="text-slate-900 text-sm font-medium">
 									7-day free trial
 								</p>
-								<p className="text-slate-300 text-xs">
+								<p className="text-slate-600 text-xs">
 									No credit card required
 								</p>
 							</div>
 						</div>
 						<div className="auth-float-card auth-float-card-offset">
-							<Sparkles size={16} className="text-cyan-300" />
+							<Sparkles size={16} className="text-amber-700" />
 							<div>
-								<p className="text-white text-sm font-medium">
+								<p className="text-slate-900 text-sm font-medium">
 									Custom Indian ML model
 								</p>
-								<p className="text-slate-300 text-xs">
+								<p className="text-slate-600 text-xs">
 									35,800+ curated training samples
 								</p>
 							</div>
@@ -312,13 +312,13 @@ export default function RegisterPage() {
 
 				<section className="auth-form-card p-6 sm:p-8">
 					<div className="text-center mb-5">
-						<div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gold-600 mb-3">
+						<div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gold-600 mb-3 shadow-sm">
 							<Sparkles size={22} className="text-white" />
 						</div>
-						<h2 className="text-xl font-semibold text-white">
+						<h2 className="text-xl font-semibold text-slate-900">
 							Start Your Free Trial
 						</h2>
-						<p className="text-slate-300 text-sm mt-1">
+						<p className="text-slate-600 text-sm mt-1">
 							Set up your account in under 2 minutes
 						</p>
 						{successState ? (
@@ -336,17 +336,17 @@ export default function RegisterPage() {
 									{i > 0 && (
 										<div
 											className={`w-8 h-0.5 rounded-full transition-colors duration-300 ${
-												done ? "bg-cyan-300" : "bg-slate-500/60"
+												done ? "bg-amber-400" : "bg-slate-300"
 											}`}
 										/>
 									)}
 									<div
 										className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 ${
 											active
-												? "bg-cyan-300 text-slate-900"
+												? "bg-amber-300 text-amber-950"
 												: done
-													? "bg-cyan-300/20 text-cyan-100 border border-cyan-300/30"
-													: "bg-slate-800/60 text-slate-300 border border-slate-600"
+													? "bg-amber-100 text-amber-800 border border-amber-200"
+													: "bg-white text-slate-500 border border-slate-300"
 										}`}
 									>
 										{done ? (
@@ -600,11 +600,11 @@ export default function RegisterPage() {
 						</div>
 					</form>
 
-					<p className="text-center text-sm text-slate-300 mt-5">
+					<p className="text-center text-sm text-slate-600 mt-5">
 						Already have an account?{" "}
 						<Link
 							to="/login"
-							className="text-cyan-200 hover:text-cyan-100 font-medium transition-colors"
+							className="text-amber-700 hover:text-amber-800 font-medium transition-colors"
 						>
 							Sign in
 						</Link>

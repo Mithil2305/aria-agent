@@ -199,12 +199,12 @@ export default function HomePage() {
 			<div className="landing-aurora landing-aurora-b" />
 
 			<header className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-				<nav className="landing-nav rounded-2xl px-4 sm:px-6 py-3 flex items-center justify-between">
+				<nav className="landing-nav rounded-3xl px-4 sm:px-6 py-3.5 flex items-center justify-between">
 					<div>
-						<p className="text-xs uppercase tracking-[0.28em] text-cyan-200/70">
+						<p className="text-xs uppercase tracking-[0.28em] text-amber-700/80">
 							Mud Media
 						</p>
-						<h1 className="text-white font-semibold text-lg tracking-tight">
+						<h1 className="text-slate-900 font-semibold text-lg tracking-tight">
 							Yukti
 						</h1>
 					</div>
@@ -230,20 +230,20 @@ export default function HomePage() {
 			<section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 sm:pt-16 pb-16 reveal-on-scroll">
 				<div className="grid lg:grid-cols-2 gap-10 items-center">
 					<div>
-						<p className="text-cyan-100 text-[11px] uppercase tracking-[0.2em] mb-4">
+						<p className="text-amber-700 text-[11px] uppercase tracking-[0.2em] mb-4">
 							{activeVariant.tag}
 						</p>
-						<p className="text-cyan-200 uppercase tracking-[0.24em] text-xs mb-4">
+						<p className="text-amber-700 uppercase tracking-[0.24em] text-xs mb-4">
 							Introducing Yukti
 						</p>
-						<h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-white leading-[1.05]">
+						<h2 className="text-4xl sm:text-5xl lg:text-6xl font-semibold text-slate-900 leading-[1.05]">
 							What if your data could think for you?
 						</h2>
-						<p className="text-slate-200/90 mt-5 text-base sm:text-lg leading-relaxed max-w-xl">
+						<p className="text-slate-600 mt-5 text-base sm:text-lg leading-relaxed max-w-xl">
 							Yukti replaces spreadsheets, disconnected BI tools, and expensive
 							consulting with one intelligent platform designed for Indian SMBs.
 						</p>
-						<p className="text-cyan-100/85 mt-3 text-sm font-medium">
+						<p className="text-amber-800/90 mt-3 text-sm font-medium">
 							{activeVariant.heroPunch}
 						</p>
 						<div className="mt-8 flex flex-wrap gap-3">
@@ -277,16 +277,16 @@ export default function HomePage() {
 						</div>
 						<div className="grid grid-cols-3 gap-3 mt-8 max-w-lg">
 							<div className="landing-stat-card">
-								<p className="text-2xl text-white font-semibold">35,800+</p>
-								<p className="text-xs text-slate-300">Training samples</p>
+								<p className="text-2xl text-slate-900 font-semibold">35,800+</p>
+								<p className="text-xs text-slate-600">Training samples</p>
 							</div>
 							<div className="landing-stat-card">
-								<p className="text-2xl text-white font-semibold">6-Layer</p>
-								<p className="text-xs text-slate-300">Analytics engine</p>
+								<p className="text-2xl text-slate-900 font-semibold">6-Layer</p>
+								<p className="text-xs text-slate-600">Analytics engine</p>
 							</div>
 							<div className="landing-stat-card">
-								<p className="text-2xl text-white font-semibold">4 AI</p>
-								<p className="text-xs text-slate-300">Provider fallback</p>
+								<p className="text-2xl text-slate-900 font-semibold">4 AI</p>
+								<p className="text-xs text-slate-600">Provider fallback</p>
 							</div>
 						</div>
 					</div>
@@ -294,11 +294,11 @@ export default function HomePage() {
 					<div className="landing-scene-wrap">
 						<div className="landing-scene">
 							<div className="landing-scene-core">
-								<ShieldCheck size={24} className="text-cyan-200" />
-								<p className="text-white text-sm font-medium mt-2">
+								<ShieldCheck size={24} className="text-amber-700" />
+								<p className="text-slate-900 text-sm font-medium mt-2">
 									AI Reliability Chain
 								</p>
-								<p className="text-xs text-slate-300 mt-1">
+								<p className="text-xs text-slate-600 mt-1">
 									Gemini &rarr; Groq &rarr; Claude &rarr; Rule Engine
 								</p>
 							</div>
@@ -313,19 +313,19 @@ export default function HomePage() {
 
 			<section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 reveal-on-scroll">
 				<div className="text-center max-w-3xl mx-auto mb-8">
-					<p className="text-cyan-200 uppercase tracking-[0.24em] text-xs">
+					<p className="text-amber-700 uppercase tracking-[0.24em] text-xs">
 						Capabilities
 					</p>
-					<h3 className="text-white text-3xl sm:text-4xl font-semibold mt-3">
+					<h3 className="text-slate-900 text-3xl sm:text-4xl font-semibold mt-3">
 						One Platform, Ten Superpowers
 					</h3>
 				</div>
 				<div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
 					{SUPERPOWERS.map((item) => (
 						<article key={item.title} className="landing-feature-card">
-							<item.icon className="text-cyan-200" size={20} />
-							<h4 className="text-white font-medium mt-3">{item.title}</h4>
-							<p className="text-slate-300 text-sm mt-2 leading-relaxed">
+							<item.icon className="text-amber-700" size={20} />
+							<h4 className="text-slate-900 font-medium mt-3">{item.title}</h4>
+							<p className="text-slate-600 text-sm mt-2 leading-relaxed">
 								{item.desc}
 							</p>
 						</article>
@@ -335,17 +335,17 @@ export default function HomePage() {
 
 			<section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 reveal-on-scroll">
 				<div className="landing-glass rounded-3xl p-6 sm:p-8">
-					<p className="text-cyan-200 uppercase tracking-[0.24em] text-xs">
+					<p className="text-amber-700 uppercase tracking-[0.24em] text-xs">
 						6 Processing Layers
 					</p>
-					<h3 className="text-white text-2xl sm:text-3xl font-semibold mt-3 max-w-2xl">
+					<h3 className="text-slate-900 text-2xl sm:text-3xl font-semibold mt-3 max-w-2xl">
 						Six layers between raw data and real decisions
 					</h3>
 					<div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
 						{PIPELINE.map((layer, index) => (
 							<div key={layer} className="landing-step-card">
-								<p className="text-cyan-200 text-xs">0{index + 1}</p>
-								<p className="text-white font-medium mt-1">{layer}</p>
+								<p className="text-amber-700 text-xs">0{index + 1}</p>
+								<p className="text-slate-900 font-medium mt-1">{layer}</p>
 							</div>
 						))}
 					</div>
@@ -355,36 +355,36 @@ export default function HomePage() {
 			<section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 reveal-on-scroll">
 				<div className="grid lg:grid-cols-2 gap-4">
 					<div className="landing-glass rounded-3xl p-6 sm:p-8">
-						<p className="text-cyan-200 uppercase tracking-[0.24em] text-xs">
+						<p className="text-amber-700 uppercase tracking-[0.24em] text-xs">
 							Custom ML Model
 						</p>
-						<h3 className="text-white text-2xl font-semibold mt-3">
+						<h3 className="text-slate-900 text-2xl font-semibold mt-3">
 							TinyLlama 1.1B + QLoRA
 						</h3>
-						<p className="text-slate-300 text-sm mt-3 leading-relaxed">
+						<p className="text-slate-600 text-sm mt-3 leading-relaxed">
 							Yukti's custom model was fine-tuned with QLoRA (4-bit NF4, rank
 							16) on 35,800+ curated samples from Indian retail, restaurant,
 							finance, forecasting, and anomaly datasets.
 						</p>
 						<div className="grid grid-cols-2 gap-3 mt-6">
 							<div className="landing-mini-stat">
-								<p className="text-white font-semibold">10+</p>
-								<p className="text-slate-300 text-xs">Source datasets</p>
+								<p className="text-slate-900 font-semibold">10+</p>
+								<p className="text-slate-600 text-xs">Source datasets</p>
 							</div>
 							<div className="landing-mini-stat">
-								<p className="text-white font-semibold">4-bit NF4</p>
-								<p className="text-slate-300 text-xs">Fine-tuning method</p>
+								<p className="text-slate-900 font-semibold">4-bit NF4</p>
+								<p className="text-slate-600 text-xs">Fine-tuning method</p>
 							</div>
 						</div>
 					</div>
 					<div className="landing-glass rounded-3xl p-6 sm:p-8">
-						<p className="text-cyan-200 uppercase tracking-[0.24em] text-xs">
+						<p className="text-amber-700 uppercase tracking-[0.24em] text-xs">
 							Built For India
 						</p>
-						<h3 className="text-white text-2xl font-semibold mt-3">
+						<h3 className="text-slate-900 text-2xl font-semibold mt-3">
 							63 Million SMBs Need Better Decisions
 						</h3>
-						<ul className="text-slate-300 text-sm mt-4 space-y-2">
+						<ul className="text-slate-600 text-sm mt-4 space-y-2">
 							<li>Cost-aware product design where every rupee matters.</li>
 							<li>Festival and regional seasonality intelligence built in.</li>
 							<li>
@@ -401,19 +401,21 @@ export default function HomePage() {
 
 			<section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 reveal-on-scroll">
 				<div className="text-center max-w-3xl mx-auto mb-8">
-					<p className="text-cyan-200 uppercase tracking-[0.24em] text-xs">
+					<p className="text-amber-700 uppercase tracking-[0.24em] text-xs">
 						Who It's For
 					</p>
-					<h3 className="text-white text-3xl sm:text-4xl font-semibold mt-3">
+					<h3 className="text-slate-900 text-3xl sm:text-4xl font-semibold mt-3">
 						Real owners, real problems, real results
 					</h3>
 				</div>
 				<div className="grid md:grid-cols-2 gap-4">
 					{TARGET_USERS.map((segment) => (
 						<div className="landing-feature-card" key={segment.title}>
-							<segment.icon className="text-cyan-200" size={20} />
-							<h4 className="text-white font-medium mt-3">{segment.title}</h4>
-							<ul className="text-sm text-slate-300 mt-3 space-y-1.5">
+							<segment.icon className="text-amber-700" size={20} />
+							<h4 className="text-slate-900 font-medium mt-3">
+								{segment.title}
+							</h4>
+							<ul className="text-sm text-slate-600 mt-3 space-y-1.5">
 								{segment.points.map((point) => (
 									<li key={point}>• {point}</li>
 								))}
@@ -425,13 +427,13 @@ export default function HomePage() {
 
 			<section className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 reveal-on-scroll">
 				<div className="landing-cta rounded-3xl p-7 sm:p-10 text-center">
-					<p className="text-cyan-200 uppercase tracking-[0.24em] text-xs">
+					<p className="text-amber-700 uppercase tracking-[0.24em] text-xs">
 						Get Started
 					</p>
-					<h3 className="text-3xl sm:text-4xl text-white font-semibold mt-3">
+					<h3 className="text-3xl sm:text-4xl text-slate-900 font-semibold mt-3">
 						{activeVariant.finalTitle}
 					</h3>
-					<p className="text-slate-200 mt-4 max-w-3xl mx-auto">
+					<p className="text-slate-600 mt-4 max-w-3xl mx-auto">
 						{activeVariant.finalBody}
 					</p>
 					<div className="mt-8 flex flex-wrap justify-center gap-3">

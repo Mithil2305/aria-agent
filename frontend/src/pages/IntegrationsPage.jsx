@@ -56,6 +56,10 @@ function generateSecret() {
 
 export default function IntegrationsPage() {
 	const { user, userProfile, getIdToken } = useAuth();
+	const apiBase =
+		import.meta.env.VITE_API_URL ||
+		`${window.location.protocol}//${window.location.hostname}:8000`;
+	const webhookUrl = `${apiBase.replace(/\/$/, "")}/api/integrations/webhook/custom`;
 
 	const businessType = userProfile?.businessType || "";
 	const category = getBusinessCategory(businessType);
@@ -403,16 +407,10 @@ export default function IntegrationsPage() {
 							</p>
 							<div className="flex items-center gap-2">
 								<code className="text-xs text-indigo-600 font-mono flex-1">
-									{window.location.origin.replace(/:\d+$/, ":8000")}
-									/api/integrations/webhook/custom
+									{webhookUrl}
 								</code>
 								<button
-									onClick={() =>
-										copyToClipboard(
-											`${window.location.origin.replace(/:\d+$/, ":8000")}/api/integrations/webhook/custom`,
-											"webhookUrl",
-										)
-									}
+									onClick={() => copyToClipboard(webhookUrl, "webhookUrl")}
 									className="p-1.5 rounded hover:bg-surface-200 text-surface-400 transition-colors"
 								>
 									{copiedField === "webhookUrl" ? (
@@ -498,7 +496,7 @@ export default function IntegrationsPage() {
 
 			{/* ── Add Integration Modal ── */}
 			{showAddModal && (
-				<div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+				<div className="fixed inset-0 z-100 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
 					<div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
 						{/* Header */}
 						<div className="flex items-center justify-between px-6 py-4 border-b border-surface-200">

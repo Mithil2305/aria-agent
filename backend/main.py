@@ -228,7 +228,7 @@ default_origins = [
 ]
 
 allowed_origins = _env_csv("YUKTI_CORS_ALLOW_ORIGINS") or default_origins
-allowed_hosts = _env_csv("YUKTI_ALLOWED_HOSTS") or ["127.0.0.1", "localhost", "*.localhost"]
+allowed_hosts = _env_csv("YUKTI_ALLOWED_HOSTS") or ["*"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -270,11 +270,10 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 # ---------------------------------------------------------------------------
-# Session store — persisted to a temp file so data survives uvicorn --reload
+# Session store — persisted to disk so data survives uvicorn --reload
 # ---------------------------------------------------------------------------
-_APPDATA_ROOT = Path(os.getenv("APPDATA", str(Path.home()))) / "Yukti"
-_APPDATA_ROOT.mkdir(parents=True, exist_ok=True)
-_SESSION_DIR = _APPDATA_ROOT / "sessions"
+_default_session_dir = Path(__file__).resolve().parent / "sessions"
+_SESSION_DIR = Path(os.getenv("YUKTI_SESSION_DIR", str(_default_session_dir)))
 _SESSION_DIR.mkdir(parents=True, exist_ok=True)
 _SESSION_PATH = str(_SESSION_DIR / "yukti_session.pkl")
 
