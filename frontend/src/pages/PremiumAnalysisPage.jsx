@@ -178,9 +178,25 @@ export default function PremiumAnalysisPage() {
 			setStatus((prev) => ({ ...prev, used: true, available: false }));
 		} catch (e) {
 			console.error("Premium analysis failed:", e);
+			const isTimeout =
+				e?.code === "ECONNABORTED" ||
+				String(e?.message || "")
+					.toLowerCase()
+					.includes("timeout");
+			const isNetworkDrop =
+				String(e?.message || "")
+					.toLowerCase()
+					.includes("network error") ||
+				String(e?.message || "")
+					.toLowerCase()
+					.includes("empty_response");
 			setError(
 				e.response?.data?.detail ||
-					"Failed to generate analysis. Please try again.",
+					(isTimeout
+						? "Premium analysis is taking longer than expected. Please keep the backend running and try once more in a minute."
+						: isNetworkDrop
+							? "Could not reach backend server (connection dropped). Please confirm backend is running on port 8000 and retry."
+							: "Failed to generate analysis. Please try again."),
 			);
 		} finally {
 			setLoading(false);

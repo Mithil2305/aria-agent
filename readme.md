@@ -69,7 +69,7 @@ Backend:
 - `YUKTI_ALLOWED_HOSTS`: comma-separated trusted hosts
 - `YUKTI_SESSION_DIR`: optional path for persisted session files
 - `GOOGLE_APPLICATION_CREDENTIALS`: Firebase service account JSON path
-- `SECRETS_WORKER_URL`, `SECRETS_WORKER_FALLBACK_URLS`, `SECRETS_AUTH_TOKEN`: optional secrets worker integration
+- `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `GROQ_API_KEY`: AI provider keys loaded by backend from local environment/config
 
 Frontend:
 

@@ -27,11 +27,12 @@ MODEL_DIR = Path(__file__).parent / "checkpoints" / "yukti-model"
 _model_loaded = False
 _model = None
 _tokenizer = None
+_model_device = "cpu"
 
 
 def _load_model():
     """Lazy-load the fine-tuned model + LoRA adapter."""
-    global _model_loaded, _model, _tokenizer
+    global _model_loaded, _model, _tokenizer, _model_device
 
     if _model_loaded:
         return _model is not None
@@ -59,6 +60,7 @@ def _load_model():
             _tokenizer.pad_token = _tokenizer.eos_token
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
+        _model_device = device
         base_model = AutoModelForCausalLM.from_pretrained(
             base_model_name,
             torch_dtype=torch.float16 if device == "cuda" else torch.float32,
@@ -86,9 +88,17 @@ def _load_model():
         return False
 
 
-def _generate_with_local_model(prompt: str, max_new_tokens: int = 1500) -> str:
+def _generate_with_local_model(prompt: str, max_new_tokens: int | None = None) -> str:
     """Generate text using the locally loaded fine-tuned model."""
     import torch
+
+    # CPU generation can be slow for 1B+ models; keep defaults conservative
+    # so frontend requests complete within practical limits.
+    if max_new_tokens is None:
+        max_new_tokens = 420 if _model_device == "cpu" else 900
+
+    max_new_tokens = int(os.getenv("YUKTI_PREMIUM_MAX_NEW_TOKENS", max_new_tokens))
+    max_time_seconds = float(os.getenv("YUKTI_PREMIUM_MAX_TIME_SECONDS", 90 if _model_device == "cpu" else 150))
 
     inputs = _tokenizer(prompt, return_tensors="pt", truncation=True, max_length=1024)
     if torch.cuda.is_available():
@@ -98,6 +108,7 @@ def _generate_with_local_model(prompt: str, max_new_tokens: int = 1500) -> str:
         outputs = _model.generate(
             **inputs,
             max_new_tokens=max_new_tokens,
+            max_time=max_time_seconds,
             temperature=0.7,
             top_p=0.9,
             do_sample=True,

@@ -40,56 +40,9 @@ from setup_route import router as setup_router
 
 load_dotenv()
 
-# ── Fetch API keys from Cloudflare Worker (if configured) ──
-_SECRETS_WORKER_URL = (
-    os.environ.get("SECRETS_WORKER_URL", "")
-    or os.environ.get("VITE_SECRETS_WORKER_URL", "")
-)
-_SECRETS_WORKER_FALLBACK_URLS = [
-    u.strip()
-    for u in os.environ.get("SECRETS_WORKER_FALLBACK_URLS", "").split(",")
-    if u.strip()
-]
-_SECRETS_AUTH_TOKEN = os.environ.get("SECRETS_AUTH_TOKEN", "")
-
-if (_SECRETS_WORKER_URL or _SECRETS_WORKER_FALLBACK_URLS) and _SECRETS_AUTH_TOKEN:
-    import requests as _req
-
-    _worker_urls = []
-    if _SECRETS_WORKER_URL:
-        _worker_urls.append(_SECRETS_WORKER_URL)
-    _worker_urls.extend(_SECRETS_WORKER_FALLBACK_URLS)
-
-    _loaded = False
-    for _worker_url in _worker_urls:
-        try:
-            _resp = _req.get(
-                f"{_worker_url.rstrip('/')}/keys/backend",
-                headers={"Authorization": f"Bearer {_SECRETS_AUTH_TOKEN}"},
-                timeout=10,
-            )
-            if _resp.status_code == 200:
-                _secrets = _resp.json()
-                for _key, _val in _secrets.items():
-                    if _val:
-                        os.environ.setdefault(_key, _val)
-                print(
-                    f"  [INFO] Loaded {len([v for v in _secrets.values() if v])} secrets from Cloudflare Worker"
-                )
-                _loaded = True
-                break
-
-            print(
-                f"  [WARN] Secrets worker {_worker_url} returned {_resp.status_code}: {_resp.text[:200]}"
-            )
-        except Exception as _e:
-            print(f"  [WARN] Could not reach secrets worker {_worker_url}: {_e}")
-
-    if not _loaded:
-        print("  [INFO] Worker fetch failed - using local environment API keys")
-else:
-    if not os.environ.get("GEMINI_API_KEY"):
-        print("  [INFO] No secrets worker config set - using .env for API keys")
+# ── API keys are loaded from local backend environment/config ──
+if not os.environ.get("GEMINI_API_KEY"):
+    print("  [INFO] Using local .env/config for API keys")
 
 # ── Configure logging ──
 logging.basicConfig(

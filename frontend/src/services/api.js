@@ -227,6 +227,7 @@ export async function getPremiumAnalysis(
 						"Content-Type": "application/json",
 						...authHeaders(token),
 					},
+					timeout: 300_000,
 				},
 			);
 			return data;
