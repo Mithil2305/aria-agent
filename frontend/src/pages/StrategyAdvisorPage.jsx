@@ -128,13 +128,13 @@ export default function StrategyAdvisorPage() {
 	];
 
 	return (
-		<div className="min-h-screen py-10 px-6">
-			<div className="max-w-5xl mx-auto">
+		<div className="app-page">
+			<div className="app-page-inner max-w-5xl mx-auto">
 				{/* Header */}
 				<div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
 					<div>
 						<h1 className="text-xl font-semibold text-surface-900 mb-1 flex items-center gap-3">
-							<div className="p-2 rounded-lg bg-gradient-to-br from-indigo-50 to-purple-50">
+							<div className="p-2 rounded-lg bg-linear-to-br from-indigo-50 to-purple-50">
 								<Lightbulb size={20} className="text-indigo-600" />
 							</div>
 							Strategy Advisor
@@ -170,9 +170,9 @@ export default function StrategyAdvisorPage() {
 
 				{/* Intro card with Analyse button — shown before first run */}
 				{!strategy && !loading && !error && (
-					<div className="mb-6 bg-gradient-to-br from-indigo-50/80 via-purple-50/50 to-white rounded-xl border border-indigo-200/60 p-6">
+					<div className="mb-6 bg-linear-to-br from-indigo-50/80 via-purple-50/50 to-white rounded-xl border border-indigo-200/60 p-6">
 						<div className="flex items-start gap-4">
-							<div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
+							<div className="w-12 h-12 rounded-xl bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
 								<Lightbulb size={22} className="text-white" />
 							</div>
 							<div className="space-y-3 flex-1">
@@ -212,7 +212,7 @@ export default function StrategyAdvisorPage() {
 								<button
 									onClick={generateStrategy}
 									disabled={loading}
-									className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-sm transition-all"
+									className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-linear-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-sm transition-all"
 								>
 									<Sparkles size={15} />
 									Analyse
@@ -355,7 +355,7 @@ export default function StrategyAdvisorPage() {
 
 						{/* AI badge */}
 						<div className="flex items-center gap-2 mb-5">
-							<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 text-indigo-600 text-[10px] font-semibold uppercase tracking-wider">
+							<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-linear-to-r from-indigo-50 to-purple-50 border border-indigo-200 text-indigo-600 text-[10px] font-semibold uppercase tracking-wider">
 								<Sparkles size={10} />
 								{strategy.generated_by === "gemini_ai"
 									? "Powered by Gemini AI"
@@ -555,7 +555,7 @@ export default function StrategyAdvisorPage() {
 								</h2>
 								<div className="relative">
 									{/* Vertical timeline line */}
-									<div className="absolute left-[18px] top-6 bottom-6 w-0.5 bg-indigo-100" />
+									<div className="absolute left-4.5 top-6 bottom-6 w-0.5 bg-indigo-100" />
 
 									{(strategy.roadmap || []).map((week, wi) => (
 										<div

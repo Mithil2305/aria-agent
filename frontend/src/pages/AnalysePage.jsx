@@ -195,8 +195,8 @@ export default function AnalysePage() {
 
 	// ── Prepare stage ──
 	return (
-		<div className="min-h-screen py-10 px-6">
-			<div className="max-w-3xl mx-auto">
+		<div className="app-page">
+			<div className="app-page-inner max-w-3xl mx-auto">
 				{isRunning && (
 					<div className="mb-6 px-4 py-3 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm">
 						Analysis is already running in the background. You can explore other

@@ -5,7 +5,9 @@ export default function TrialExpiredPage() {
 	const { logout, userProfile } = useAuth();
 
 	return (
-		<div className="min-h-screen bg-surface-100 flex items-center justify-center px-4 py-8">
+		<div className="auth-shell min-h-screen flex items-center justify-center px-4 py-8">
+			<div className="auth-bg-glow auth-bg-glow-a" />
+			<div className="auth-bg-glow auth-bg-glow-b" />
 			<div className="w-full max-w-md text-center">
 				{/* Brand */}
 				<div className="mb-8 animate-fade-in-up">
@@ -19,7 +21,7 @@ export default function TrialExpiredPage() {
 
 				{/* Card */}
 				<div
-					className="card-elevated p-8 animate-fade-in-up"
+					className="auth-form-card p-8 animate-fade-in-up"
 					style={{ animationDelay: "80ms" }}
 				>
 					<div className="flex justify-center mb-5">

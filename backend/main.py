@@ -10,6 +10,10 @@ Architecture Layers:
   5. Decision Intelligence  - Correlations, risk scoring, feature importance
   6. AI Reasoning          - Insight generation, narratives, recommendations
 """
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from engine.smart_advisor import (
     generate_smart_alerts,
     generate_pricing_insights,
@@ -35,10 +39,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from datetime import datetime, date
-from dotenv import load_dotenv
 from setup_route import router as setup_router
-
-load_dotenv()
 
 # ── API keys are loaded from local backend environment/config ──
 if not os.environ.get("GEMINI_API_KEY"):

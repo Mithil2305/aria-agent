@@ -285,8 +285,8 @@ export default function DashboardPage() {
 		: "Welcome to Yukti";
 
 	return (
-		<div className="min-h-screen py-10 px-6">
-			<div className="max-w-4xl mx-auto">
+		<div className="app-page">
+			<div className="app-page-inner max-w-4xl mx-auto">
 				{job.status === "running" && (
 					<div className="mb-6 px-4 py-3 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm">
 						Analysis is in progress. Feel free to explore other sections while

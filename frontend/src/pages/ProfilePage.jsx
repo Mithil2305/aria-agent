@@ -83,8 +83,8 @@ export default function ProfilePage() {
 		.slice(0, 2);
 
 	return (
-		<div className="min-h-screen py-10 px-6">
-			<div className="max-w-2xl mx-auto">
+		<div className="app-page">
+			<div className="app-page-inner max-w-2xl mx-auto">
 				{/* Header */}
 				<div className="mb-8">
 					<h1 className="text-xl font-semibold text-surface-900 mb-1">

@@ -90,19 +90,24 @@ export default function UploadPage() {
 	}, [getIdToken, startAnalysisJob, user, role, navigate]);
 
 	return (
-		<div className="min-h-screen">
-			{isRunning && (
-				<div className="max-w-2xl mx-auto mt-4 px-4 py-3 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm text-center">
-					Analysis is running in the background. Feel free to explore other
-					pages while we process your data.
-				</div>
-			)}
-			{error && (
-				<div className="max-w-2xl mx-auto mt-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm text-center">
-					{error}
-				</div>
-			)}
-			<UploadZone onFileSelect={handleFileSelect} onDemoLoad={handleDemoLoad} />
+		<div className="app-page">
+			<div className="app-page-inner max-w-5xl mx-auto">
+				{isRunning && (
+					<div className="max-w-2xl mx-auto mt-4 px-4 py-3 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm text-center">
+						Analysis is running in the background. Feel free to explore other
+						pages while we process your data.
+					</div>
+				)}
+				{error && (
+					<div className="max-w-2xl mx-auto mt-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm text-center">
+						{error}
+					</div>
+				)}
+				<UploadZone
+					onFileSelect={handleFileSelect}
+					onDemoLoad={handleDemoLoad}
+				/>
+			</div>
 		</div>
 	);
 }

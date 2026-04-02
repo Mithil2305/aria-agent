@@ -96,16 +96,18 @@ export default function LimitsPage() {
 
 	if (loading) {
 		return (
-			<div className="min-h-screen flex items-center justify-center">
-				<Loader2 size={24} className="text-gold-600 animate-spin" />
+			<div className="app-page">
+				<div className="app-page-inner max-w-4xl mx-auto flex items-center justify-center min-h-[40vh]">
+					<Loader2 size={24} className="text-gold-600 animate-spin" />
+				</div>
 			</div>
 		);
 	}
 
 	if (error) {
 		return (
-			<div className="min-h-screen py-10 px-6">
-				<div className="max-w-3xl mx-auto">
+			<div className="app-page">
+				<div className="app-page-inner max-w-3xl mx-auto">
 					<div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm">
 						<AlertCircle size={16} />
 						{error}
@@ -128,8 +130,8 @@ export default function LimitsPage() {
 		totalLimit > 0 ? Math.round((totalUsed / totalLimit) * 100) : 0;
 
 	return (
-		<div className="min-h-screen py-10 px-6">
-			<div className="max-w-4xl mx-auto">
+		<div className="app-page">
+			<div className="app-page-inner max-w-4xl mx-auto">
 				{/* Page header */}
 				<div className="mb-8">
 					<h1 className="text-xl font-semibold text-surface-900 mb-1 flex items-center gap-3">

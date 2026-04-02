@@ -303,8 +303,8 @@ export default function StockManagementPage() {
 	}
 
 	return (
-		<div className="min-h-screen py-10 px-6">
-			<div className="max-w-5xl mx-auto">
+		<div className="app-page">
+			<div className="app-page-inner max-w-5xl mx-auto">
 				{/* Page header */}
 				<div className="mb-8">
 					<h1 className="text-xl font-semibold text-surface-900 mb-1 flex items-center gap-3">

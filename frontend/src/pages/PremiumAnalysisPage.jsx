@@ -218,282 +218,285 @@ export default function PremiumAnalysisPage() {
 	}
 
 	return (
-		<div className="max-w-4xl mx-auto space-y-6 mt-5">
-			{/* ── Header ──────────────────────────────── */}
-			<div className="flex items-start justify-between">
-				<div>
-					<div className="flex items-center gap-2">
-						<div className="w-9 h-9 rounded-lg bg-linear-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-							<Crown size={18} className="text-white" />
+		<div className="app-page">
+			<div className="app-page-inner max-w-4xl mx-auto space-y-6">
+				{/* ── Header ──────────────────────────────── */}
+				<div className="flex items-start justify-between">
+					<div>
+						<div className="flex items-center gap-2">
+							<div className="w-9 h-9 rounded-lg bg-linear-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+								<Crown size={18} className="text-white" />
+							</div>
+							<div>
+								<h1 className="text-lg font-semibold text-surface-900">
+									Premium Analysis
+								</h1>
+								<p className="text-xs text-surface-400">
+									Deep AI-powered month-end business report
+								</p>
+							</div>
 						</div>
-						<div>
-							<h1 className="text-lg font-semibold text-surface-900">
-								Premium Analysis
-							</h1>
-							<p className="text-xs text-surface-400">
-								Deep AI-powered month-end business report
-							</p>
-						</div>
+					</div>
+
+					{/* Monthly status badge */}
+					<div
+						className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
+							status?.used
+								? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+								: "bg-amber-50 text-amber-700 border border-amber-200"
+						}`}
+					>
+						{status?.used ? (
+							<>
+								<CheckCircle2 size={12} />
+								Used for {currentMonth}
+							</>
+						) : (
+							<>
+								<Zap size={12} />1 analysis available
+							</>
+						)}
 					</div>
 				</div>
 
-				{/* Monthly status badge */}
-				<div
-					className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
-						status?.used
-							? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-							: "bg-amber-50 text-amber-700 border border-amber-200"
-					}`}
-				>
-					{status?.used ? (
-						<>
-							<CheckCircle2 size={12} />
-							Used for {currentMonth}
-						</>
-					) : (
-						<>
-							<Zap size={12} />1 analysis available
-						</>
-					)}
-				</div>
-			</div>
+				{/* ── Explainer Card ──────────────────────── */}
+				{!result && !loading && (
+					<div className="bg-linear-to-br from-amber-50/80 via-orange-50/50 to-white rounded-xl border border-amber-200/60 p-6">
+						<div className="flex items-start gap-4">
+							<div className="w-12 h-12 rounded-xl bg-linear-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0">
+								<Sparkles size={22} className="text-white" />
+							</div>
+							<div className="space-y-3">
+								<div>
+									<h2 className="text-sm font-semibold text-surface-900">
+										Your Monthly Deep Dive
+									</h2>
+									<p className="text-xs text-surface-500 mt-1 leading-relaxed">
+										Once per month, unlock a comprehensive AI-generated analysis
+										of your business performance. This premium report includes
+										revenue trends, profitability insights, customer
+										intelligence, risk assessment, and a detailed action plan —
+										all powered by Yukti&apos;s custom-trained model.
+									</p>
+								</div>
 
-			{/* ── Explainer Card ──────────────────────── */}
-			{!result && !loading && (
-				<div className="bg-linear-to-br from-amber-50/80 via-orange-50/50 to-white rounded-xl border border-amber-200/60 p-6">
-					<div className="flex items-start gap-4">
-						<div className="w-12 h-12 rounded-xl bg-linear-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0">
-							<Sparkles size={22} className="text-white" />
+								<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+									{[
+										{
+											icon: TrendingUp,
+											label: "Revenue Analysis",
+										},
+										{ icon: BarChart3, label: "Profitability" },
+										{
+											icon: Sparkles,
+											label: "Customer Intel",
+										},
+										{
+											icon: CalendarCheck,
+											label: "Action Plan",
+										},
+									].map((item) => (
+										<div
+											key={item.label}
+											className="flex items-center gap-2 text-xs text-surface-600"
+										>
+											<item.icon size={14} className="text-amber-500" />
+											{item.label}
+										</div>
+									))}
+								</div>
+
+								{status?.used ? (
+									<div className="flex items-center gap-2 text-xs text-surface-400 bg-white rounded-lg px-3 py-2 border border-surface-200">
+										<Lock size={12} />
+										You&apos;ve used your {currentMonth} analysis. Next one
+										available next month.
+									</div>
+								) : (
+									<button
+										onClick={handleGenerate}
+										disabled={loading}
+										className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-sm transition-all"
+									>
+										<Crown size={15} />
+										Generate Premium Report
+										<ChevronRight size={14} />
+									</button>
+								)}
+							</div>
 						</div>
-						<div className="space-y-3">
-							<div>
-								<h2 className="text-sm font-semibold text-surface-900">
-									Your Monthly Deep Dive
-								</h2>
-								<p className="text-xs text-surface-500 mt-1 leading-relaxed">
-									Once per month, unlock a comprehensive AI-generated analysis
-									of your business performance. This premium report includes
-									revenue trends, profitability insights, customer intelligence,
-									risk assessment, and a detailed action plan — all powered by
-									Yukti&apos;s custom-trained model.
+					</div>
+				)}
+
+				{/* ── Loading State ───────────────────────── */}
+				{loading && (
+					<div className="bg-white rounded-xl border border-surface-200 p-8">
+						<div className="max-w-sm mx-auto space-y-6">
+							<div className="text-center">
+								<div className="w-14 h-14 rounded-2xl bg-linear-to-br from-amber-400 to-orange-500 flex items-center justify-center mx-auto mb-4">
+									<Crown size={26} className="text-white animate-pulse" />
+								</div>
+								<h3 className="text-sm font-semibold text-surface-900">
+									Generating Your Premium Report
+								</h3>
+								<p className="text-xs text-surface-400 mt-1">
+									This may take 30–60 seconds
 								</p>
 							</div>
 
+							<div className="space-y-3">
+								{PROGRESS_STEPS.map((step, idx) => {
+									const isActive = idx === progressIdx;
+									const isDone = idx < progressIdx;
+									return (
+										<div
+											key={idx}
+											className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-500 ${
+												isActive
+													? "bg-amber-50 border border-amber-200"
+													: isDone
+														? "bg-emerald-50/50"
+														: "opacity-40"
+											}`}
+										>
+											{isDone ? (
+												<CheckCircle2 size={16} className="text-emerald-500" />
+											) : isActive ? (
+												<Loader2
+													size={16}
+													className="text-amber-600 animate-spin"
+												/>
+											) : (
+												<step.icon size={16} className="text-surface-300" />
+											)}
+											<span
+												className={`text-xs font-medium ${
+													isActive
+														? "text-amber-800"
+														: isDone
+															? "text-emerald-700"
+															: "text-surface-400"
+												}`}
+											>
+												{step.label}
+											</span>
+										</div>
+									);
+								})}
+							</div>
+						</div>
+					</div>
+				)}
+
+				{/* ── Error State ─────────────────────────── */}
+				{error && (
+					<div className="bg-red-50 border border-red-200 rounded-xl px-5 py-4 flex items-start gap-3">
+						<AlertCircle size={16} className="text-red-500 mt-0.5 shrink-0" />
+						<div>
+							<p className="text-sm font-medium text-red-800">
+								Analysis Failed
+							</p>
+							<p className="text-xs text-red-600 mt-0.5">{error}</p>
+						</div>
+					</div>
+				)}
+
+				{/* ── Analysis Result ─────────────────────── */}
+				{result && !loading && (
+					<div className="space-y-4">
+						{/* Meta bar */}
+						<div className="flex items-center justify-between bg-white rounded-xl border border-surface-200 px-5 py-3">
+							<div className="flex items-center gap-3">
+								<ProviderBadge
+									generatedBy={result.generated_by}
+									label={result.provider_label}
+								/>
+								{result.cached && (
+									<span className="inline-flex items-center gap-1 text-xs text-surface-400">
+										<Clock size={11} />
+										Cached result
+									</span>
+								)}
+							</div>
+							<div className="flex items-center gap-4 text-xs text-surface-400">
+								{result.generation_time && (
+									<span>Generated in {result.generation_time}s</span>
+								)}
+								{result.generated_at && (
+									<span>
+										{new Date(result.generated_at).toLocaleDateString("en-IN", {
+											day: "numeric",
+											month: "short",
+											year: "numeric",
+											hour: "2-digit",
+											minute: "2-digit",
+										})}
+									</span>
+								)}
+							</div>
+						</div>
+
+						{/* Report content */}
+						<div className="bg-white rounded-xl border border-surface-200 overflow-hidden">
+							<div className="px-6 py-4 border-b border-surface-100 bg-linear-to-r from-amber-50/50 to-white">
+								<div className="flex items-center gap-2">
+									<Crown size={16} className="text-amber-500" />
+									<h2 className="text-sm font-semibold text-surface-900">
+										Premium Month-End Report — {currentMonth}
+									</h2>
+								</div>
+							</div>
+							<div className="px-6 py-5">
+								<PremiumStructuredReport analysis={result.analysis} />
+							</div>
+						</div>
+
+						{/* Stats summary if available */}
+						{result.stats && (
 							<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
 								{[
 									{
-										icon: TrendingUp,
-										label: "Revenue Analysis",
+										label: "Avg Revenue",
+										value: `₹${(
+											result.stats.avg_daily_revenue || 0
+										).toLocaleString("en-IN", {
+											maximumFractionDigits: 0,
+										})}`,
 									},
-									{ icon: BarChart3, label: "Profitability" },
 									{
-										icon: Sparkles,
-										label: "Customer Intel",
+										label: "Avg Customers",
+										value: Math.round(result.stats.avg_daily_customers || 0),
 									},
 									{
-										icon: CalendarCheck,
-										label: "Action Plan",
+										label: "Best Day",
+										value: `₹${(
+											result.stats.max_revenue_day || 0
+										).toLocaleString("en-IN", {
+											maximumFractionDigits: 0,
+										})}`,
 									},
-								].map((item) => (
+									{
+										label: "Data Points",
+										value: result.stats.total_entries || 0,
+									},
+								].map((s) => (
 									<div
-										key={item.label}
-										className="flex items-center gap-2 text-xs text-surface-600"
+										key={s.label}
+										className="bg-surface-50 rounded-lg px-4 py-3 border border-surface-200"
 									>
-										<item.icon size={14} className="text-amber-500" />
-										{item.label}
+										<p className="text-[11px] text-surface-400 font-medium">
+											{s.label}
+										</p>
+										<p className="text-base font-semibold text-surface-800 mt-0.5">
+											{s.value}
+										</p>
 									</div>
 								))}
 							</div>
-
-							{status?.used ? (
-								<div className="flex items-center gap-2 text-xs text-surface-400 bg-white rounded-lg px-3 py-2 border border-surface-200">
-									<Lock size={12} />
-									You&apos;ve used your {currentMonth} analysis. Next one
-									available next month.
-								</div>
-							) : (
-								<button
-									onClick={handleGenerate}
-									disabled={loading}
-									className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-sm transition-all"
-								>
-									<Crown size={15} />
-									Generate Premium Report
-									<ChevronRight size={14} />
-								</button>
-							)}
-						</div>
+						)}
 					</div>
-				</div>
-			)}
-
-			{/* ── Loading State ───────────────────────── */}
-			{loading && (
-				<div className="bg-white rounded-xl border border-surface-200 p-8">
-					<div className="max-w-sm mx-auto space-y-6">
-						<div className="text-center">
-							<div className="w-14 h-14 rounded-2xl bg-linear-to-br from-amber-400 to-orange-500 flex items-center justify-center mx-auto mb-4">
-								<Crown size={26} className="text-white animate-pulse" />
-							</div>
-							<h3 className="text-sm font-semibold text-surface-900">
-								Generating Your Premium Report
-							</h3>
-							<p className="text-xs text-surface-400 mt-1">
-								This may take 30–60 seconds
-							</p>
-						</div>
-
-						<div className="space-y-3">
-							{PROGRESS_STEPS.map((step, idx) => {
-								const isActive = idx === progressIdx;
-								const isDone = idx < progressIdx;
-								return (
-									<div
-										key={idx}
-										className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all duration-500 ${
-											isActive
-												? "bg-amber-50 border border-amber-200"
-												: isDone
-													? "bg-emerald-50/50"
-													: "opacity-40"
-										}`}
-									>
-										{isDone ? (
-											<CheckCircle2 size={16} className="text-emerald-500" />
-										) : isActive ? (
-											<Loader2
-												size={16}
-												className="text-amber-600 animate-spin"
-											/>
-										) : (
-											<step.icon size={16} className="text-surface-300" />
-										)}
-										<span
-											className={`text-xs font-medium ${
-												isActive
-													? "text-amber-800"
-													: isDone
-														? "text-emerald-700"
-														: "text-surface-400"
-											}`}
-										>
-											{step.label}
-										</span>
-									</div>
-								);
-							})}
-						</div>
-					</div>
-				</div>
-			)}
-
-			{/* ── Error State ─────────────────────────── */}
-			{error && (
-				<div className="bg-red-50 border border-red-200 rounded-xl px-5 py-4 flex items-start gap-3">
-					<AlertCircle size={16} className="text-red-500 mt-0.5 shrink-0" />
-					<div>
-						<p className="text-sm font-medium text-red-800">Analysis Failed</p>
-						<p className="text-xs text-red-600 mt-0.5">{error}</p>
-					</div>
-				</div>
-			)}
-
-			{/* ── Analysis Result ─────────────────────── */}
-			{result && !loading && (
-				<div className="space-y-4">
-					{/* Meta bar */}
-					<div className="flex items-center justify-between bg-white rounded-xl border border-surface-200 px-5 py-3">
-						<div className="flex items-center gap-3">
-							<ProviderBadge
-								generatedBy={result.generated_by}
-								label={result.provider_label}
-							/>
-							{result.cached && (
-								<span className="inline-flex items-center gap-1 text-xs text-surface-400">
-									<Clock size={11} />
-									Cached result
-								</span>
-							)}
-						</div>
-						<div className="flex items-center gap-4 text-xs text-surface-400">
-							{result.generation_time && (
-								<span>Generated in {result.generation_time}s</span>
-							)}
-							{result.generated_at && (
-								<span>
-									{new Date(result.generated_at).toLocaleDateString("en-IN", {
-										day: "numeric",
-										month: "short",
-										year: "numeric",
-										hour: "2-digit",
-										minute: "2-digit",
-									})}
-								</span>
-							)}
-						</div>
-					</div>
-
-					{/* Report content */}
-					<div className="bg-white rounded-xl border border-surface-200 overflow-hidden">
-						<div className="px-6 py-4 border-b border-surface-100 bg-linear-to-r from-amber-50/50 to-white">
-							<div className="flex items-center gap-2">
-								<Crown size={16} className="text-amber-500" />
-								<h2 className="text-sm font-semibold text-surface-900">
-									Premium Month-End Report — {currentMonth}
-								</h2>
-							</div>
-						</div>
-						<div className="px-6 py-5">
-							<PremiumStructuredReport analysis={result.analysis} />
-						</div>
-					</div>
-
-					{/* Stats summary if available */}
-					{result.stats && (
-						<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-							{[
-								{
-									label: "Avg Revenue",
-									value: `₹${(
-										result.stats.avg_daily_revenue || 0
-									).toLocaleString("en-IN", {
-										maximumFractionDigits: 0,
-									})}`,
-								},
-								{
-									label: "Avg Customers",
-									value: Math.round(result.stats.avg_daily_customers || 0),
-								},
-								{
-									label: "Best Day",
-									value: `₹${(result.stats.max_revenue_day || 0).toLocaleString(
-										"en-IN",
-										{
-											maximumFractionDigits: 0,
-										},
-									)}`,
-								},
-								{
-									label: "Data Points",
-									value: result.stats.total_entries || 0,
-								},
-							].map((s) => (
-								<div
-									key={s.label}
-									className="bg-surface-50 rounded-lg px-4 py-3 border border-surface-200"
-								>
-									<p className="text-[11px] text-surface-400 font-medium">
-										{s.label}
-									</p>
-									<p className="text-base font-semibold text-surface-800 mt-0.5">
-										{s.value}
-									</p>
-								</div>
-							))}
-						</div>
-					)}
-				</div>
-			)}
+				)}
+			</div>
 		</div>
 	);
 }

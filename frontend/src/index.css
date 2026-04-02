@@ -1,9 +1,9 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap");
 @import "tailwindcss";
 
 @theme {
 	--font-sans:
-		"Inter", "SF Pro Text", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+		"Manrope", "SF Pro Text", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
 
 	/* ── Light SaaS palette ── */
 
@@ -53,8 +53,114 @@ html {
 }
 
 body {
-	background: #f8f6f2;
+	background:
+		radial-gradient(
+			circle at 8% 0%,
+			rgba(226, 232, 240, 0.48),
+			transparent 38%
+		),
+		radial-gradient(
+			circle at 96% 8%,
+			rgba(203, 213, 225, 0.42),
+			transparent 32%
+		),
+		linear-gradient(170deg, #fafafa 0%, #f8fafc 52%, #f3f4f6 100%);
 	color: #1f2937;
+}
+
+h1,
+h2,
+h3,
+h4 {
+	font-family: "Sora", "Manrope", ui-sans-serif, system-ui, sans-serif;
+	letter-spacing: -0.02em;
+}
+
+.app-shell-bg {
+	position: relative;
+	overflow-x: hidden;
+	background:
+		radial-gradient(
+			circle at 6% 0%,
+			rgba(203, 213, 225, 0.35),
+			transparent 30%
+		),
+		radial-gradient(
+			circle at 92% 8%,
+			rgba(148, 163, 184, 0.22),
+			transparent 32%
+		),
+		linear-gradient(165deg, #fafafa 0%, #f8fafc 48%, #f1f5f9 100%);
+}
+
+.app-shell-grid {
+	position: absolute;
+	inset: 0;
+	background-image:
+		linear-gradient(rgba(148, 163, 184, 0.1) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(148, 163, 184, 0.1) 1px, transparent 1px);
+	background-size: 36px 36px;
+	mask-image: radial-gradient(circle at center, black 52%, transparent 100%);
+	z-index: 0;
+}
+
+.app-shell-blob {
+	position: absolute;
+	width: 26rem;
+	height: 26rem;
+	filter: blur(88px);
+	opacity: 0.24;
+	z-index: 0;
+	animation: aurora-float 12s ease-in-out infinite alternate;
+}
+
+.app-shell-blob-a {
+	left: -8rem;
+	top: -4rem;
+	background: #cbd5e1;
+}
+
+.app-shell-blob-b {
+	right: -10rem;
+	top: 22vh;
+	background: #e2e8f0;
+	animation-delay: 1.5s;
+}
+
+.app-page {
+	min-height: 100vh;
+	padding: 2rem 1rem;
+	position: relative;
+	z-index: 10;
+}
+
+.app-page-inner {
+	width: 100%;
+	max-width: 72rem;
+	margin: 0 auto;
+	border: 1px solid rgba(226, 232, 240, 0.85);
+	border-radius: 1.5rem;
+	padding: 1.25rem;
+	background: rgba(255, 255, 255, 0.78);
+	backdrop-filter: blur(12px);
+	box-shadow: 0 24px 48px rgba(15, 23, 42, 0.07);
+}
+
+@media (min-width: 768px) {
+	.app-page {
+		padding: 2rem 1.5rem;
+	}
+
+	.app-page-inner {
+		padding: 1.75rem;
+		border-radius: 1.75rem;
+	}
+}
+
+@media (min-width: 1024px) {
+	.app-page {
+		padding: 2.25rem 1.75rem;
+	}
 }
 
 /* ── Scrollbar ── */
