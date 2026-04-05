@@ -24,7 +24,6 @@ import {
 import { useAuth } from "../contexts/AuthContext";
 import {
 	collection,
-	addDoc,
 	getDocs,
 	deleteDoc,
 	updateDoc,
@@ -41,7 +40,11 @@ import {
 	CONNECTION_STATUS,
 } from "../config/integrations";
 import { getBusinessCategory } from "../config/businessTypes";
-import { syncIntegration } from "../services/api";
+import {
+	syncIntegration,
+	testIntegrationConnection,
+	saveIntegrationConnection,
+} from "../services/api";
 
 // Generate a random webhook secret
 function generateSecret() {
@@ -59,7 +62,7 @@ export default function IntegrationsPage() {
 	const apiBase =
 		import.meta.env.VITE_API_URL ||
 		`${window.location.protocol}//${window.location.hostname}:8000`;
-	const webhookUrl = `${apiBase.replace(/\/$/, "")}/api/integrations/webhook/custom`;
+	const webhookUrl = `${apiBase.replace(/\/$/, "")}/api/integrations/webhook/custom_webhook`;
 
 	const businessType = userProfile?.businessType || "";
 	const category = getBusinessCategory(businessType);
@@ -70,8 +73,10 @@ export default function IntegrationsPage() {
 	const [selectedPlatform, setSelectedPlatform] = useState(null);
 	const [authForm, setAuthForm] = useState({});
 	const [saving, setSaving] = useState(false);
+	const [testingConnection, setTestingConnection] = useState(false);
 	const [error, setError] = useState(null);
 	const [successMsg, setSuccessMsg] = useState(null);
+	const [testSuccessMsg, setTestSuccessMsg] = useState(null);
 	const [syncing, setSyncing] = useState(null); // connection id being synced
 	const [copiedField, setCopiedField] = useState(null);
 	const [visibleFields, setVisibleFields] = useState({});
@@ -115,6 +120,45 @@ export default function IntegrationsPage() {
 		}
 		setAuthForm(initialForm);
 		setError(null);
+		setTestSuccessMsg(null);
+	};
+
+	const handleTestConnection = async () => {
+		if (!selectedPlatform || !user) return;
+
+		for (const field of selectedPlatform.authFields) {
+			if (field.type !== "readonly" && !authForm[field.key]?.trim()) {
+				setError(`Please fill in ${field.label}.`);
+				return;
+			}
+		}
+
+		setTestingConnection(true);
+		setError(null);
+		setTestSuccessMsg(null);
+		try {
+			const token = await getIdToken();
+			const result = await testIntegrationConnection(
+				selectedPlatform.id,
+				authForm,
+				token,
+			);
+			const count = Number(result?.recordsFound || 0);
+			if (selectedPlatform.id === "custom_webhook") {
+				setTestSuccessMsg("Webhook connection is valid. You can now connect.");
+			} else {
+				setTestSuccessMsg(
+					`Connection test passed. ${count} record${count === 1 ? "" : "s"} detected.`,
+				);
+			}
+		} catch (e) {
+			setError(
+				e?.response?.data?.detail ||
+					"Connection test failed. Verify credentials and endpoint details.",
+			);
+		} finally {
+			setTestingConnection(false);
+		}
 	};
 
 	const handleSaveConnection = async () => {
@@ -131,26 +175,30 @@ export default function IntegrationsPage() {
 		setSaving(true);
 		setError(null);
 		try {
-			await addDoc(collection(db, "users", user.uid, "integrations"), {
-				platformId: selectedPlatform.id,
-				platformName: selectedPlatform.name,
-				credentials: authForm, // In production, encrypt this server-side
-				status: CONNECTION_STATUS.CONNECTED,
-				lastSyncAt: null,
-				syncCount: 0,
-				businessType: businessType || null,
-				businessCategory: category,
-				createdAt: serverTimestamp(),
-			});
+			const token = await getIdToken();
+			await saveIntegrationConnection(
+				{
+					platformId: selectedPlatform.id,
+					platformName: selectedPlatform.name,
+					credentials: authForm,
+					businessType: businessType || null,
+					businessCategory: category,
+				},
+				token,
+			);
 
 			setShowAddModal(false);
 			setSelectedPlatform(null);
 			setAuthForm({});
+			setTestSuccessMsg(null);
 			setSuccessMsg(`${selectedPlatform.name} connected successfully!`);
 			setTimeout(() => setSuccessMsg(null), 4000);
 			loadConnections();
-		} catch {
-			setError("Failed to save connection. Please try again.");
+		} catch (e) {
+			setError(
+				e?.response?.data?.detail ||
+					"Failed to save connection. Please try again.",
+			);
 		} finally {
 			setSaving(false);
 		}
@@ -718,6 +766,13 @@ export default function IntegrationsPage() {
 										</div>
 									)}
 
+									{testSuccessMsg && (
+										<div className="flex items-center gap-2 px-3 py-2.5 rounded-lg bg-green-50 border border-green-200 text-green-700 text-xs">
+											<CheckCircle2 size={12} />
+											{testSuccessMsg}
+										</div>
+									)}
+
 									<div className="flex items-center gap-3 pt-2">
 										<button
 											onClick={() => {
@@ -729,8 +784,15 @@ export default function IntegrationsPage() {
 											Back
 										</button>
 										<button
+											onClick={handleTestConnection}
+											disabled={testingConnection || saving}
+											className="px-4 py-2.5 rounded-lg border border-indigo-300 text-indigo-600 text-xs font-medium hover:bg-indigo-50 transition-colors disabled:opacity-50"
+										>
+											{testingConnection ? "Testing…" : "Test Connection"}
+										</button>
+										<button
 											onClick={handleSaveConnection}
-											disabled={saving}
+											disabled={saving || testingConnection}
 											className="btn-primary flex items-center gap-2 text-xs"
 										>
 											{saving ? (

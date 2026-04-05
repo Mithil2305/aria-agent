@@ -1,4 +1,12 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+	BrowserRouter,
+	Routes,
+	Route,
+	Navigate,
+	Outlet,
+	useLocation,
+} from "react-router-dom";
+import { useEffect } from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./components/AppLayout";
@@ -18,19 +26,66 @@ import PremiumAnalysisPage from "./pages/PremiumAnalysisPage";
 import LimitsPage from "./pages/LimitsPage";
 import AdminPage from "./pages/AdminPage";
 import SetupPage from "./pages/SetupPage";
+import DocumentationPage from "./pages/DocumentationPage";
+import CaseStudiesPage from "./pages/CaseStudiesPage";
+import HelpCenterPage from "./pages/HelpCenterPage";
+import ApiReferencePage from "./pages/ApiReferencePage";
+import AboutMudMediaPage from "./pages/AboutMudMediaPage";
+import CareersPage from "./pages/CareersPage";
+import ContactUsPage from "./pages/ContactUsPage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import TermsOfServicePage from "./pages/TermsOfServicePage";
+import PricingPage from "./pages/PricingPage";
 import { AnalysisJobProvider } from "./contexts/AnalysisJobContext";
+import Footer from "./components/Footer";
+import Navbar from "./components/Navbar";
+
+function ScrollToTop() {
+	const { pathname } = useLocation();
+
+	useEffect(() => {
+		window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+	}, [pathname]);
+
+	return null;
+}
+
+function PublicLayout() {
+	return (
+		<>
+			<Navbar />
+			<Outlet />
+		</>
+	);
+}
 
 function App() {
 	return (
 		<BrowserRouter>
+			<ScrollToTop />
 			<AuthProvider>
 				<AnalysisJobProvider>
 					<Routes>
 						{/* Public routes */}
-						<Route path="/" element={<HomePage />} />
-						<Route path="/setup" element={<SetupPage />} />
-						<Route path="/login" element={<LoginPage />} />
-						<Route path="/register" element={<RegisterPage />} />
+						<Route element={<PublicLayout />}>
+							<Route path="/" element={<HomePage />} />
+							<Route path="/setup" element={<SetupPage />} />
+							<Route path="/login" element={<LoginPage />} />
+							<Route path="/register" element={<RegisterPage />} />
+							<Route path="/documentation" element={<DocumentationPage />} />
+							<Route path="/case-studies" element={<CaseStudiesPage />} />
+							<Route path="/help-center" element={<HelpCenterPage />} />
+							<Route path="/api-reference" element={<ApiReferencePage />} />
+							<Route path="/about" element={<AboutMudMediaPage />} />
+							<Route path="/careers" element={<CareersPage />} />
+							<Route path="/contact-us" element={<ContactUsPage />} />
+							<Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+							<Route path="/pricing" element={<PricingPage />} />
+							<Route
+								path="/terms-of-service"
+								element={<TermsOfServicePage />}
+							/>
+						</Route>
 
 						{/* Trial expired — protected but outside AppLayout */}
 						<Route
@@ -68,6 +123,7 @@ function App() {
 					</Routes>
 				</AnalysisJobProvider>
 			</AuthProvider>
+			<Footer />
 		</BrowserRouter>
 	);
 }

@@ -1,5 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useRef } from "react";
 import {
 	motion,
 	useScroll,
@@ -40,8 +39,8 @@ import {
 	Target,
 	AlertTriangle,
 } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext";
-import { trackLandingCtaClick } from "../services/marketingAnalytics";
+
+const trackLandingCtaClick = (data) => console.log("Analytics Event:", data);
 
 // Complex Background Node Component
 const AnimatedOrb = ({ delay, duration, color, size, start, end }) => {
@@ -64,77 +63,236 @@ const AnimatedOrb = ({ delay, duration, color, size, start, end }) => {
 	);
 };
 
+// Mini sparkline for the large Predictive Intelligence card
+const MiniSparkline = () => {
+	const values = [42, 55, 48, 70, 63, 80, 72, 88, 82, 95, 90, 100];
+	const w = 340,
+		h = 80,
+		pad = 8;
+	const min = Math.min(...values);
+	const max = Math.max(...values);
+	const range = max - min;
+	const stepX = (w - pad * 2) / (values.length - 1);
+	const points = values.map((v, i) => {
+		const x = pad + i * stepX;
+		const y = h - pad - ((v - min) / range) * (h - pad * 2);
+		return `${x},${y}`;
+	});
+	const linePath = points
+		.map((p, i) => `${i === 0 ? "M" : "L"} ${p}`)
+		.join(" ");
+	const areaPath = `${linePath} L ${pad + (values.length - 1) * stepX},${h - pad} L ${pad},${h - pad} Z`;
+
+	return (
+		<svg
+			viewBox={`0 0 ${w} ${h}`}
+			className="w-full h-20"
+			preserveAspectRatio="none"
+		>
+			<defs>
+				<linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
+					<stop offset="0%" stopColor="#1e293b" stopOpacity="0.15" />
+					<stop offset="100%" stopColor="#1e293b" stopOpacity="0" />
+				</linearGradient>
+			</defs>
+			<path d={areaPath} fill="url(#sparkGrad)" />
+			<path
+				d={linePath}
+				fill="none"
+				stroke="#334155"
+				strokeWidth="2.5"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+			/>
+			{values.map((v, i) => {
+				const x = pad + i * stepX;
+				const y = h - pad - ((v - min) / range) * (h - pad * 2);
+				return i === values.length - 1 ? (
+					<circle key={i} cx={x} cy={y} r="4" fill="#0f172a" />
+				) : null;
+			})}
+		</svg>
+	);
+};
+
+// ── Ten Superpowers ─────────────────────────────────────────────────────────
+// Using all imported icons: LineChart, CloudUpload, Radar, Brain, Sparkles,
+// BookOpen, BarChart3, FileText, ShieldCheck, Wrench
 const SUPERPOWERS = [
 	{
 		title: "Predictive Intelligence",
 		desc: "Linear and polynomial regression forecasting with uncertainty bands and confidence intervals.",
 		icon: LineChart,
-		colSpan: "md:col-span-2 lg:col-span-2",
-		rowSpan: "md:row-span-2",
-		visual: (
-			<div className="absolute right-[-20%] bottom-[-20%] w-64 h-64 opacity-[0.03] group-hover:opacity-10 transition-opacity duration-700 pointer-events-none">
-				<svg
-					viewBox="0 0 100 100"
-					fill="none"
-					xmlns="http://www.w3.org/2000/svg"
-				>
-					<path d="M0 100L20 80L40 90L70 40L100 0V100H0Z" fill="currentColor" />
-					<path
-						d="M0 100L20 80L40 90L70 40L100 0"
-						stroke="currentColor"
-						strokeWidth="2"
-					/>
-				</svg>
-			</div>
-		),
+		// Large hero card: 6 cols × 2 rows on desktop
+		layout: "lg:col-span-6 lg:row-span-2",
+		isLarge: true,
 	},
 	{
 		title: "Smart Data Upload",
 		desc: "Drag-and-drop CSV/Excel files with auto schema detection, type inference, and data quality scoring.",
 		icon: CloudUpload,
-		colSpan: "md:col-span-1 lg:col-span-1",
-		rowSpan: "md:row-span-1",
-		visual: null,
+		layout: "lg:col-span-3 lg:row-span-1",
+		isLarge: false,
 	},
 	{
 		title: "Anomaly Detection",
 		desc: "Z-score and IQR-based anomaly detection across all numeric features to catch problems early.",
 		icon: Radar,
-		colSpan: "md:col-span-1 lg:col-span-1",
-		rowSpan: "md:row-span-1",
-		visual: null,
+		layout: "lg:col-span-3 lg:row-span-1",
+		isLarge: false,
 	},
 	{
 		title: "AI Strategy Advisor",
 		desc: "Personalised business recommendations powered by a multi-provider AI fallback chain for maximum reliability.",
 		icon: Brain,
-		colSpan: "md:col-span-2 lg:col-span-2",
-		rowSpan: "md:row-span-1",
-		visual: (
-			<div className="absolute right-4 bottom-4 flex gap-2 opacity-20 group-hover:opacity-100 transition-opacity duration-500">
-				<div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center animate-pulse">
-					<Brain size={16} />
-				</div>
-			</div>
-		),
+		// Spans the right 6 cols on the second row of the large card
+		layout: "lg:col-span-6 lg:row-span-1",
+		isLarge: false,
 	},
 	{
 		title: "Premium Month-End Analysis",
 		desc: "Deep analysis powered by Yukti's custom QLoRA fine-tuned TinyLlama model, once per month per user.",
 		icon: Sparkles,
-		colSpan: "md:col-span-1 lg:col-span-1",
-		rowSpan: "md:row-span-1",
-		visual: null,
+		layout: "lg:col-span-4 lg:row-span-1",
+		isLarge: false,
 	},
 	{
 		title: "Daily Business Logs",
 		desc: "Simple form to log daily revenue, customers, orders, expenses, and stock, stored securely.",
 		icon: BookOpen,
-		colSpan: "md:col-span-1 lg:col-span-1",
-		rowSpan: "md:row-span-1",
-		visual: null,
+		layout: "lg:col-span-4 lg:row-span-1",
+		isLarge: false,
+	},
+	{
+		title: "KPI Dashboard",
+		desc: "Real-time key performance indicators with trend indicators, period-over-period deltas, and sparkline cards.",
+		icon: BarChart3,
+		layout: "lg:col-span-4 lg:row-span-1",
+		isLarge: false,
+	},
+	{
+		title: "Instant PDF Reports",
+		desc: "Generate branded, chart-rich PDF reports in seconds — ready to share with your team or investors.",
+		icon: FileText,
+		layout: "lg:col-span-6 lg:row-span-1",
+		isLarge: false,
+	},
+	{
+		title: "Data Security",
+		desc: "Enterprise-grade AES-256 encryption and role-based access keep every record private and audit-ready.",
+		icon: ShieldCheck,
+		layout: "lg:col-span-6 lg:row-span-1",
+		isLarge: false,
+	},
+	{
+		title: "Custom Integrations",
+		desc: "Connect POS systems, e-commerce platforms, and ERPs via our open API and pre-built connectors.",
+		icon: Wrench,
+		layout: "lg:col-span-12 lg:row-span-1",
+		isLarge: false,
+		isWide: true,
 	},
 ];
+
+// ── useInView usage — animate pipeline steps in on scroll ─────────────────
+function PipelineSection({
+	yParallaxFast,
+	staggerContainer,
+	fadeInUp,
+	PIPELINE,
+}) {
+	const ref = useRef(null);
+	const isInView = useInView(ref, { once: true, margin: "-80px" });
+
+	return (
+		<section
+			ref={ref}
+			className="py-32 bg-[#0a0a0a] text-white relative z-10 rounded-t-[3rem]"
+		>
+			<motion.div
+				style={{ y: yParallaxFast }}
+				className="absolute -top-64 right-10 w-96 h-96 bg-white/5 filter blur-[100px] rounded-full pointer-events-none"
+			/>
+			<div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
+				<div className="grid lg:grid-cols-2 gap-20 items-center">
+					<motion.div
+						initial={{ opacity: 0, x: -50 }}
+						animate={isInView ? { opacity: 1, x: 0 } : {}}
+						transition={{ duration: 0.8, ease: "easeOut" }}
+					>
+						<div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mb-8 border border-white/10 backdrop-blur-md">
+							<Layers size={32} className="text-slate-100" />
+						</div>
+						<h2 className="text-4xl lg:text-5xl font-extrabold tracking-tight mb-6">
+							Six layers between raw data and real decisions
+						</h2>
+						<p className="text-slate-400 text-xl leading-relaxed mb-10">
+							Every dataset you upload passes through six intelligent processing
+							layers. By the time it reaches you, it is no longer data, it is a
+							clear action plan.
+						</p>
+						<div className="flex flex-col gap-6">
+							<div className="flex items-start gap-4 bg-white/5 border border-white/5 p-5 rounded-2xl backdrop-blur-sm">
+								<CheckCircle2 className="text-slate-300 shrink-0 mt-0.5" />
+								<div>
+									<h4 className="font-semibold text-lg">
+										Four AI Providers. Zero Downtime.
+									</h4>
+									<p className="text-sm text-slate-400 mt-2">
+										Gemini, Groq, Claude, and our Rule-Based Engine. What
+										happens when an AI provider goes down? Yukti automatically
+										switches to the next one.
+									</p>
+								</div>
+							</div>
+							<div className="flex items-start gap-4 p-5">
+								<CheckCircle2 className="text-slate-300 shrink-0 mt-0.5" />
+								<div>
+									<h4 className="font-semibold text-lg">
+										This model thinks Indian
+									</h4>
+									<p className="text-sm text-slate-400 mt-2">
+										Trained specifically on Indian retail, restaurant, and
+										service business patterns. It understands festivals, local
+										contexts, and SMB realities.
+									</p>
+								</div>
+							</div>
+						</div>
+					</motion.div>
+
+					<motion.div
+						initial="hidden"
+						animate={isInView ? "visible" : "hidden"}
+						variants={staggerContainer}
+						className="relative bg-white/[0.02] border border-white/[0.05] p-8 md:p-12 rounded-[2.5rem] backdrop-blur-xl"
+					>
+						<div className="absolute left-10 md:left-14 top-14 bottom-14 w-px bg-gradient-to-b from-white/20 via-white/10 to-transparent" />
+						<div className="space-y-6 relative">
+							{PIPELINE.map((layer, index) => (
+								<motion.div
+									key={layer.name}
+									variants={fadeInUp}
+									className="relative flex items-center gap-6 group cursor-default"
+								>
+									<div className="relative z-10 w-8 h-8 rounded-full bg-black border-2 border-slate-700 flex items-center justify-center text-xs font-bold font-mono group-hover:border-white transition-colors">
+										{index + 1}
+									</div>
+									<div className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-6 py-5 group-hover:bg-white/10 group-hover:border-white/20 transition-all duration-300">
+										<p className="text-lg font-bold text-slate-200 group-hover:text-white">
+											{layer.name}
+										</p>
+										<p className="text-sm text-slate-400 mt-1">{layer.desc}</p>
+									</div>
+								</motion.div>
+							))}
+						</div>
+					</motion.div>
+				</div>
+			</div>
+		</section>
+	);
+}
 
 const PIPELINE = [
 	{
@@ -276,16 +434,8 @@ const DECISION_LOOP = [
 		desc: "Daily logs, POS exports, stock movement",
 		icon: Database,
 	},
-	{
-		title: "Diagnose",
-		desc: "Trend, anomaly, and risk scoring",
-		icon: Radar,
-	},
-	{
-		title: "Decide",
-		desc: "AI recommendations ranked by impact",
-		icon: Brain,
-	},
+	{ title: "Diagnose", desc: "Trend, anomaly, and risk scoring", icon: Radar },
+	{ title: "Decide", desc: "AI recommendations ranked by impact", icon: Brain },
 	{
 		title: "Execute",
 		desc: "Weekly playbook with measurable goals",
@@ -339,7 +489,6 @@ function buildPath(values, width = 420, height = 210, padding = 22) {
 	const max = Math.max(...values);
 	const range = Math.max(1, max - min);
 	const stepX = (width - padding * 2) / Math.max(1, values.length - 1);
-
 	return values
 		.map((value, index) => {
 			const x = padding + index * stepX;
@@ -351,8 +500,6 @@ function buildPath(values, width = 420, height = 210, padding = 22) {
 }
 
 export default function HomePage() {
-	const { user } = useAuth();
-	const navigate = useNavigate();
 	const { scrollYProgress } = useScroll();
 
 	const smoothProgress = useSpring(scrollYProgress, {
@@ -360,22 +507,6 @@ export default function HomePage() {
 		damping: 30,
 		restDelta: 0.001,
 	});
-
-	const yNavBg = useTransform(
-		scrollYProgress,
-		[0, 0.05],
-		["rgba(255, 255, 255, 0)", "rgba(255, 255, 255, 0.85)"],
-	);
-	const navBorder = useTransform(
-		scrollYProgress,
-		[0, 0.05],
-		["rgba(229, 231, 235, 0)", "rgba(229, 231, 235, 1)"],
-	);
-	const navBackdrop = useTransform(
-		scrollYProgress,
-		[0, 0.05],
-		["blur(0px)", "blur(16px)"],
-	);
 
 	const yParallaxFast = useTransform(smoothProgress, [0, 1], [0, -300]);
 	const yParallaxSlow = useTransform(smoothProgress, [0, 1], [0, -150]);
@@ -404,7 +535,7 @@ export default function HomePage() {
 
 	return (
 		<div className="min-h-screen bg-[#fafafa] text-slate-900 selection:bg-black selection:text-white font-sans relative overflow-x-hidden">
-			{/* Complex Ambient Animated Background */}
+			{/* Ambient Background */}
 			<div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
 				<AnimatedOrb
 					color="bg-slate-200"
@@ -436,54 +567,11 @@ export default function HomePage() {
 						backgroundImage:
 							"url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noise%22 x=%220%22 y=%220%22 width=%22100%25%22 height=%22100%25%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noise)%22 opacity=%220.5%22/%3E%3C/svg%3E')",
 					}}
-				></div>
+				/>
 			</div>
 
-			{/* Sticky Nav */}
-			<motion.header
-				style={{
-					backgroundColor: yNavBg,
-					borderColor: navBorder,
-					backdropFilter: navBackdrop,
-					WebkitBackdropFilter: navBackdrop,
-				}}
-				className="fixed top-0 left-0 right-0 z-50 border-b border-transparent transition-colors duration-300"
-			>
-				<nav className="max-w-7xl mx-auto px-6 lg:px-8 py-4 flex items-center justify-between">
-					<div
-						className="flex items-center gap-2 group cursor-pointer"
-						onClick={() => navigate("/")}
-					>
-						<div className="w-8 h-8 bg-black rounded-xl flex items-center justify-center group-hover:scale-95 transition-transform">
-							<span className="text-white font-bold text-lg leading-none">
-								Y
-							</span>
-						</div>
-						<span className="font-semibold text-lg tracking-tight">Yukti</span>
-					</div>
-					<div className="flex items-center gap-6">
-						<Link
-							to="/login"
-							className="text-sm font-medium text-slate-600 hover:text-black transition-colors hidden sm:block"
-							onClick={() => trackCta("login", "nav", "Login")}
-						>
-							Log in
-						</Link>
-						<button
-							onClick={() => {
-								trackCta("register", "nav", "Try Yukti Live");
-								window.location.href = "https://mudmedia-yukti.vercel.app/";
-							}}
-							className="text-sm font-medium bg-black text-white px-5 py-2.5 rounded-full hover:bg-slate-800 hover:shadow-lg hover:shadow-black/20 hover:-translate-y-0.5 transition-all duration-300"
-						>
-							Try Yukti Live
-						</button>
-					</div>
-				</nav>
-			</motion.header>
-
 			{/* Hero Section */}
-			<section className="relative pt-40 pb-20 lg:pt-52 lg:pb-32 px-6 lg:px-8 max-w-7xl mx-auto flex flex-col items-center text-center z-10">
+			<section className="relative pt-28 pb-20 lg:pt-24 lg:pb-32 px-6 lg:px-8 max-w-7xl mx-auto flex flex-col items-center text-center z-10">
 				<motion.div
 					initial="hidden"
 					animate="visible"
@@ -495,15 +583,15 @@ export default function HomePage() {
 						className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 shadow-sm text-xs font-semibold text-slate-700 mb-8 whitespace-nowrap hover:shadow-md transition-shadow cursor-default"
 					>
 						<span className="relative flex h-2 w-2">
-							<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-							<span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+							<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+							<span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
 						</span>
 						<span>Introducing Yukti</span>
 					</motion.div>
 
 					<motion.h1
 						variants={fadeInUp}
-						className="text-6xl sm:text-7xl lg:text-[5.5rem] font-extrabold tracking-tighter text-black leading-[1.05] mb-8"
+						className="text-5xl sm:text-7xl lg:text-[4rem] font-extrabold tracking-tighter text-black leading-[1.05] mb-8"
 					>
 						What if your data could <br className="hidden md:block" />
 						<span className="relative inline-block mt-2">
@@ -521,7 +609,7 @@ export default function HomePage() {
 
 					<motion.p
 						variants={fadeInUp}
-						className="text-xl sm:text-2xl text-slate-500 mb-12 max-w-2xl leading-relaxed"
+						className="text-[1rem] sm:text-xl text-slate-500 mb-12 max-w-2xl leading-relaxed"
 					>
 						We fed 35,800+ Indian business disasters to an AI so you don't have
 						to live through them. Yukti takes your sales data and gives you the
@@ -621,7 +709,7 @@ export default function HomePage() {
 										<svg
 											preserveAspectRatio="none"
 											viewBox="0 0 100 100"
-											className="w-[100%] h-[100%]"
+											className="w-full h-full"
 										>
 											<path
 												d="M0,100 C20,80 40,90 60,40 C80,-10 100,30 100,30 L100,100 Z"
@@ -636,7 +724,7 @@ export default function HomePage() {
 				</motion.div>
 			</section>
 
-			{/* Live Ticker / Proof */}
+			{/* Ticker */}
 			<section className="py-12 border-y border-slate-200 bg-white z-10 relative overflow-hidden">
 				<motion.div
 					animate={{ x: [0, -1000] }}
@@ -649,7 +737,7 @@ export default function HomePage() {
 							className="flex items-center gap-10 text-slate-800 font-bold text-lg tracking-tight"
 						>
 							{[
-								{ label: "TinyLlama fine-tuning ", icon: Cpu },
+								{ label: "TinyLlama fine-tuning", icon: Cpu },
 								{ label: "Predictive Intelligence", icon: LineChart },
 								{ label: "Anomaly Detection", icon: Radar },
 								{ label: "Multi-provider fallback", icon: Blocks },
@@ -665,7 +753,7 @@ export default function HomePage() {
 				</motion.div>
 			</section>
 
-			{/* Problem vs Solution Bento */}
+			{/* Problem vs Solution */}
 			<section className="py-28 px-6 lg:px-8 max-w-7xl mx-auto relative z-10">
 				<div className="mb-14 text-center">
 					<h2 className="text-4xl lg:text-5xl font-extrabold tracking-tight text-black mb-5">
@@ -676,7 +764,6 @@ export default function HomePage() {
 						turns those numbers into immediate, prioritized actions.
 					</p>
 				</div>
-
 				<div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 					<div className="lg:col-span-7 rounded-[2rem] bg-white border border-slate-200 p-8 shadow-sm">
 						<div className="flex items-center justify-between mb-6">
@@ -695,7 +782,6 @@ export default function HomePage() {
 								</p>
 							</div>
 						</div>
-
 						<div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 relative overflow-hidden">
 							<svg viewBox="0 0 420 210" className="w-full h-56">
 								<defs>
@@ -751,7 +837,6 @@ export default function HomePage() {
 								</span>
 							</div>
 						</div>
-
 						<div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
 							{[
 								{
@@ -784,7 +869,6 @@ export default function HomePage() {
 							))}
 						</div>
 					</div>
-
 					<div className="lg:col-span-5 grid grid-cols-1 gap-4">
 						{PROBLEM_SIGNALS.map((signal, idx) => (
 							<motion.div
@@ -804,7 +888,7 @@ export default function HomePage() {
 											{signal.title}
 										</h4>
 									</div>
-									<span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+									<span className="text-[11px] font-semibold px-2 py-1 rounded-full bg-amber-100 text-amber-700 border border-amber-200 whitespace-nowrap">
 										{signal.severity}
 									</span>
 								</div>
@@ -824,21 +908,21 @@ export default function HomePage() {
 				</div>
 			</section>
 
-			{/* Bento Grid: Redesigned Superpowers */}
+			{/* ── Bento Grid: Ten Superpowers ───────────────────────────────────── */}
 			<section className="py-32 px-6 lg:px-8 max-w-7xl mx-auto relative z-10">
 				<motion.div
 					initial="hidden"
 					whileInView="visible"
 					viewport={{ once: true, margin: "-100px" }}
 					variants={fadeInUp}
-					className="mb-20 text-center md:text-left md:flex justify-between items-end"
+					className="mb-14"
 				>
-					<div className="max-w-2xl">
-						<h2 className="text-4xl lg:text-5xl font-extrabold tracking-tight text-black mb-6">
+					<div className="max-w-3xl">
+						<h2 className="text-4xl lg:text-6xl font-extrabold tracking-tight text-black mb-4 leading-[0.95]">
 							One platform, <br />
 							ten superpowers
 						</h2>
-						<p className="text-xl text-slate-500">
+						<p className="text-xl text-slate-500 max-w-2xl">
 							Most business owners juggle spreadsheets, BI dashboards, and
 							consultants. Yukti replaces all of that with a single intelligent
 							platform, purpose-built for the Indian market.
@@ -851,127 +935,125 @@ export default function HomePage() {
 					whileInView="visible"
 					viewport={{ once: true, margin: "-100px" }}
 					variants={staggerContainer}
-					className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-4 gap-6 auto-rows-[minmax(240px,auto)]"
+					className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-4 lg:auto-rows-[minmax(220px,1fr)]"
 				>
 					{SUPERPOWERS.map((feature, i) => (
 						<motion.div
 							key={i}
 							variants={fadeInUp}
-							whileHover={{ y: -5 }}
-							className={`relative group bg-white border border-slate-200 rounded-[2rem] p-8 shadow-sm hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)] hover:border-slate-300 transition-all overflow-hidden ${feature.colSpan} ${feature.rowSpan}`}
+							whileHover={{ y: -4 }}
+							className={[
+								"relative group bg-white border border-slate-200 rounded-3xl",
+								"shadow-[0_10px_30px_-20px_rgba(15,23,42,0.25)]",
+								"hover:shadow-[0_24px_44px_-26px_rgba(15,23,42,0.35)]",
+								"hover:border-slate-300 transition-all duration-300 overflow-hidden",
+								// On mobile every card is full width; sm: two columns; lg: bento layout
+								"sm:col-span-1",
+								feature.isLarge
+									? "lg:col-span-6 lg:row-span-2"
+									: feature.isWide
+										? "sm:col-span-2 lg:col-span-12 lg:row-span-1"
+										: feature.layout,
+							].join(" ")}
 						>
-							<div className="relative z-10 flex flex-col h-full">
-								<div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 mb-8 group-hover:bg-black group-hover:text-white transition-colors duration-300 text-black shadow-inner">
-									<feature.icon size={26} />
+							{/* ── Large card — split layout ─────────────────────────── */}
+							{feature.isLarge ? (
+								<div className="flex flex-col h-full p-6 md:p-8">
+									{/* Top: icon + title */}
+									<div className="flex-none">
+										<div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-200 mb-5 group-hover:bg-black group-hover:text-white transition-colors duration-300 text-black">
+											<feature.icon size={20} />
+										</div>
+										<h3 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-black leading-tight mb-3">
+											{feature.title}
+										</h3>
+										<p className="text-slate-500 text-base md:text-lg leading-relaxed max-w-sm">
+											{feature.desc}
+										</p>
+									</div>
+									{/* Bottom: decorative sparkline that fills remaining height */}
+									<div className="flex-1 mt-6 min-h-0 flex flex-col justify-end">
+										<div className="rounded-2xl bg-slate-50 border border-slate-100 px-4 pt-4 pb-2 overflow-hidden">
+											<p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
+												Revenue forecast · next 12 weeks
+											</p>
+											<MiniSparkline />
+											<div className="flex items-center justify-between mt-2">
+												<span className="text-[11px] text-slate-400">
+													Week 1
+												</span>
+												<span className="text-xs font-bold text-emerald-600">
+													+38% projected ↑
+												</span>
+												<span className="text-[11px] text-slate-400">
+													Week 12
+												</span>
+											</div>
+										</div>
+									</div>
 								</div>
-								<h3
-									className={`font-bold text-black mb-3 ${feature.rowSpan === "md:row-span-2" ? "text-3xl" : "text-2xl"}`}
-								>
-									{feature.title}
-								</h3>
-								<p className="text-slate-500 text-base leading-relaxed mt-auto pr-4">
-									{feature.desc}
-								</p>
-							</div>
-							{feature.visual && feature.visual}
-							<div className="absolute inset-0 bg-gradient-to-br from-slate-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+							) : feature.isWide ? (
+								/* ── Wide full-span card ─────────────────────────────── */
+								<div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 h-full p-6 md:p-8">
+									<div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-200 shrink-0 group-hover:bg-black group-hover:text-white transition-colors duration-300 text-black">
+										<feature.icon size={20} />
+									</div>
+									<div className="flex-1 min-w-0">
+										<h3 className="text-2xl md:text-3xl font-extrabold text-black leading-tight">
+											{feature.title}
+										</h3>
+										<p className="text-slate-500 text-base leading-relaxed mt-1">
+											{feature.desc}
+										</p>
+									</div>
+									{/* decorative connector dots */}
+									<div className="hidden lg:flex items-center gap-2 shrink-0">
+										{["POS", "Shopify", "Tally", "WooCommerce", "Zoho"].map(
+											(tag) => (
+												<span
+													key={tag}
+													className="px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-xs font-semibold text-slate-600 whitespace-nowrap"
+												>
+													{tag}
+												</span>
+											),
+										)}
+										<span className="px-3 py-1.5 rounded-full bg-black text-white text-xs font-semibold whitespace-nowrap">
+											+ more
+										</span>
+									</div>
+								</div>
+							) : (
+								/* ── Regular small / medium card ─────────────────────── */
+								<div className="flex flex-col h-full p-6 md:p-7">
+									<div className="w-11 h-11 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-200 mb-4 group-hover:bg-black group-hover:text-white transition-colors duration-300 text-black shrink-0">
+										<feature.icon size={18} />
+									</div>
+									<h3 className="text-xl sm:text-2xl font-extrabold text-black leading-tight mb-2">
+										{feature.title}
+									</h3>
+									<p className="text-slate-500 text-sm leading-relaxed flex-1">
+										{feature.desc}
+									</p>
+								</div>
+							)}
+
+							{/* hover overlay */}
+							<div className="absolute inset-0 bg-gradient-to-br from-slate-50/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none rounded-3xl" />
 						</motion.div>
 					))}
 				</motion.div>
 			</section>
 
-			{/* Pipeline Steps View */}
-			<section className="py-32 bg-[#0a0a0a] text-white relative z-10 rounded-t-[3rem]">
-				<motion.div
-					style={{ y: yParallaxFast }}
-					className="absolute -top-64 right-10 w-96 h-96 bg-white/5 filter blur-[100px] rounded-full pointer-events-none"
-				/>
+			{/* Pipeline Section — uses useInView via PipelineSection component */}
+			<PipelineSection
+				yParallaxFast={yParallaxFast}
+				staggerContainer={staggerContainer}
+				fadeInUp={fadeInUp}
+				PIPELINE={PIPELINE}
+			/>
 
-				<div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
-					<div className="grid lg:grid-cols-2 gap-20 items-center">
-						<motion.div
-							initial={{ opacity: 0, x: -50 }}
-							whileInView={{ opacity: 1, x: 0 }}
-							viewport={{ once: true, margin: "-100px" }}
-							transition={{ duration: 0.8, ease: "easeOut" }}
-						>
-							<div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mb-8 border border-white/10 backdrop-blur-md">
-								<Layers size={32} className="text-slate-100" />
-							</div>
-							<h2 className="text-4xl lg:text-5xl font-extrabold tracking-tight mb-6">
-								Six layers between raw data and real decisions
-							</h2>
-							<p className="text-slate-400 text-xl leading-relaxed mb-10">
-								Every dataset you upload passes through six intelligent
-								processing layers. By the time it reaches you, it is no longer
-								data, it is a clear action plan.
-							</p>
-
-							<div className="flex flex-col gap-6">
-								<div className="flex items-start gap-4 bg-white/5 border border-white/5 p-5 rounded-2xl backdrop-blur-sm">
-									<CheckCircle2 className="text-slate-300 shrink-0 mt-0.5" />
-									<div>
-										<h4 className="font-semibold text-lg">
-											Four AI Providers. Zero Downtime.
-										</h4>
-										<p className="text-sm text-slate-400 mt-2">
-											Gemini, Groq, Claude, and our Rule-Based Engine. What
-											happens when an AI provider goes down? Yukti automatically
-											switches to the next one.
-										</p>
-									</div>
-								</div>
-								<div className="flex items-start gap-4 p-5">
-									<CheckCircle2 className="text-slate-300 shrink-0 mt-0.5" />
-									<div>
-										<h4 className="font-semibold text-lg">
-											This model thinks Indian
-										</h4>
-										<p className="text-sm text-slate-400 mt-2">
-											Trained specifically on Indian retail, restaurant, and
-											service business patterns. It understands festivals, local
-											contexts, and SMB realities.
-										</p>
-									</div>
-								</div>
-							</div>
-						</motion.div>
-
-						<motion.div
-							initial="hidden"
-							whileInView="visible"
-							viewport={{ once: true, margin: "-100px" }}
-							variants={staggerContainer}
-							className="relative bg-white/[0.02] border border-white/[0.05] p-8 md:p-12 rounded-[2.5rem] backdrop-blur-xl"
-						>
-							<div className="absolute left-10 md:left-14 top-14 bottom-14 w-px bg-gradient-to-b from-white/20 via-white/10 to-transparent" />
-							<div className="space-y-6 relative">
-								{PIPELINE.map((layer, index) => (
-									<motion.div
-										key={layer.name}
-										variants={fadeInUp}
-										className="relative flex items-center gap-6 group cursor-default"
-									>
-										<div className="relative z-10 w-8 h-8 rounded-full bg-black border-2 border-slate-700 flex items-center justify-center text-xs font-bold font-mono group-hover:border-white transition-colors">
-											{index + 1}
-										</div>
-										<div className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-6 py-5 group-hover:bg-white/10 group-hover:border-white/20 transition-all duration-300">
-											<p className="text-lg font-bold text-slate-200 group-hover:text-white">
-												{layer.name}
-											</p>
-											<p className="text-sm text-slate-400 mt-1">
-												{layer.desc}
-											</p>
-										</div>
-									</motion.div>
-								))}
-							</div>
-						</motion.div>
-					</div>
-				</div>
-			</section>
-
-			{/* Target Users / Segments Grid */}
+			{/* Target Users */}
 			<section className="py-32 px-6 lg:px-8 max-w-7xl mx-auto z-10 relative">
 				<div className="text-center mb-20">
 					<h2 className="text-4xl lg:text-5xl font-extrabold tracking-tight text-black mb-6">
@@ -982,7 +1064,7 @@ export default function HomePage() {
 						63 million Indian SMB owners who need answers, not dashboards.
 					</p>
 				</div>
-				<div className="grid lg:grid-cols-2 gap-8">
+				<div className="grid sm:grid-cols-2 gap-8">
 					{TARGET_USERS.map((userType, i) => (
 						<motion.div
 							key={i}
@@ -1001,11 +1083,9 @@ export default function HomePage() {
 									{userType.title}
 								</h3>
 							</div>
-
 							<blockquote className="text-slate-600 italic border-l-4 border-slate-200 pl-4 py-1 mb-8">
 								"{userType.quote}"
 							</blockquote>
-
 							<div className="space-y-3">
 								{userType.points.map((point, idx) => (
 									<div key={idx} className="flex items-start gap-3">
@@ -1053,7 +1133,6 @@ export default function HomePage() {
 							))}
 						</div>
 					</div>
-
 					<div className="lg:col-span-5 rounded-[2rem] border border-slate-200 bg-black text-white p-7">
 						<div className="flex items-center gap-2 mb-5">
 							<Workflow size={16} className="text-slate-300" />
@@ -1088,7 +1167,7 @@ export default function HomePage() {
 							))}
 						</div>
 						<div className="mt-5 rounded-xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-xs text-amber-100 flex items-start gap-2">
-							<AlertTriangle size={14} className="mt-0.5" />
+							<AlertTriangle size={14} className="mt-0.5 shrink-0" />
 							Without this loop, businesses review data monthly. With Yukti,
 							they react weekly.
 						</div>
@@ -1096,7 +1175,7 @@ export default function HomePage() {
 				</div>
 			</section>
 
-			{/* Huge CTA Bottom */}
+			{/* Final CTA */}
 			<section className="py-24 px-6 lg:px-8 mb-10 z-10 relative">
 				<motion.div
 					initial={{ opacity: 0, scale: 0.95 }}
@@ -1106,7 +1185,6 @@ export default function HomePage() {
 				>
 					<div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-700/50 via-transparent to-transparent opacity-60" />
 					<div className="absolute inset-0 opacity-[0.1] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMCAwbDQwIDQwbTAtNDBMMCA0MCIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiLz48L3N2Zz4=')]" />
-
 					<div className="relative z-10">
 						<h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight mb-8">
 							{activeVariant.finalTitle}
@@ -1141,15 +1219,6 @@ export default function HomePage() {
 					</div>
 				</motion.div>
 			</section>
-
-			<footer className="border-t border-slate-200 py-12 px-6 lg:px-8 text-center bg-white z-10 relative">
-				<div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center mx-auto mb-6">
-					<span className="text-white font-bold text-xl leading-none">Y</span>
-				</div>
-				<p className="text-slate-400 font-medium">
-					© {new Date().getFullYear()} Mud Media. All rights reserved.
-				</p>
-			</footer>
 		</div>
 	);
 }

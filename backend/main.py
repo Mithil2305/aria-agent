@@ -28,10 +28,12 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+import requests
 import uvicorn
 import json
 import io
 import base64
+import hashlib
 import pickle
 import os
 import logging
@@ -65,6 +67,12 @@ from engine.report_generator import generate_pdf_report
 
 from pydantic import BaseModel
 from typing import Any, List, Optional
+
+try:
+    from cryptography.fernet import Fernet, InvalidToken
+except Exception:
+    Fernet = None
+    InvalidToken = Exception
 
 
 class DailyLogEntry(BaseModel):
@@ -116,6 +124,32 @@ class DailyLogsPayload(BaseModel):
 class IntegrationSyncRequest(BaseModel):
     platformId: str
     connectionId: str
+
+
+class IntegrationConnectionPayload(BaseModel):
+    platformId: str
+    platformName: Optional[str] = None
+    credentials: dict[str, Any]
+    businessType: Optional[str] = None
+    businessCategory: Optional[str] = None
+    connectionId: Optional[str] = None
+
+
+class IntegrationConnectionTestPayload(BaseModel):
+    platformId: str
+    credentials: dict[str, Any]
+
+
+class ContactInquiryRequest(BaseModel):
+    fullName: str
+    workEmail: str
+    companyName: str
+    businessType: str
+    revenueScale: str
+    teamSize: Optional[str] = None
+    purpose: str
+    message: str
+    consent: bool
 
 
 class StrategyRequest(BaseModel):
@@ -996,6 +1030,47 @@ async def health():
     return {"status": "ok", "engine": "Yukti Decision Intelligence v1.0"}
 
 
+@app.post("/api/contact")
+async def submit_contact_inquiry(
+    payload: ContactInquiryRequest,
+    uid: str = Depends(get_current_user),
+):
+    if not payload.consent:
+        raise HTTPException(status_code=400, detail="Consent is required to submit inquiry.")
+
+    if "@" not in payload.workEmail or payload.workEmail.count("@") != 1:
+        raise HTTPException(status_code=400, detail="Please enter a valid work email address.")
+
+    safe = {
+        "fullName": payload.fullName.strip(),
+        "workEmail": payload.workEmail.strip().lower(),
+        "companyName": payload.companyName.strip(),
+        "businessType": payload.businessType.strip(),
+        "revenueScale": payload.revenueScale.strip(),
+        "teamSize": (payload.teamSize or "").strip(),
+        "purpose": payload.purpose.strip(),
+        "message": payload.message.strip(),
+        "consent": bool(payload.consent),
+        "source": "website-contact-form",
+        "uid": uid,
+        "createdAt": datetime.utcnow(),
+    }
+
+    if not safe["fullName"] or not safe["companyName"] or not safe["purpose"] or not safe["message"]:
+        raise HTTPException(status_code=400, detail="Please fill all required fields.")
+
+    db = _get_firestore_client()
+    if db is not None:
+        db.collection("contactInquiries").add(_sanitize(safe))
+    else:
+        logging.getLogger("yukti.contact").info("contact inquiry (no firestore): %s", _sanitize(safe))
+
+    return {
+        "status": "success",
+        "message": "Thanks for reaching out. Our team will get back to you soon.",
+    }
+
+
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...), uid: str = Depends(get_current_user)):
     """Data Ingestion Layer: Parse and normalize uploaded dataset."""
@@ -1359,8 +1434,625 @@ PLATFORM_FIELD_MAPS = {
         "stock_in_hand": "inventory_count",
         "customer_count": "customers",
     },
+    "gofrugal": {
+        "total_sales": "revenue",
+        "invoice_count": "orders",
+        "customer_count": "customers",
+        "total_expenses": "expenses",
+        "items_sold": "items_sold",
+    },
+    "nammabilling": {
+        "total_sales": "revenue",
+        "bill_count": "orders",
+        "customer_count": "customers",
+        "total_expenses": "expenses",
+    },
+    "marg_erp": {
+        "net_sales": "revenue",
+        "invoice_count": "orders",
+        "customer_count": "customers",
+        "purchase_value": "expenses",
+        "stock_qty": "inventory_count",
+    },
+    "retailpos_unipro": {
+        "gross_sales": "revenue",
+        "order_count": "orders",
+        "customer_count": "customers",
+        "refund_amount": "returns_refunds",
+    },
+    "ecbill": {
+        "total_amount": "revenue",
+        "bill_count": "orders",
+        "customer_count": "customers",
+        "expense_amount": "expenses",
+    },
+    "zubizi": {
+        "sales_total": "revenue",
+        "orders_total": "orders",
+        "customers_total": "customers",
+        "expenses_total": "expenses",
+        "units_total": "units_sold",
+    },
     "custom_webhook": {},  # pass-through: fields already named correctly
 }
+
+# Platform defaults and parser hints used by manual sync.
+# If a platform has a vendor-specific API, users can still override with
+# apiBaseUrl/endpointPath in saved credentials.
+PLATFORM_API_DEFAULTS = {
+    "tally_prime": {
+        "base_env": "TALLY_PRIME_API_BASE",
+        "default_base": "",
+        "default_path": "/api/v1/transactions",
+    },
+    "zoho_books": {
+        "base_env": "ZOHO_BOOKS_API_BASE",
+        "default_base": "https://www.zohoapis.in/books/v3",
+        "default_path": "/invoices",
+    },
+    "gofrugal": {
+        "base_env": "GOFRUGAL_API_BASE",
+        "default_base": "",
+        "default_path": "/transactions",
+    },
+    "vyapar": {
+        "base_env": "VYAPAR_API_BASE",
+        "default_base": "",
+        "default_path": "/transactions",
+    },
+    "mybillbook": {
+        "base_env": "MYBILLBOOK_API_BASE",
+        "default_base": "",
+        "default_path": "/transactions",
+    },
+    "nammabilling": {
+        "base_env": "NAMMABILLING_API_BASE",
+        "default_base": "",
+        "default_path": "/transactions",
+    },
+    "marg_erp": {
+        "base_env": "MARG_ERP_API_BASE",
+        "default_base": "",
+        "default_path": "/transactions",
+    },
+    "retailpos_unipro": {
+        "base_env": "RETAILPOS_UNIPRO_API_BASE",
+        "default_base": "",
+        "default_path": "/transactions",
+    },
+    "ecbill": {
+        "base_env": "ECBILL_API_BASE",
+        "default_base": "",
+        "default_path": "/transactions",
+    },
+    "zubizi": {
+        "base_env": "ZUBIZI_API_BASE",
+        "default_base": "",
+        "default_path": "/transactions",
+    },
+    "petpooja": {
+        "base_env": "PETPOOJA_API_BASE",
+        "default_base": "",
+        "default_path": "/transactions",
+    },
+    "custom_webhook": {
+        "base_env": "",
+        "default_base": "",
+        "default_path": "",
+    },
+}
+
+def _integration_numeric(value: Any) -> Optional[float]:
+    if value is None:
+        return None
+    if isinstance(value, (int, float, np.integer, np.floating)):
+        try:
+            num = float(value)
+            if np.isnan(num) or np.isinf(num):
+                return None
+            return num
+        except Exception:
+            return None
+    if isinstance(value, str):
+        raw = value.strip().replace(",", "")
+        if not raw:
+            return None
+        try:
+            num = float(raw)
+            if np.isnan(num) or np.isinf(num):
+                return None
+            return num
+        except Exception:
+            return None
+    return None
+
+
+def _integration_to_iso_date(value: Any) -> str:
+    if value is None:
+        return date.today().isoformat()
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    raw = str(value).strip()
+    if not raw:
+        return date.today().isoformat()
+    # Accept date or datetime formats; fallback to today.
+    for parser in (datetime.fromisoformat,):
+        try:
+            return parser(raw.replace("Z", "+00:00")).date().isoformat()
+        except Exception:
+            pass
+    try:
+        return datetime.strptime(raw[:10], "%Y-%m-%d").date().isoformat()
+    except Exception:
+        return date.today().isoformat()
+
+
+def _integration_get(records_payload: Any, candidates: list[str]) -> Any:
+    if not isinstance(records_payload, dict):
+        return None
+    lower = {str(k).lower(): v for k, v in records_payload.items()}
+    for key in candidates:
+        if key.lower() in lower:
+            return lower[key.lower()]
+    return None
+
+
+def _integration_fernet():
+    if Fernet is None:
+        raise HTTPException(
+            status_code=500,
+            detail="cryptography package is required for secure integration credentials.",
+        )
+
+    secret = os.getenv("YUKTI_INTEGRATION_CRED_SECRET", "").strip()
+    if not secret:
+        raise HTTPException(
+            status_code=500,
+            detail="YUKTI_INTEGRATION_CRED_SECRET is not configured on backend.",
+        )
+
+    digest = hashlib.sha256(secret.encode("utf-8")).digest()
+    key = base64.urlsafe_b64encode(digest)
+    return Fernet(key)
+
+
+def _encrypt_integration_credentials(creds: dict[str, Any]) -> str:
+    try:
+        blob = json.dumps(_sanitize(creds), separators=(",", ":")).encode("utf-8")
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid credentials payload.")
+    token = _integration_fernet().encrypt(blob)
+    return token.decode("utf-8")
+
+
+def _decrypt_integration_credentials(token: str) -> dict[str, Any]:
+    if not token:
+        return {}
+    try:
+        raw = _integration_fernet().decrypt(token.encode("utf-8"))
+        data = json.loads(raw.decode("utf-8"))
+        return data if isinstance(data, dict) else {}
+    except InvalidToken:
+        raise HTTPException(status_code=500, detail="Stored integration credentials cannot be decrypted.")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Invalid encrypted credentials format.")
+
+
+def _get_connection_credentials(connection_doc: dict[str, Any]) -> dict[str, Any]:
+    # Backward-compatible fallback for old plain-text integration docs.
+    creds = connection_doc.get("credentials")
+    if isinstance(creds, dict):
+        return creds
+
+    encrypted = connection_doc.get("credentialsEncrypted")
+    if isinstance(encrypted, str) and encrypted.strip():
+        return _decrypt_integration_credentials(encrypted)
+
+    return {}
+
+
+def _extract_platform_records(payload: Any) -> list[dict]:
+    if isinstance(payload, list):
+        return [row for row in payload if isinstance(row, dict)]
+    if isinstance(payload, dict):
+        for key in (
+            "transactions",
+            "orders",
+            "invoices",
+            "data",
+            "items",
+            "results",
+            "records",
+        ):
+            value = payload.get(key)
+            if isinstance(value, list):
+                return [row for row in value if isinstance(row, dict)]
+        # Some APIs return a single summary object.
+        return [payload]
+    return []
+
+
+def _map_platform_record(platform: str, raw_record: dict) -> dict:
+    field_map = PLATFORM_FIELD_MAPS.get(platform, {})
+    mapped = {}
+
+    if platform == "custom_webhook":
+        mapped = dict(raw_record)
+    else:
+        for src_key, value in raw_record.items():
+            target = field_map.get(src_key)
+            if target:
+                mapped[target] = value
+
+    date_raw = (
+        mapped.get("date")
+        or raw_record.get("date")
+        or raw_record.get("created_at")
+        or raw_record.get("createdAt")
+        or raw_record.get("invoice_date")
+        or raw_record.get("bill_date")
+        or raw_record.get("transaction_date")
+    )
+    mapped["date"] = _integration_to_iso_date(date_raw)
+
+    mapped["revenue"] = _integration_numeric(mapped.get("revenue"))
+    mapped["orders"] = _integration_numeric(mapped.get("orders")) or 1.0
+    mapped["customers"] = _integration_numeric(mapped.get("customers"))
+    mapped["expenses"] = _integration_numeric(mapped.get("expenses"))
+
+    if mapped.get("customers") is None:
+        mapped["customers"] = 0.0
+    if mapped.get("expenses") is None:
+        mapped["expenses"] = 0.0
+    if mapped.get("revenue") is None:
+        mapped["revenue"] = 0.0
+
+    for candidate, key in (
+        ("units_sold", "unitsSold"),
+        ("items_sold", "itemsSold"),
+        ("online_orders", "onlineOrders"),
+        ("inventory_count", "inventoryCount"),
+        ("food_cost", "foodCost"),
+        ("tip_revenue", "tipRevenue"),
+        ("returns_refunds", "returnsRefunds"),
+    ):
+        value = _integration_numeric(mapped.get(candidate))
+        if value is not None:
+            mapped[key] = value
+
+    mapped["source"] = platform
+    mapped["synced"] = True
+    return mapped
+
+
+def _platform_base_and_path(platform: str, creds: dict) -> tuple[str, str]:
+    defaults = PLATFORM_API_DEFAULTS.get(platform, {})
+    base_env = defaults.get("base_env")
+    base = (
+        (creds.get("apiBaseUrl") or "").strip()
+        or (creds.get("serverUrl") or "").strip()
+        or (os.getenv(base_env, "").strip() if base_env else "")
+        or defaults.get("default_base", "")
+    )
+    path = (creds.get("endpointPath") or "").strip() or defaults.get("default_path", "")
+    return base.rstrip("/"), path
+
+
+def _platform_headers(platform: str, creds: dict) -> dict:
+    headers = {"Accept": "application/json"}
+
+    token = (
+        creds.get("accessToken")
+        or creds.get("apiToken")
+        or creds.get("apiKey")
+        or creds.get("token")
+    )
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    if creds.get("clientId"):
+        headers["X-Client-Id"] = str(creds.get("clientId"))
+    if creds.get("clientSecret"):
+        headers["X-Client-Secret"] = str(creds.get("clientSecret"))
+    if creds.get("organizationId"):
+        headers["X-com-zoho-books-organizationid"] = str(creds.get("organizationId"))
+
+    # Allow explicit header overrides from connection config.
+    extra = creds.get("headers")
+    if isinstance(extra, dict):
+        for key, value in extra.items():
+            if value is not None:
+                headers[str(key)] = str(value)
+
+    return headers
+
+
+def _platform_query_params(creds: dict) -> dict:
+    today = date.today().isoformat()
+    from_date = str(creds.get("fromDate") or today)
+    to_date = str(creds.get("toDate") or today)
+    params = {
+        "from_date": from_date,
+        "to_date": to_date,
+        "fromDate": from_date,
+        "toDate": to_date,
+        "date": today,
+    }
+    for key in (
+        "locationId",
+        "storeDomain",
+        "merchantId",
+        "accountId",
+        "restaurantId",
+        "businessId",
+        "companyName",
+        "companyCode",
+        "outletId",
+    ):
+        value = creds.get(key)
+        if value:
+            params[key] = value
+    return params
+
+
+def _get_user_integration_connection(uid: str, connection_id: str) -> dict:
+    db = _get_firestore_client()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Firestore is not configured.")
+
+    ref = (
+        db.collection("users")
+        .document(uid)
+        .collection("integrations")
+        .document(connection_id)
+    )
+    snap = ref.get()
+    if not snap.exists:
+        raise HTTPException(status_code=404, detail="Integration connection not found.")
+
+    data = snap.to_dict() or {}
+    creds = _get_connection_credentials(data)
+    data["credentials"] = creds
+    return data
+
+
+def _store_sync_results(
+    uid: str,
+    platform: str,
+    connection_id: str,
+    mapped_records: list[dict],
+    raw_records: list[dict],
+) -> int:
+    db = _get_firestore_client()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Firestore is not configured.")
+
+    tx_collection = (
+        db.collection("users")
+        .document(uid)
+        .collection("transactions")
+    )
+    logs_collection = (
+        db.collection("users")
+        .document(uid)
+        .collection("dailyLogs")
+    )
+
+    imported = 0
+    aggregate_by_date: dict[str, dict] = {}
+
+    for idx, mapped in enumerate(mapped_records):
+        raw = raw_records[idx] if idx < len(raw_records) and isinstance(raw_records[idx], dict) else {}
+        log_date = _integration_to_iso_date(mapped.get("date"))
+
+        external_id = (
+            raw.get("id")
+            or raw.get("invoice_id")
+            or raw.get("order_id")
+            or raw.get("voucher_no")
+            or f"auto-{log_date}-{idx}"
+        )
+        doc_id = f"{platform}_{connection_id}_{str(external_id)}_{idx}".replace("/", "_")
+
+        revenue = _integration_numeric(mapped.get("revenue")) or 0.0
+        orders = _integration_numeric(mapped.get("orders")) or 1.0
+        customers = _integration_numeric(mapped.get("customers")) or 0.0
+        expenses = _integration_numeric(mapped.get("expenses")) or 0.0
+
+        tx_collection.document(doc_id).set(
+            {
+                "platformId": platform,
+                "connectionId": connection_id,
+                "date": log_date,
+                "externalId": str(external_id),
+                "revenue": revenue,
+                "orders": orders,
+                "customers": customers,
+                "expenses": expenses,
+                "mapped": _sanitize(mapped),
+                "raw": _sanitize(raw),
+                "source": "integration_sync",
+                "synced": True,
+                "updatedAt": datetime.utcnow(),
+            },
+            merge=True,
+        )
+
+        bucket = aggregate_by_date.setdefault(
+            log_date,
+            {
+                "date": log_date,
+                "revenue": 0.0,
+                "orders": 0.0,
+                "customers": 0.0,
+                "expenses": 0.0,
+                "source": platform,
+                "synced": True,
+                "platformId": platform,
+                "connectionId": connection_id,
+                "updatedAt": datetime.utcnow(),
+            },
+        )
+        bucket["revenue"] += revenue
+        bucket["orders"] += orders
+        bucket["customers"] += customers
+        bucket["expenses"] += expenses
+        imported += 1
+
+    for log_date, payload in aggregate_by_date.items():
+        log_doc = logs_collection.document(f"{log_date}_{platform}_{connection_id}")
+        log_doc.set(_sanitize(payload), merge=True)
+
+    return imported
+
+
+def _fetch_platform_transactions(platform: str, creds: dict) -> tuple[list[dict], dict]:
+    if platform == "custom_webhook":
+        return [], {
+            "status": "skipped",
+            "message": "Custom webhook integrations receive pushed data; manual pull is not required.",
+        }
+
+    base, path = _platform_base_and_path(platform, creds)
+    if not base or not path:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"{platform} connection missing API endpoint. "
+                "Save apiBaseUrl/serverUrl and endpointPath in integration credentials, "
+                "or configure platform API base env variables on backend."
+            ),
+        )
+
+    url = f"{base}{path if path.startswith('/') else '/' + path}"
+    headers = _platform_headers(platform, creds)
+    params = _platform_query_params(creds)
+    method = str(creds.get("httpMethod") or "GET").upper()
+
+    body = creds.get("requestBody") if isinstance(creds.get("requestBody"), dict) else None
+    timeout = int(creds.get("timeoutMs") or 20_000) / 1000
+
+    try:
+        if method == "POST":
+            response = requests.post(url, json=body or {}, params=params, headers=headers, timeout=timeout)
+        else:
+            response = requests.get(url, params=params, headers=headers, timeout=timeout)
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=502, detail=f"Failed to reach {platform} API: {exc}")
+
+    if response.status_code >= 400:
+        detail = response.text[:600] if response.text else "no response body"
+        raise HTTPException(
+            status_code=502,
+            detail=f"{platform} API error {response.status_code}: {detail}",
+        )
+
+    try:
+        payload = response.json()
+    except Exception:
+        raise HTTPException(status_code=502, detail=f"{platform} API returned non-JSON response.")
+
+    records = _extract_platform_records(payload)
+    return records, {
+        "status": "ok",
+        "url": url,
+        "records": len(records),
+    }
+
+
+@app.post("/api/integrations/test")
+async def test_integration_connection(
+    payload: IntegrationConnectionTestPayload,
+    uid: str = Depends(get_current_user),
+):
+    if not uid:
+        raise HTTPException(status_code=401, detail="Authentication required for integration test.")
+
+    platform = payload.platformId
+    if platform not in PLATFORM_FIELD_MAPS:
+        raise HTTPException(status_code=400, detail=f"Unknown platform: {platform}")
+
+    if platform == "custom_webhook":
+        return JSONResponse(content=_sanitize({
+            "status": "success",
+            "platform": platform,
+            "message": "Custom webhook connection is valid. Use webhook URL + secret to push data.",
+            "importable": False,
+        }))
+
+    raw_records, meta = _fetch_platform_transactions(platform, payload.credentials or {})
+    mapped_preview = [_map_platform_record(platform, row) for row in raw_records[:3]]
+
+    return JSONResponse(content=_sanitize({
+        "status": "success",
+        "platform": platform,
+        "message": f"Connection test passed for {platform}.",
+        "recordsFound": len(raw_records),
+        "preview": mapped_preview,
+        "meta": meta,
+        "importable": True,
+    }))
+
+
+@app.post("/api/integrations/connection")
+async def save_integration_connection(
+    payload: IntegrationConnectionPayload,
+    uid: str = Depends(get_current_user),
+):
+    if not uid:
+        raise HTTPException(status_code=401, detail="Authentication required for integration setup.")
+
+    platform = payload.platformId
+    if platform not in PLATFORM_FIELD_MAPS:
+        raise HTTPException(status_code=400, detail=f"Unknown platform: {platform}")
+
+    if not isinstance(payload.credentials, dict) or not payload.credentials:
+        raise HTTPException(status_code=400, detail="Credentials are required.")
+
+    db = _get_firestore_client()
+    if db is None:
+        raise HTTPException(status_code=503, detail="Firestore is not configured.")
+
+    ref = (
+        db.collection("users")
+        .document(uid)
+        .collection("integrations")
+    )
+
+    doc_ref = ref.document(payload.connectionId) if payload.connectionId else ref.document()
+    now = datetime.utcnow()
+    encrypted = _encrypt_integration_credentials(payload.credentials)
+
+    doc_ref.set(
+        {
+            "platformId": platform,
+            "platformName": payload.platformName or platform,
+            "credentialsEncrypted": encrypted,
+            "credentialsVersion": 1,
+            "credentialFingerprint": hashlib.sha256(encrypted.encode("utf-8")).hexdigest()[:16],
+            "status": "connected",
+            "lastSyncAt": None,
+            "syncCount": 0,
+            "businessType": payload.businessType,
+            "businessCategory": payload.businessCategory,
+            "updatedAt": now,
+            "createdAt": now,
+            # Clear any legacy plain credentials if they were present.
+            "credentials": None,
+        },
+        merge=True,
+    )
+
+    return JSONResponse(content=_sanitize({
+        "status": "success",
+        "platform": platform,
+        "connectionId": doc_ref.id,
+        "message": f"{payload.platformName or platform} connection saved securely.",
+    }))
 
 
 @app.post("/api/integrations/webhook/{platform}")
@@ -1379,7 +2071,37 @@ async def receive_webhook(
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid JSON body.")
 
+    if not uid:
+        raise HTTPException(status_code=401, detail="Authentication required for integrations webhook.")
+
     field_map = PLATFORM_FIELD_MAPS.get(platform, {})
+
+    if platform not in PLATFORM_FIELD_MAPS:
+        raise HTTPException(status_code=400, detail=f"Unknown platform: {platform}")
+
+    # Optional webhook secret check for custom webhook connections.
+    if platform == "custom_webhook":
+        supplied_secret = request.headers.get("X-Webhook-Secret", "").strip()
+        if not supplied_secret:
+            raise HTTPException(status_code=400, detail="Missing X-Webhook-Secret header.")
+        db = _get_firestore_client()
+        if db is None:
+            raise HTTPException(status_code=503, detail="Firestore is not configured.")
+        matches = (
+            db.collection("users")
+            .document(uid)
+            .collection("integrations")
+            .where("platformId", "==", "custom_webhook")
+            .stream()
+        )
+        allowed = False
+        for snap in matches:
+            creds = _get_connection_credentials(snap.to_dict() or {})
+            if str(creds.get("webhookSecret") or "").strip() == supplied_secret:
+                allowed = True
+                break
+        if not allowed:
+            raise HTTPException(status_code=403, detail="Invalid webhook secret.")
 
     # If custom_webhook, pass through; otherwise map fields
     if platform == "custom_webhook":
@@ -1402,11 +2124,14 @@ async def receive_webhook(
     mapped["source"] = platform
     mapped["synced"] = True
 
+    # Persist webhook payload for this authenticated user.
+    imported = _store_sync_results(uid, platform, "webhook", [mapped], [body])
+
     return JSONResponse(content=_sanitize({
         "status": "success",
         "platform": platform,
         "entry": mapped,
-        "imported": 1,
+        "imported": imported,
     }))
 
 
@@ -1417,20 +2142,48 @@ async def manual_sync(
 ):
     """
     Manual sync trigger.
-    In a production environment this would call the platform's API using
-    stored credentials. For now, it acknowledges the request.
+    Pulls transactions/orders from the configured platform API using the
+    authenticated user's saved integration credentials, then persists data
+    into users/{uid}/transactions and users/{uid}/dailyLogs.
     """
+    if not uid:
+        raise HTTPException(status_code=401, detail="Authentication required for integration sync.")
+
     platform = payload.platformId
     if platform not in PLATFORM_FIELD_MAPS:
         raise HTTPException(status_code=400, detail=f"Unknown platform: {platform}")
+
+    connection = _get_user_integration_connection(uid, payload.connectionId)
+    if connection.get("platformId") != platform:
+        raise HTTPException(
+            status_code=400,
+            detail="Connection does not match platform. Please reconnect this integration.",
+        )
+
+    creds = connection.get("credentials") or {}
+    raw_records, meta = _fetch_platform_transactions(platform, creds)
+
+    mapped_records = [_map_platform_record(platform, record) for record in raw_records]
+    imported = _store_sync_results(uid, platform, payload.connectionId, mapped_records, raw_records)
+
+    db = _get_firestore_client()
+    if db is not None:
+        db.collection("users").document(uid).collection("integrations").document(payload.connectionId).set(
+            {
+                "lastSyncAt": datetime.utcnow(),
+                "lastSyncMeta": _sanitize(meta),
+                "status": "connected",
+            },
+            merge=True,
+        )
 
     return JSONResponse(content=_sanitize({
         "status": "success",
         "platform": platform,
         "connectionId": payload.connectionId,
-        "message": f"Sync acknowledged for {platform}. "
-                   f"In production, this would pull today's data via the platform API.",
-        "imported": 0,
+        "message": f"Imported {imported} records from {platform} for this user account.",
+        "imported": imported,
+        "meta": meta,
     }))
 
 

@@ -205,6 +205,33 @@ export async function syncIntegration(platformId, connectionId, token) {
 	return data;
 }
 
+export async function testIntegrationConnection(
+	platformId,
+	credentials,
+	token,
+) {
+	const { data } = await API.post(
+		"/api/integrations/test",
+		{ platformId, credentials },
+		{ headers: { "Content-Type": "application/json", ...authHeaders(token) } },
+	);
+	return data;
+}
+
+export async function saveIntegrationConnection(payload, token) {
+	const { data } = await API.post("/api/integrations/connection", payload, {
+		headers: { "Content-Type": "application/json", ...authHeaders(token) },
+	});
+	return data;
+}
+
+export async function submitContactInquiry(payload) {
+	const { data } = await API.post("/api/contact", payload, {
+		headers: { "Content-Type": "application/json" },
+	});
+	return data;
+}
+
 // ──────────────────── Strategy Advisor ────────────────────
 
 export async function getStrategyAdvice(
