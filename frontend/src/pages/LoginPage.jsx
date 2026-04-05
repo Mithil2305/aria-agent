@@ -1,19 +1,37 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, Link, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
 	Mail,
 	Lock,
 	ArrowRight,
-	AlertCircle,
 	Loader2,
 	Eye,
 	EyeOff,
 	Sparkles,
 	Orbit,
 	ShieldCheck,
+	Workflow,
+	BarChart3,
+	Rocket,
 } from "lucide-react";
 import ToastStack from "../components/ToastStack";
+
+const LOGIN_SIGNAL_CARDS = [
+	{
+		title: "Forecast confidence",
+		value: "92%",
+		detail: "Model confidence for the next 14-day revenue window.",
+		icon: Orbit,
+	},
+	{
+		title: "Anomaly shield",
+		value: "Always on",
+		detail: "Weekly risk alerts generated from your live business data.",
+		icon: ShieldCheck,
+	},
+];
 
 export default function LoginPage() {
 	const [email, setEmail] = useState("");
@@ -160,76 +178,90 @@ export default function LoginPage() {
 	};
 
 	return (
-		<div className="auth-shell min-h-screen px-4 py-6 sm:py-10">
+		<div className="landing-shell auth-v2-shell min-h-screen px-4 py-6 sm:py-10 relative overflow-hidden">
 			<ToastStack toasts={toasts} onDismiss={dismissToast} />
-			<div className="auth-bg-glow auth-bg-glow-a" />
-			<div className="auth-bg-glow auth-bg-glow-b" />
+			<div className="landing-grid-bg" />
+			<div className="landing-aurora landing-aurora-a" />
+			<div className="landing-aurora landing-aurora-b" />
+			<div className="auth-v2-noise" />
 
-			<div className="relative z-10 max-w-6xl mx-auto grid lg:grid-cols-2 gap-6 items-stretch">
-				<section className="auth-hero-card p-7 sm:p-9 hidden lg:flex flex-col justify-between">
-					<div>
-						<div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-amber-200 bg-white/80 text-amber-700 text-xs tracking-wide uppercase">
-							<Sparkles size={14} /> Yukti Intelligence
+			<div className="relative z-10 max-w-7xl mx-auto grid lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
+				<motion.section
+					initial={{ opacity: 0, y: 24 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.6, ease: "easeOut" }}
+					className="auth-v2-story hidden lg:flex lg:col-span-7"
+				>
+					<div className="auth-v2-story-content">
+						<div className="auth-v2-badge">
+							<Workflow size={14} /> Yukti Intelligence Platform
 						</div>
-						<h1 className="text-slate-900 text-4xl font-semibold leading-tight mt-6">
-							Predict smarter.
+						<h1 className="auth-v2-title">
+							Your decisions deserve
 							<br />
-							Grow faster.
+							a stronger signal.
 						</h1>
-						<p className="text-slate-600 mt-4 max-w-md">
-							A 6-layer analytics pipeline with resilient AI fallback and
-							strategy outputs designed for Indian businesses.
+						<p className="auth-v2-subtitle">
+							Resume your 6-layer insight workflow, weekly strategy loops, and
+							live anomaly intelligence from one focused workspace.
 						</p>
-					</div>
 
-					<div className="auth-hero-stack">
-						<div className="auth-float-card">
-							<Orbit size={16} className="text-amber-700" />
-							<div>
-								<p className="text-slate-900 text-sm font-medium">
-									4 AI Providers
-								</p>
-								<p className="text-slate-600 text-xs">
-									Auto-fallback reliability chain
-								</p>
+						<div className="auth-v2-story-grid">
+							{LOGIN_SIGNAL_CARDS.map((item) => {
+								const Icon = item.icon;
+								return (
+									<div key={item.title} className="auth-v2-metric-card">
+										<div className="auth-v2-metric-icon">
+											<Icon size={16} className="text-amber-700" />
+										</div>
+										<p className="auth-v2-metric-title">{item.title}</p>
+										<p className="auth-v2-metric-value">{item.value}</p>
+										<p className="auth-v2-metric-detail">{item.detail}</p>
+									</div>
+								);
+							})}
+							<div className="auth-v2-rail-card">
+								<div>
+									<p className="auth-v2-metric-title">Live dashboard signal</p>
+									<p className="auth-v2-metric-detail mt-1">
+										Track margin, trend drift, and category performance in one
+										view.
+									</p>
+								</div>
+								<span className="auth-v2-chip">
+									<BarChart3 size={14} /> Ready
+								</span>
 							</div>
 						</div>
-						<div className="auth-float-card auth-float-card-offset">
-							<ShieldCheck size={16} className="text-amber-700" />
-							<div>
-								<p className="text-slate-900 text-sm font-medium">
-									Secure by Firebase Auth
-								</p>
-								<p className="text-slate-600 text-xs">
-									Built-in account protection
-								</p>
-							</div>
-						</div>
 					</div>
-				</section>
+				</motion.section>
 
-				<section className="auth-form-card p-6 sm:p-8">
-					<div className="text-center mb-6">
-						<div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gold-600 mb-3 shadow-sm">
+				<motion.section
+					initial={{ opacity: 0, y: 16 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
+					className="auth-v2-panel lg:col-span-5"
+				>
+					<div className="auth-v2-panel-inner">
+						<div className="text-center mb-6">
+							<div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gold-600 mb-3 shadow-sm">
 							<Sparkles size={22} className="text-white" />
+							</div>
+							<h2 className="text-xl font-semibold text-slate-900">Welcome Back</h2>
+							<p className="text-slate-600 text-sm mt-1">
+								Sign in to continue with Yukti
+							</p>
+							{successState ? (
+								<p className="text-emerald-700 text-xs mt-3">{successState}</p>
+							) : null}
 						</div>
-						<h2 className="text-xl font-semibold text-slate-900">
-							Welcome Back
-						</h2>
-						<p className="text-slate-600 text-sm mt-1">
-							Sign in to continue with Yukti
-						</p>
-						{successState ? (
-							<p className="text-emerald-200 text-xs mt-3">{successState}</p>
-						) : null}
-					</div>
 
-					<button
-						type="button"
-						onClick={handleGoogle}
-						disabled={googleLoading}
-						className="auth-google-btn w-full flex items-center justify-center gap-2"
-					>
+						<button
+							type="button"
+							onClick={handleGoogle}
+							disabled={googleLoading}
+							className="auth-google-btn w-full flex items-center justify-center gap-2"
+						>
 						<svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
 							<path
 								fill="#EA4335"
@@ -248,16 +280,16 @@ export default function LoginPage() {
 								d="M24 48c6.5 0 12-2.1 16-5.8l-7.8-6c-2.1 1.5-4.9 2.6-8.2 2.6-6.3 0-11.7-3.9-13.6-9.9l-8 6.2C6.4 42.6 14.6 48 24 48z"
 							/>
 						</svg>
-						{googleLoading ? "Connecting Google..." : "Continue with Google"}
-					</button>
+							{googleLoading ? "Connecting Google..." : "Continue with Google"}
+						</button>
 
-					<div className="auth-divider my-5">
-						<span>or</span>
-					</div>
+						<div className="auth-divider my-5">
+							<span>or</span>
+						</div>
 
-					<form onSubmit={handleSubmit} className="space-y-4">
+						<form onSubmit={handleSubmit} className="space-y-4">
 						<div>
-							<label className="flex items-center gap-1.5 text-xs font-medium text-slate-300 mb-1.5">
+							<label className="auth-v2-label">
 								<Mail size={12} strokeWidth={1.5} />
 								Email
 							</label>
@@ -273,7 +305,7 @@ export default function LoginPage() {
 						</div>
 
 						<div>
-							<label className="flex items-center gap-1.5 text-xs font-medium text-slate-300 mb-1.5">
+							<label className="auth-v2-label">
 								<Lock size={12} strokeWidth={1.5} />
 								Password
 							</label>
@@ -289,7 +321,7 @@ export default function LoginPage() {
 								<button
 									type="button"
 									onClick={() => setShowPassword(!showPassword)}
-									className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+									className="auth-v2-eye-btn"
 									tabIndex={-1}
 								>
 									{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -306,18 +338,38 @@ export default function LoginPage() {
 							{loading ? "Signing in..." : "Sign In"}
 							{!loading && <ArrowRight size={15} />}
 						</button>
-					</form>
+						</form>
 
-					<p className="text-center text-sm text-slate-600 mt-5">
-						Don't have an account?{" "}
-						<Link
-							to="/register"
-							className="text-amber-700 hover:text-amber-800 font-medium transition-colors"
-						>
-							Create one
-						</Link>
-					</p>
-				</section>
+						<p className="text-center text-sm text-slate-600 mt-5">
+							Don't have an account?{" "}
+							<Link
+								to="/register"
+								className="text-amber-700 hover:text-amber-800 font-medium transition-colors"
+							>
+								Create one
+							</Link>
+						</p>
+
+						<div className="mt-5 pt-4 border-t border-amber-100 flex items-center justify-between gap-3 text-xs text-slate-600">
+							<span className="inline-flex items-center gap-1.5">
+								<Rocket size={13} className="text-amber-700" />
+								Go from login to insight in minutes
+							</span>
+							<Link
+								to="/about"
+								className="text-amber-700 hover:text-amber-800 font-medium"
+							>
+								Why Yukti
+							</Link>
+						</div>
+					</div>
+
+					<div className="auth-v2-mobile-story lg:hidden mt-4">
+						<div className="auth-v2-mobile-chip">
+							<BarChart3 size={14} /> 4 AI Providers + secure workflow
+						</div>
+					</div>
+				</motion.section>
 			</div>
 		</div>
 	);
