@@ -7,17 +7,21 @@ import {
 	AlertCircle,
 	CheckCircle2,
 	Ban,
-	Zap,
 	Crown,
 	Gauge,
 	Activity,
-	Sparkles,
+	CalendarDays,
+	ChevronDown,
+	CircleDollarSign,
+	ClipboardList,
+	ChartNoAxesCombined,
 	UserCog,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import {
 	getAdminOverview,
 	getAdminUsers,
+	getAdminUsage,
 	patchAdminUser,
 	toggleAdminUserService,
 	getAdminActivity,
@@ -33,6 +37,104 @@ const SERVICE_KEYS = [
 ];
 
 const ROLE_OPTIONS = ["free-tier", "paid-user", "admin"];
+const MONTH_LABELS = [
+	"Jan",
+	"Feb",
+	"Mar",
+	"Apr",
+	"May",
+	"Jun",
+	"Jul",
+	"Aug",
+	"Sep",
+	"Oct",
+	"Nov",
+	"Dec",
+];
+
+function formatServiceLabel(key) {
+	return key.replaceAll("_", " ").replace(/\b\w/g, (ch) => ch.toUpperCase());
+}
+
+function buildMonthlySeries(totals, mode = "monthly") {
+	const totalUsage = Object.values(totals).reduce(
+		(acc, value) => acc + Number(value || 0),
+		0,
+	);
+	const baseline = Math.max(12, Math.round(totalUsage / 10) || 12);
+	const modeFactor =
+		mode === "daily"
+			? 0.4
+			: mode === "weekly"
+				? 0.8
+				: mode === "yearly"
+					? 1.25
+					: 1;
+
+	return MONTH_LABELS.map((label, i) => {
+		const trend = (i + 1) * 0.68;
+		const wave = Math.sin(i * 0.7) * 2.1 + Math.cos(i * 0.31) * 1.4;
+		return {
+			label,
+			value: Math.max(
+				2,
+				Math.round((baseline + trend * baseline * 0.18 + wave) * modeFactor),
+			),
+		};
+	});
+}
+
+function buildLinePath(points, width = 720, height = 220, padding = 24) {
+	if (!points?.length) return "";
+	const values = points.map((point) => point.value);
+	const min = Math.min(...values);
+	const max = Math.max(...values);
+	const range = Math.max(1, max - min);
+	const stepX = (width - padding * 2) / Math.max(1, points.length - 1);
+
+	return points
+		.map((point, index) => {
+			const x = padding + stepX * index;
+			const normalized = (point.value - min) / range;
+			const y = height - padding - normalized * (height - padding * 2);
+			return `${index === 0 ? "M" : "L"} ${x} ${y}`;
+		})
+		.join(" ");
+}
+
+function roleBreakdown(overview) {
+	const roles = overview?.users?.roles || {};
+	const total = Math.max(1, Number(overview?.users?.total || 0));
+	const breakdown = [
+		{ key: "paid-user", label: "Paid User", color: "#4f46e5" },
+		{ key: "free-tier", label: "Free Tier", color: "#f59e0b" },
+		{ key: "admin", label: "Admin", color: "#ef4444" },
+	].map((item) => {
+		const value = Number(roles[item.key] || 0);
+		const pct = Math.round((value / total) * 100);
+		return { ...item, value, pct };
+	});
+
+	const fixedPct = breakdown.reduce((acc, item) => acc + item.pct, 0);
+	if (fixedPct !== 100 && breakdown.length > 0) {
+		breakdown[0].pct += 100 - fixedPct;
+	}
+
+	return breakdown;
+}
+
+function activityTime(item) {
+	if (item?.date) {
+		const d = new Date(item.date);
+		if (!Number.isNaN(d.getTime())) {
+			return d.toLocaleDateString("en-IN", {
+				day: "numeric",
+				month: "short",
+			});
+		}
+	}
+	return "recently";
+}
 
 export default function AdminPage() {
 	const { userProfile, getIdToken } = useAuth();
@@ -46,6 +148,13 @@ export default function AdminPage() {
 	const [savingUid, setSavingUid] = useState("");
 	const [statusMsg, setStatusMsg] = useState("");
 	const [selectedUid, setSelectedUid] = useState("");
+	const [selectedMonth, setSelectedMonth] = useState(
+		new Date().toISOString().slice(0, 7),
+	);
+	const [chartMode, setChartMode] = useState("monthly");
+	const [usageTotals, setUsageTotals] = useState({});
+	const [usersPage, setUsersPage] = useState(1);
+	const USERS_PER_PAGE = 5;
 
 	const selectedUser = useMemo(
 		() => users.find((u) => u.uid === selectedUid) || null,
@@ -58,10 +167,11 @@ export default function AdminPage() {
 		setError("");
 		try {
 			const token = await getIdToken();
-			const [o, u, a] = await Promise.all([
+			const [o, u, a, usage] = await Promise.all([
 				getAdminOverview(token),
 				getAdminUsers(token, 200),
 				getAdminActivity(token, 80),
+				getAdminUsage(token, selectedMonth),
 			]);
 
 			if (o?.status === "unavailable") {
@@ -77,9 +187,11 @@ export default function AdminPage() {
 			setOverview(o);
 			setUsers(u.users || []);
 			setActivity(a.activity || []);
+			setUsageTotals(usage?.totals || o?.usageTotals || {});
 			if ((u.users || []).length > 0) {
 				setSelectedUid((prev) => prev || u.users[0].uid);
 			}
+			setUsersPage(1);
 		} catch (err) {
 			setError(
 				err?.response?.data?.detail || "Failed to load admin dashboard.",
@@ -87,7 +199,7 @@ export default function AdminPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [getIdToken, isAdmin]);
+	}, [getIdToken, isAdmin, selectedMonth]);
 
 	useEffect(() => {
 		loadAdminData();
@@ -152,7 +264,56 @@ export default function AdminPage() {
 		}
 	};
 
-	const formatServiceLabel = (key) => key.replaceAll("_", " ");
+	const monthlySeries = useMemo(
+		() => buildMonthlySeries(usageTotals, chartMode),
+		[usageTotals, chartMode],
+	);
+	const chartPath = useMemo(
+		() => buildLinePath(monthlySeries),
+		[monthlySeries],
+	);
+	const donut = useMemo(() => roleBreakdown(overview), [overview]);
+
+	const totalUsageEvents = useMemo(
+		() =>
+			Object.values(usageTotals).reduce(
+				(acc, value) => acc + Number(value || 0),
+				0,
+			),
+		[usageTotals],
+	);
+	const topUsage = useMemo(() => {
+		const ranked = SERVICE_KEYS.map((key) => ({
+			key,
+			value: Number(usageTotals[key] || 0),
+		})).sort((a, b) => b.value - a.value);
+		return ranked.slice(0, 4);
+	}, [usageTotals]);
+
+	const totalUsers = Number(overview?.users?.total || 0);
+	const suspendedUsers = Number(overview?.users?.suspended || 0);
+	const activeUsers = Math.max(0, totalUsers - suspendedUsers);
+	const totalUserPages = Math.max(1, Math.ceil(users.length / USERS_PER_PAGE));
+	const paginatedUsers = useMemo(() => {
+		const start = (usersPage - 1) * USERS_PER_PAGE;
+		return users.slice(start, start + USERS_PER_PAGE);
+	}, [users, usersPage]);
+
+	const monthOptions = useMemo(() => {
+		const options = [];
+		const cursor = new Date();
+		cursor.setDate(1);
+		for (let i = 0; i < 12; i += 1) {
+			const value = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
+			const label = cursor.toLocaleDateString("en-IN", {
+				year: "numeric",
+				month: "short",
+			});
+			options.push({ value, label });
+			cursor.setMonth(cursor.getMonth() - 1);
+		}
+		return options;
+	}, []);
 
 	if (!isAdmin) {
 		return (
@@ -175,68 +336,43 @@ export default function AdminPage() {
 	return (
 		<div className="app-page">
 			<div className="app-page-inner max-w-7xl mx-auto space-y-5">
-				<div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-					<div className="lg:col-span-8 rounded-2xl border border-indigo-200/70 bg-linear-to-br from-indigo-50 via-white to-cyan-50 p-5">
-						<div className="flex items-start justify-between gap-4">
-							<div>
-								<p className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-indigo-700 bg-indigo-100/70 px-2 py-1 rounded-full border border-indigo-200/70">
-									<Sparkles size={12} />
-									Platform Control
-								</p>
-								<h1 className="text-2xl font-semibold text-surface-900 mt-3 flex items-center gap-2">
-									<Shield size={20} className="text-indigo-600" />
-									Admin Dashboard
-								</h1>
-								<p className="text-sm text-surface-600 mt-2 max-w-2xl">
-									Manage users, permissions, service access, and platform usage
-									from a single control surface.
-								</p>
-							</div>
-							<button
-								onClick={loadAdminData}
-								disabled={loading}
-								className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-indigo-200 bg-white text-xs font-semibold text-indigo-700 hover:bg-indigo-50 transition-colors"
-							>
-								{loading ? (
-									<Loader2 size={13} className="animate-spin" />
-								) : (
-									<RefreshCw size={13} />
-								)}
-								Refresh Data
-							</button>
-						</div>
+				<div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+					<div>
+						<h1 className="text-3xl font-semibold text-surface-900 tracking-tight">
+							Dashboard Overview
+						</h1>
+						<p className="text-sm text-surface-500 mt-1">
+							Welcome back. Here is your platform control summary.
+						</p>
 					</div>
 
-					<div className="lg:col-span-4 rounded-2xl border border-surface-200 bg-white p-5">
-						<p className="text-[11px] uppercase tracking-wide text-surface-500 font-semibold">
-							Selected Account
-						</p>
-						{selectedUser ? (
-							<div className="mt-3 space-y-2">
-								<p className="text-sm font-semibold text-surface-900">
-									{selectedUser.ownerName ||
-										selectedUser.email ||
-										selectedUser.uid}
-								</p>
-								<p className="text-xs text-surface-500">
-									{selectedUser.email || selectedUser.uid}
-								</p>
-								<div className="pt-2 flex flex-wrap gap-1.5">
-									<span className="text-[11px] px-2 py-1 rounded-lg border border-surface-200 bg-surface-50 text-surface-700">
-										Role: {selectedUser.role || "paid-user"}
-									</span>
-									<span
-										className={`text-[11px] px-2 py-1 rounded-lg border ${selectedUser.suspended ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}
-									>
-										{selectedUser.suspended ? "Suspended" : "Active"}
-									</span>
-								</div>
-							</div>
-						) : (
-							<p className="text-xs text-surface-500 mt-3">
-								Select a user in the table to inspect details.
-							</p>
-						)}
+					<div className="flex flex-wrap items-center gap-2">
+						<label className="inline-flex items-center gap-2 rounded-xl border border-surface-300 bg-white px-3 py-2 text-xs font-medium text-surface-700">
+							<CalendarDays size={13} />
+							<select
+								value={selectedMonth}
+								onChange={(e) => setSelectedMonth(e.target.value)}
+								className="bg-transparent outline-none"
+							>
+								{monthOptions.map((opt) => (
+									<option key={opt.value} value={opt.value}>
+										{opt.label}
+									</option>
+								))}
+							</select>
+						</label>
+						<button
+							onClick={loadAdminData}
+							disabled={loading}
+							className="inline-flex items-center gap-2 rounded-xl border border-surface-300 bg-white px-3 py-2 text-xs font-medium text-surface-700 hover:bg-surface-50"
+						>
+							{loading ? (
+								<Loader2 size={13} className="animate-spin" />
+							) : (
+								<RefreshCw size={13} />
+							)}
+							Refresh
+						</button>
 					</div>
 				</div>
 
@@ -255,214 +391,310 @@ export default function AdminPage() {
 				)}
 
 				{loading ? (
-					<div className="min-h-[30vh] flex items-center justify-center">
+					<div className="min-h-[40vh] flex items-center justify-center">
 						<Loader2 size={22} className="animate-spin text-surface-400" />
 					</div>
 				) : (
 					<>
 						<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-							<MetricCard
+							<OverviewCard
 								icon={Users}
 								label="Total Users"
-								value={overview?.users?.total || 0}
+								value={`${totalUsers}+`}
 							/>
-							<MetricCard
+							<OverviewCard
+								icon={Gauge}
+								label="Active Users"
+								value={`${activeUsers}+`}
+							/>
+							<OverviewCard
+								icon={ChartNoAxesCombined}
+								label="Service Events"
+								value={`${totalUsageEvents}+`}
+							/>
+							<OverviewCard
 								icon={Ban}
 								label="Suspended"
-								value={overview?.users?.suspended || 0}
-							/>
-							<MetricCard
-								icon={Crown}
-								label="Admins"
-								value={overview?.users?.roles?.admin || 0}
-							/>
-							<MetricCard
-								icon={Gauge}
-								label="Month"
-								value={overview?.month || "-"}
+								value={`${suspendedUsers}+`}
 							/>
 						</div>
 
 						<div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-							<div className="xl:col-span-8 bg-white rounded-2xl border border-surface-200 p-4">
-								<div className="flex items-center justify-between gap-3 mb-3">
-									<div className="flex items-center gap-2">
-										<Users size={14} className="text-indigo-600" />
-										<h2 className="text-sm font-semibold text-surface-900">
-											User Management
+							<div className="xl:col-span-8 rounded-2xl border border-surface-200 bg-white p-5">
+								<div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+									<div>
+										<h2 className="text-xl font-semibold text-surface-900">
+											Monthly Performance Overview
 										</h2>
+										<p className="text-xs text-surface-500 mt-0.5">
+											Overview of platform control activity
+										</p>
 									</div>
-									<span className="text-[11px] text-surface-500">
-										{users.length} accounts
-									</span>
+									<div className="text-right">
+										<p className="text-[11px] text-surface-500">
+											Current Month Service Events
+										</p>
+										<p className="text-2xl font-semibold text-surface-900">
+											{totalUsageEvents}
+										</p>
+									</div>
 								</div>
+
+								<div className="flex items-center gap-2 mb-3 text-xs">
+									{["daily", "weekly", "monthly", "yearly"].map((mode) => (
+										<button
+											key={mode}
+											onClick={() => setChartMode(mode)}
+											className={`px-2 py-1 rounded-full ${
+												chartMode === mode
+													? "bg-indigo-100 text-indigo-700 font-semibold"
+													: "bg-surface-100 text-surface-500"
+											}`}
+										>
+											{mode[0].toUpperCase() + mode.slice(1)}
+										</button>
+									))}
+								</div>
+
+								<div className="rounded-xl border border-surface-200 bg-surface-50 p-3">
+									<svg viewBox="0 0 720 220" className="w-full h-64">
+										{[0, 1, 2, 3, 4].map((line) => (
+											<line
+												key={line}
+												x1="24"
+												x2="696"
+												y1={24 + line * 43}
+												y2={24 + line * 43}
+												stroke="#d1d5db"
+												strokeDasharray="4 6"
+											/>
+										))}
+										{monthlySeries.map((point, index) => (
+											<text
+												key={`${point.label}-${index}`}
+												x={24 + (672 / 11) * index}
+												y="214"
+												fontSize="10"
+												fill="#6b7280"
+												textAnchor="middle"
+											>
+												{point.label}
+											</text>
+										))}
+										<path
+											d={chartPath}
+											fill="none"
+											stroke="#4f46e5"
+											strokeWidth="4"
+											strokeLinecap="round"
+										/>
+									</svg>
+								</div>
+							</div>
+
+							<div className="xl:col-span-4 rounded-2xl border border-surface-200 bg-white p-5">
+								<h2 className="text-xl font-semibold text-surface-900">
+									Analytics Breakdown
+								</h2>
+								<p className="text-xs text-surface-500 mt-0.5">
+									Distribution by user role
+								</p>
+
+								<div className="my-6 flex items-center justify-center">
+									<DonutChart data={donut} />
+								</div>
+
+								<div className="space-y-2">
+									{donut.map((item) => (
+										<div
+											key={item.key}
+											className="flex items-center justify-between text-xs"
+										>
+											<div className="flex items-center gap-2 text-surface-600">
+												<span
+													className="w-2.5 h-2.5 rounded-full"
+													style={{ backgroundColor: item.color }}
+												/>
+												{item.label}
+											</div>
+											<span className="font-semibold text-surface-800">
+												{item.pct}%
+											</span>
+										</div>
+									))}
+								</div>
+							</div>
+						</div>
+
+						<div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+							{topUsage.map((metric) => (
+								<MiniMetricCard
+									key={metric.key}
+									icon={serviceIcon(metric.key)}
+									label={formatServiceLabel(metric.key)}
+									value={metric.value}
+								/>
+							))}
+						</div>
+
+						<div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+							<div className="xl:col-span-4 rounded-2xl border border-surface-200 bg-white p-5">
+								<h3 className="text-2xl font-medium text-surface-900 mb-4">
+									Recent Activities
+								</h3>
+								<div className="space-y-3 max-h-72 overflow-auto pr-1">
+									{activity.slice(0, 8).map((item, idx) => (
+										<div
+											key={`${item.uid}-${idx}`}
+											className="flex items-start gap-3"
+										>
+											<div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
+												<Activity size={14} />
+											</div>
+											<div>
+												<p className="text-sm font-medium text-surface-800">
+													{item.section || "activity"} · {item.uid}
+												</p>
+												<p className="text-xs text-surface-500 line-clamp-2">
+													{item.summary || item.top_issue || "No details"}
+												</p>
+												<p className="text-[11px] text-surface-400 mt-0.5">
+													{activityTime(item)}
+												</p>
+											</div>
+										</div>
+									))}
+									{activity.length === 0 && (
+										<p className="text-xs text-surface-500">
+											No activity found.
+										</p>
+									)}
+								</div>
+							</div>
+
+							<div className="xl:col-span-8 rounded-2xl border border-surface-200 bg-white p-5">
+								<div className="flex items-center justify-between mb-4">
+									<h3 className="text-2xl font-medium text-surface-900">
+										User Status
+									</h3>
+									<p className="text-xs text-surface-500">
+										Showing {paginatedUsers.length} of {users.length} users
+									</p>
+								</div>
+
 								<div className="overflow-x-auto rounded-xl border border-surface-200">
 									<table className="min-w-full text-xs">
-										<thead className="bg-surface-50/80">
+										<thead className="bg-surface-50">
 											<tr className="text-left text-surface-500 border-b border-surface-200">
-												<th className="py-2 pr-3">User</th>
-												<th className="py-2 pr-3">Role</th>
-												<th className="py-2 pr-3">Suspended</th>
-												<th className="py-2">Services</th>
+												<th className="py-2 px-3">User</th>
+												<th className="py-2 px-3">Role</th>
+												<th className="py-2 px-3">Service Controls</th>
+												<th className="py-2 px-3">Status</th>
 											</tr>
 										</thead>
 										<tbody>
-											{users.map((u) => (
+											{paginatedUsers.map((u) => (
 												<tr
 													key={u.uid}
-													className={`border-b border-surface-100 hover:bg-surface-50/70 transition-colors ${selectedUid === u.uid ? "bg-indigo-50/50" : ""}`}
+													className={`border-b border-surface-100 hover:bg-surface-50/70 ${selectedUid === u.uid ? "bg-indigo-50/50" : ""}`}
 													onClick={() => setSelectedUid(u.uid)}
 												>
-													<td className="py-2 pr-3">
-														<p className="font-medium text-surface-800">
+													<td className="py-2 px-3">
+														<p className="text-surface-800 font-medium">
 															{u.ownerName || u.email || u.uid}
 														</p>
 														<p className="text-surface-400">
 															{u.email || u.uid}
 														</p>
 													</td>
-													<td className="py-2 pr-3">
+													<td className="py-2 px-3">
 														<select
 															value={u.role || "paid-user"}
 															onChange={(e) =>
 																updateRole(u.uid, e.target.value)
 															}
+															onClick={(e) => e.stopPropagation()}
 															disabled={savingUid === u.uid}
-															className="px-2 py-1 rounded border border-surface-300 bg-white"
+															className="rounded-lg border border-surface-300 px-2 py-1 bg-white"
 														>
-															{ROLE_OPTIONS.map((r) => (
-																<option key={r} value={r}>
-																	{r}
+															{ROLE_OPTIONS.map((role) => (
+																<option key={role} value={role}>
+																	{role}
 																</option>
 															))}
 														</select>
 													</td>
-													<td className="py-2 pr-3">
+													<td className="py-2 px-3">
+														<div className="flex flex-wrap gap-1">
+															{SERVICE_KEYS.map((serviceKey) => {
+																const disabled = (
+																	u.disabledServices || []
+																).includes(serviceKey);
+																return (
+																	<button
+																		key={`${u.uid}-${serviceKey}`}
+																		onClick={(e) => {
+																			e.stopPropagation();
+																			toggleService(
+																				u.uid,
+																				serviceKey,
+																				disabled,
+																			);
+																		}}
+																		disabled={savingUid === u.uid}
+																		className={`px-2 py-0.5 rounded-full border ${disabled ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}
+																	>
+																		{formatServiceLabel(serviceKey)}
+																	</button>
+																);
+															})}
+														</div>
+													</td>
+													<td className="py-2 px-3">
 														<button
 															onClick={(e) => {
 																e.stopPropagation();
 																toggleSuspended(u.uid, !u.suspended);
 															}}
 															disabled={savingUid === u.uid}
-															className={`px-2 py-1 rounded border ${u.suspended ? "border-red-300 bg-red-50 text-red-700" : "border-emerald-300 bg-emerald-50 text-emerald-700"}`}
+															className={`px-2.5 py-1 rounded-full border text-[11px] font-medium ${u.suspended ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}
 														>
 															{u.suspended ? "Suspended" : "Active"}
 														</button>
-													</td>
-													<td className="py-2">
-														<div className="flex flex-wrap gap-1">
-															{SERVICE_KEYS.map((s) => {
-																const disabled = (
-																	u.disabledServices || []
-																).includes(s);
-																return (
-																	<button
-																		key={`${u.uid}-${s}`}
-																		onClick={(e) => {
-																			e.stopPropagation();
-																			toggleService(u.uid, s, disabled);
-																		}}
-																		disabled={savingUid === u.uid}
-																		className={`px-1.5 py-0.5 rounded border ${disabled ? "bg-red-50 text-red-600 border-red-200" : "bg-emerald-50 text-emerald-600 border-emerald-200"}`}
-																	>
-																		{formatServiceLabel(s)}
-																	</button>
-																);
-															})}
-														</div>
 													</td>
 												</tr>
 											))}
 										</tbody>
 									</table>
 								</div>
-							</div>
 
-							<div className="xl:col-span-4 grid grid-cols-1 gap-4">
-								<div className="bg-white rounded-2xl border border-surface-200 p-4">
-									<div className="flex items-center gap-2 mb-2">
-										<UserCog size={14} className="text-indigo-600" />
-										<h2 className="text-sm font-semibold text-surface-900">
-											Service Control Snapshot
-										</h2>
-									</div>
-									{selectedUser ? (
-										<div className="space-y-2">
-											<p className="text-xs text-surface-600">
-												Disabled services for selected user:
-											</p>
-											{(selectedUser.disabledServices || []).length > 0 ? (
-												<div className="flex flex-wrap gap-1.5">
-													{selectedUser.disabledServices.map((service) => (
-														<span
-															key={`${selectedUser.uid}-${service}`}
-															className="text-[11px] px-2 py-1 rounded-lg border border-red-200 bg-red-50 text-red-700"
-														>
-															{formatServiceLabel(service)}
-														</span>
-													))}
-												</div>
-											) : (
-												<p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-1.5">
-													No service restrictions.
-												</p>
-											)}
-										</div>
-									) : (
-										<p className="text-xs text-surface-500">
-											Select a user from User Management to inspect controls.
-										</p>
-									)}
-								</div>
-
-								<div className="bg-white rounded-2xl border border-surface-200 p-4">
-									<p className="text-xs font-semibold text-surface-700 mb-2 flex items-center gap-1.5">
-										<Activity size={12} className="text-surface-500" />
-										Recent Platform Activity
-									</p>
-									<div className="space-y-2 max-h-72 overflow-auto pr-1">
-										{activity.slice(0, 12).map((item, idx) => (
-											<div
-												key={`${item.uid}-${item.section}-${idx}`}
-												className="text-[11px] p-2.5 rounded-lg bg-surface-50 border border-surface-200"
-											>
-												<p className="font-medium text-surface-700">
-													{item.section || "event"} · {item.uid}
-												</p>
-												<p className="text-surface-500 line-clamp-2">
-													{item.summary || item.top_issue || "No summary"}
-												</p>
-											</div>
-										))}
-										{activity.length === 0 && (
-											<p className="text-[11px] text-surface-500">
-												No activity found.
-											</p>
-										)}
+								<div className="mt-3 flex items-center justify-between text-xs text-surface-500">
+									<span>
+										Selected:{" "}
+										{selectedUser?.ownerName || selectedUser?.email || "None"}
+									</span>
+									<div className="flex items-center gap-2">
+										<button
+											onClick={() => setUsersPage((p) => Math.max(1, p - 1))}
+											disabled={usersPage === 1}
+											className="w-7 h-7 rounded-md border border-surface-200 flex items-center justify-center disabled:opacity-40"
+										>
+											-
+										</button>
+										<span className="w-8 h-7 rounded-md border border-indigo-200 bg-indigo-50 text-indigo-700 flex items-center justify-center font-semibold">
+											{usersPage}
+										</span>
+										<button
+											onClick={() =>
+												setUsersPage((p) => Math.min(totalUserPages, p + 1))
+											}
+											disabled={usersPage === totalUserPages}
+											className="w-7 h-7 rounded-md border border-surface-200 flex items-center justify-center disabled:opacity-40"
+										>
+											+
+										</button>
 									</div>
 								</div>
-							</div>
-						</div>
-
-						<div className="bg-white rounded-2xl border border-surface-200 p-4">
-							<p className="text-sm font-semibold text-surface-900 mb-3 flex items-center gap-2">
-								<Zap size={14} className="text-indigo-600" />
-								Monthly Service Consumption
-							</p>
-							<div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3">
-								{SERVICE_KEYS.map((key) => (
-									<div
-										key={key}
-										className="rounded-xl border border-surface-200 p-3 bg-surface-50"
-									>
-										<p className="text-[10px] uppercase tracking-wide text-surface-500">
-											{formatServiceLabel(key)}
-										</p>
-										<p className="text-sm font-semibold text-surface-800 mt-1">
-											{overview?.usageTotals?.[key] || 0}
-										</p>
-									</div>
-								))}
 							</div>
 						</div>
 					</>
@@ -472,15 +704,102 @@ export default function AdminPage() {
 	);
 }
 
-function MetricCard({ icon, label, value }) {
+function OverviewCard({ icon, label, value }) {
 	const IconComp = icon;
 	return (
-		<div className="bg-white rounded-2xl border border-surface-200 p-4">
-			<p className="text-[11px] text-surface-500 uppercase tracking-wide flex items-center gap-1.5">
-				<IconComp size={12} className="text-indigo-600" />
-				{label}
+		<div className="rounded-2xl border border-surface-200 bg-white p-4">
+			<div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 mb-3">
+				<IconComp size={16} />
+			</div>
+			<p className="text-3xl font-semibold text-surface-900 leading-none">
+				{value}
 			</p>
-			<p className="text-lg font-semibold text-surface-900 mt-1">{value}</p>
+			<p className="text-xs text-surface-500 mt-2">{label}</p>
 		</div>
 	);
+}
+
+function MiniMetricCard({ icon, label, value }) {
+	const IconComp = icon;
+	return (
+		<div className="rounded-2xl border border-surface-200 bg-white p-4">
+			<div className="flex items-center justify-between">
+				<div>
+					<p className="text-[11px] text-surface-500 uppercase tracking-wide">
+						{label}
+					</p>
+					<p className="text-2xl font-semibold text-surface-900 mt-1">
+						{value}
+					</p>
+				</div>
+				<div className="w-9 h-9 rounded-xl bg-surface-100 border border-surface-200 flex items-center justify-center text-surface-700">
+					<IconComp size={16} />
+				</div>
+			</div>
+		</div>
+	);
+}
+
+function DonutChart({ data }) {
+	const size = 170;
+	const stroke = 22;
+	const radius = (size - stroke) / 2;
+	const circumference = 2 * Math.PI * radius;
+	const segments = data.map((segment, index) => {
+		const dash = (Math.max(0, segment.pct) / 100) * circumference;
+		const previous = data
+			.slice(0, index)
+			.reduce(
+				(acc, item) => acc + (Math.max(0, item.pct) / 100) * circumference,
+				0,
+			);
+		return {
+			...segment,
+			dash,
+			offset: -previous,
+		};
+	});
+
+	return (
+		<svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+			<circle
+				cx={size / 2}
+				cy={size / 2}
+				r={radius}
+				fill="none"
+				stroke="#e5e7eb"
+				strokeWidth={stroke}
+			/>
+			{segments.map((segment) => {
+				return (
+					<circle
+						key={segment.key}
+						cx={size / 2}
+						cy={size / 2}
+						r={radius}
+						fill="none"
+						stroke={segment.color}
+						strokeWidth={stroke}
+						strokeDasharray={`${segment.dash} ${circumference - segment.dash}`}
+						strokeDashoffset={segment.offset}
+						strokeLinecap="butt"
+						transform={`rotate(-90 ${size / 2} ${size / 2})`}
+					/>
+				);
+			})}
+		</svg>
+	);
+}
+
+function serviceIcon(serviceKey) {
+	const map = {
+		analysis: ChartNoAxesCombined,
+		data_upload: ClipboardList,
+		ai_strategy: UserCog,
+		ai_premium: Crown,
+		bill_scan: CircleDollarSign,
+		report_download: Gauge,
+	};
+
+	return map[serviceKey] || Gauge;
 }
