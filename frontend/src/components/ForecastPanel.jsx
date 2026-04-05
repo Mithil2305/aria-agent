@@ -138,9 +138,14 @@ export default function ForecastPanel({ forecasts, expanded }) {
 
 			<div
 				className={expanded ? "h-72" : "h-56"}
-				style={{ minWidth: 0, minHeight: expanded ? 288 : 224 }}
+				style={{ width: "100%", minWidth: 0, minHeight: expanded ? 288 : 224 }}
 			>
-				<ResponsiveContainer width="99%" height="100%">
+				<ResponsiveContainer
+					width="100%"
+					height="100%"
+					minWidth={0}
+					minHeight={expanded ? 288 : 224}
+				>
 					<ComposedChart
 						data={combinedData}
 						margin={{ top: 5, right: 10, left: 0, bottom: 5 }}

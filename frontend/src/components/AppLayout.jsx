@@ -13,6 +13,7 @@ import {
 	Lightbulb,
 	Crown,
 	Gauge,
+	Shield,
 	Loader2,
 	Sparkles,
 	CheckCircle2,
@@ -136,6 +137,9 @@ export default function AppLayout() {
 					</p>
 					{[
 						...NAV_ITEMS,
+						...(userProfile?.role === "admin"
+							? [{ to: "/admin", icon: Shield, label: "Admin" }]
+							: []),
 						...(needsStockManagement(userProfile?.businessType)
 							? [{ to: "/stock", icon: Package, label: "Stock" }]
 							: []),

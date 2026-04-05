@@ -40,6 +40,7 @@ import {
 } from "../config/businessTypes";
 import { useNavigate } from "react-router-dom";
 import { scanBillImage } from "../services/api";
+import { formatCurrency, getCurrencySymbol } from "../utils/currency";
 
 function getCurrentMonth() {
 	const d = new Date();
@@ -49,6 +50,8 @@ function getCurrentMonth() {
 export default function StockManagementPage() {
 	const { user, userProfile } = useAuth();
 	const navigate = useNavigate();
+	const currencyCode = userProfile?.currency || "INR";
+	const currencySymbol = getCurrencySymbol(currencyCode);
 
 	const businessType = userProfile?.businessType || "";
 	const category = getBusinessCategory(businessType);
@@ -332,7 +335,7 @@ export default function StockManagementPage() {
 							{monthSummary.totalIn.toLocaleString()}
 						</p>
 						<p className="text-[10px] text-surface-400">
-							${monthSummary.totalCostIn.toLocaleString()} value
+							{formatCurrency(monthSummary.totalCostIn, currencyCode)} value
 						</p>
 					</div>
 					<div className="card p-4">
@@ -346,7 +349,7 @@ export default function StockManagementPage() {
 							{monthSummary.totalOut.toLocaleString()}
 						</p>
 						<p className="text-[10px] text-surface-400">
-							${monthSummary.totalCostOut.toLocaleString()} value
+							{formatCurrency(monthSummary.totalCostOut, currencyCode)} value
 						</p>
 					</div>
 					<div className="card p-4">
@@ -503,7 +506,7 @@ export default function StockManagementPage() {
 																{scanResult.storeName &&
 																	` from ${scanResult.storeName}`}
 																{scanResult.billTotal &&
-																	` · Total: ₹${scanResult.billTotal.toLocaleString()}`}
+																	` · Total: ${formatCurrency(scanResult.billTotal, currencyCode)}`}
 															</span>
 														</>
 													) : (
@@ -688,13 +691,13 @@ export default function StockManagementPage() {
 									{/* Unit Cost */}
 									<div className="md:col-span-1">
 										<label className="block md:hidden text-[10px] font-medium text-surface-400 mb-1">
-											Unit Cost ($)
+											Unit Cost ({currencySymbol})
 										</label>
 										<input
 											type="number"
 											min="0"
 											step="0.01"
-											placeholder="$"
+											placeholder={currencySymbol}
 											value={entry.unitCost}
 											onChange={(e) =>
 												updateEntry(entry.id, "unitCost", e.target.value)
@@ -857,10 +860,10 @@ export default function StockManagementPage() {
 															{net.toLocaleString()}
 														</td>
 														<td className="text-right px-4 py-3 text-surface-500 hidden md:table-cell">
-															$
-															{(
-																(h.unitCost || 0) * (h.stockIn || 0)
-															).toLocaleString()}
+															{formatCurrency(
+																(h.unitCost || 0) * (h.stockIn || 0),
+																currencyCode,
+															)}
 														</td>
 														<td className="px-4 py-3">
 															<button

@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import {
+	createContext,
+	useContext,
+	useState,
+	useEffect,
+	useCallback,
+} from "react";
 import {
 	createUserWithEmailAndPassword,
 	signInWithEmailAndPassword,
@@ -15,11 +21,21 @@ import {
 	setDoc,
 	getDoc,
 	updateDoc,
+	deleteField,
 	serverTimestamp,
 } from "firebase/firestore";
 import { auth, db } from "../firebase";
 
 const AuthContext = createContext(null);
+const ADMIN_EMAIL = "admin@yukti.com";
+
+function isAdminEmail(email) {
+	return (
+		String(email || "")
+			.trim()
+			.toLowerCase() === ADMIN_EMAIL
+	);
+}
 
 // eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
@@ -37,6 +53,7 @@ export function AuthProvider({ children }) {
 
 	const ensureUserProfileDoc = async (firebaseUser, profileData = {}) => {
 		if (!firebaseUser) return null;
+		const adminUser = isAdminEmail(firebaseUser.email);
 
 		const ref = doc(db, "users", firebaseUser.uid);
 		const snap = await getDoc(ref);
@@ -55,9 +72,8 @@ export function AuthProvider({ children }) {
 				address: profileData.address || "",
 				currency: profileData.currency || "INR",
 				createdAt: serverTimestamp(),
-				plan: "free",
-				role: "free-tier",
-				trialStartDate: serverTimestamp(),
+				role: adminUser ? "admin" : "free-tier",
+				trialStartDate: adminUser ? null : serverTimestamp(),
 			};
 			await setDoc(ref, profile);
 			setUserProfile(profile);
@@ -86,6 +102,12 @@ export function AuthProvider({ children }) {
 		}
 		if (!existing.currency && profileData.currency) {
 			patch.currency = profileData.currency;
+		}
+		if (adminUser && existing.role !== "admin") {
+			patch.role = "admin";
+		}
+		if (Object.prototype.hasOwnProperty.call(existing, "plan")) {
+			patch.plan = deleteField();
 		}
 
 		if (Object.keys(patch).length > 0) {
@@ -130,7 +152,6 @@ export function AuthProvider({ children }) {
 			address: profileData.address || "",
 			currency: profileData.currency || "INR",
 			createdAt: serverTimestamp(),
-			plan: "free",
 			role: "free-tier",
 			trialStartDate: serverTimestamp(),
 		};
@@ -143,12 +164,8 @@ export function AuthProvider({ children }) {
 	const login = async (email, password) => {
 		const cred = await signInWithEmailAndPassword(auth, email, password);
 		await reload(cred.user);
-		if (!cred.user.emailVerified) {
-			try {
-				await sendEmailVerification(cred.user);
-			} catch {
-				// Best effort only; sign-in should still be blocked when unverified.
-			}
+		const adminUser = isAdminEmail(cred.user.email);
+		if (!cred.user.emailVerified && !adminUser) {
 			await signOut(auth);
 			const err = new Error("Email not verified");
 			err.code = "auth/email-not-verified";
@@ -186,10 +203,10 @@ export function AuthProvider({ children }) {
 		setUserProfile(null);
 	};
 
-	const getIdToken = async () => {
+	const getIdToken = useCallback(async () => {
 		if (!user) return null;
 		return user.getIdToken();
-	};
+	}, [user]);
 
 	const updateUserProfile = async (updates) => {
 		if (!user) return;

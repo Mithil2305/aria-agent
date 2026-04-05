@@ -41,6 +41,9 @@ from pathlib import Path
 from datetime import datetime, date
 from setup_route import router as setup_router
 
+DEFAULT_ADMIN_EMAIL = "admin@yukti.com"
+DEFAULT_ADMIN_PASSWORD = "Admin@2026/"
+
 # ── API keys are loaded from local backend environment/config ──
 if not os.environ.get("GEMINI_API_KEY"):
     print("  [INFO] Using local .env/config for API keys")
@@ -129,6 +132,19 @@ class PremiumAnalysisRequest(BaseModel):
     businessType: Optional[str] = None
     businessCategory: Optional[str] = None
     region: Optional[str] = "India"
+
+
+class AdminUserPatch(BaseModel):
+    role: Optional[str] = None
+    suspended: Optional[bool] = None
+    disabledServices: Optional[List[str]] = None
+    serviceLimits: Optional[dict[str, int]] = None
+    featureFlags: Optional[dict[str, bool]] = None
+    notes: Optional[str] = None
+
+
+class AdminServiceToggle(BaseModel):
+    enabled: bool
 
 
 # ---------------------------------------------------------------------------
@@ -223,6 +239,105 @@ async def get_current_user(
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
+
+def _admin_email_set() -> set[str]:
+    return {e.lower() for e in _env_csv("YUKTI_ADMIN_EMAILS") if e}
+
+
+def _firestore_user_doc(uid: str):
+    db = _get_firestore_client()
+    if db is None:
+        return None
+    return db.collection("users").document(uid)
+
+
+def _is_admin_user(uid: Optional[str], email: Optional[str] = None) -> bool:
+    if not uid:
+        return False
+
+    if email and email.lower() in _admin_email_set():
+        return True
+
+    user_ref = _firestore_user_doc(uid)
+    if user_ref is None:
+        return False
+
+    try:
+        snap = user_ref.get()
+        if not snap.exists:
+            return False
+        role = (snap.to_dict() or {}).get("role", "")
+        return str(role).lower() == "admin"
+    except Exception:
+        return False
+
+
+def _assert_service_allowed(uid: Optional[str], service_key: str) -> None:
+    """Server-side enforcement for admin-managed user controls."""
+    if not uid:
+        return
+    if _is_admin_user(uid):
+        return
+
+    user_ref = _firestore_user_doc(uid)
+    if user_ref is None:
+        return
+
+    try:
+        snap = user_ref.get()
+        if not snap.exists:
+            return
+        managed = (snap.to_dict() or {}).get("managed", {}) or {}
+        if bool(managed.get("suspended")):
+            raise HTTPException(
+                status_code=403,
+                detail="Your account is temporarily suspended by admin.",
+            )
+        disabled = set(managed.get("disabledServices", []) or [])
+        if service_key in disabled:
+            raise HTTPException(
+                status_code=403,
+                detail="This service is currently disabled for your account by admin.",
+            )
+    except HTTPException:
+        raise
+    except Exception:
+        return
+
+
+async def require_admin(
+    creds: HTTPAuthorizationCredentials = Depends(security),
+):
+    if not _firebase_available:
+        # Local-development fallback: allow admin routes to respond gracefully
+        # even when Firebase Admin credentials are not configured.
+        dev_bypass = os.getenv("YUKTI_ALLOW_DEV_ADMIN_NO_FIREBASE", "1").strip()
+        if dev_bypass.lower() in {"1", "true", "yes", "on"}:
+            return {
+                "uid": "local-admin",
+                "email": DEFAULT_ADMIN_EMAIL,
+                "devBypass": True,
+            }
+        raise HTTPException(
+            status_code=503,
+            detail="Admin APIs require Firebase Admin credentials on backend.",
+        )
+    if creds is None:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+
+    try:
+        decoded = firebase_auth.verify_id_token(creds.credentials)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    uid = decoded.get("uid")
+    email = decoded.get("email")
+    if decoded.get("admin") is True:
+        return {"uid": uid, "email": email}
+    if not _is_admin_user(uid, email):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return {"uid": uid, "email": email}
+
 # ---------------------------------------------------------------------------
 # Session store — persisted to disk so data survives uvicorn --reload
 # ---------------------------------------------------------------------------
@@ -290,6 +405,98 @@ def _get_firestore_client():
         return _fs.client()
     except Exception:
         return None
+
+
+def _bootstrap_default_admin_account() -> None:
+    """Ensure default admin credentials exist and are mapped to admin role."""
+    if not _firebase_available:
+        return
+
+    # Allow explicit opt-out in production environments.
+    if os.getenv("YUKTI_BOOTSTRAP_DEFAULT_ADMIN", "1").strip() in {"0", "false", "False"}:
+        return
+
+    try:
+        try:
+            user_record = firebase_auth.get_user_by_email(DEFAULT_ADMIN_EMAIL)
+            # Keep credentials in sync with requested defaults.
+            firebase_auth.update_user(
+                user_record.uid,
+                password=DEFAULT_ADMIN_PASSWORD,
+                email_verified=True,
+            )
+        except Exception:
+            user_record = firebase_auth.create_user(
+                email=DEFAULT_ADMIN_EMAIL,
+                password=DEFAULT_ADMIN_PASSWORD,
+                display_name="Yukti Admin",
+                email_verified=True,
+            )
+
+        # Grant hard admin custom claim for token-based checks.
+        firebase_auth.set_custom_user_claims(user_record.uid, {"admin": True})
+
+        db = _get_firestore_client()
+        if db is not None:
+            db.collection("users").document(user_record.uid).set(
+                {
+                    "email": DEFAULT_ADMIN_EMAIL,
+                    "ownerName": "Yukti Admin",
+                    "businessName": "Yukti Platform",
+                    "businessType": "Platform Admin",
+                    "role": "admin",
+                    "currency": "INR",
+                    "managed": {
+                        "suspended": False,
+                        "disabledServices": [],
+                        "featureFlags": {"fullPlatformAccess": True},
+                        "updatedAt": datetime.utcnow(),
+                        "updatedBy": "system-bootstrap",
+                        "notes": "Auto-bootstrapped default admin account",
+                    },
+                    "updatedAt": datetime.utcnow(),
+                },
+                merge=True,
+            )
+
+        logging.getLogger("yukti.admin").info(
+            "✅ Default admin account ready: %s", DEFAULT_ADMIN_EMAIL
+        )
+    except Exception as e:
+        logging.getLogger("yukti.admin").warning(
+            "⚠ Could not bootstrap default admin account: %s", e
+        )
+
+
+def _cleanup_legacy_plan_field() -> None:
+    """Remove legacy `plan` field from all Firestore user docs."""
+    db = _get_firestore_client()
+    if db is None:
+        return
+
+    try:
+        from firebase_admin import firestore as _fs
+
+        removed = 0
+        for doc in db.collection("users").stream():
+            data = doc.to_dict() or {}
+            if "plan" not in data:
+                continue
+            doc.reference.set({"plan": _fs.DELETE_FIELD}, merge=True)
+            removed += 1
+
+        if removed:
+            logging.getLogger("yukti.admin").info(
+                "✅ Removed legacy plan field from %s user docs", removed
+            )
+    except Exception as e:
+        logging.getLogger("yukti.admin").warning(
+            "⚠ Could not cleanup legacy plan field: %s", e
+        )
+
+
+_bootstrap_default_admin_account()
+_cleanup_legacy_plan_field()
 
 
 def _build_history_context(uid: Optional[str], limit: int = 12) -> dict:
@@ -439,6 +646,351 @@ def _save_generated_report(uid: Optional[str], section: str, payload: dict[str, 
         pass
 
 
+def _coerce_usage_value(value: Any) -> int:
+    try:
+        return int(value)
+    except Exception:
+        return 0
+
+
+@app.get("/api/admin/overview")
+async def admin_overview(admin=Depends(require_admin)):
+    db = _get_firestore_client()
+    if db is None:
+        return {
+            "status": "unavailable",
+            "reason": "Firestore not configured",
+            "month": datetime.utcnow().strftime("%Y-%m"),
+            "users": {"total": 0, "suspended": 0, "roles": {}},
+            "usageTotals": {},
+            "admin": {
+                "uid": admin.get("uid"),
+                "email": admin.get("email"),
+            },
+        }
+
+    try:
+        users_docs = list(db.collection("users").stream())
+        month_key = datetime.utcnow().strftime("%Y-%m")
+
+        role_counts = {"admin": 0, "paid-user": 0, "free-tier": 0, "other": 0}
+        suspended_count = 0
+
+        for doc in users_docs:
+            data = doc.to_dict() or {}
+            role = str(data.get("role", "paid-user")).lower()
+            if role in role_counts:
+                role_counts[role] += 1
+            else:
+                role_counts["other"] += 1
+
+            managed = data.get("managed", {}) or {}
+            if bool(managed.get("suspended")):
+                suspended_count += 1
+
+        usage_totals: dict[str, int] = {}
+        for usage_user in db.collection("usage").stream():
+            month_snap = (
+                db.collection("usage")
+                .document(usage_user.id)
+                .collection("months")
+                .document(month_key)
+                .get()
+            )
+            if not month_snap.exists:
+                continue
+            udata = month_snap.to_dict() or {}
+            for key, value in udata.items():
+                if key.startswith("_"):
+                    continue
+                usage_totals[key] = usage_totals.get(key, 0) + _coerce_usage_value(value)
+
+        return {
+            "status": "success",
+            "month": month_key,
+            "users": {
+                "total": len(users_docs),
+                "suspended": suspended_count,
+                "roles": role_counts,
+            },
+            "usageTotals": usage_totals,
+            "admin": {
+                "uid": admin.get("uid"),
+                "email": admin.get("email"),
+            },
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load admin overview: {e}")
+
+
+@app.get("/api/admin/users")
+async def admin_list_users(limit: int = 200, admin=Depends(require_admin)):
+    db = _get_firestore_client()
+    if db is None:
+        return {
+            "status": "unavailable",
+            "reason": "Firestore not configured",
+            "count": 0,
+            "users": [],
+            "requestedBy": admin.get("uid"),
+        }
+
+    safe_limit = max(1, min(limit, 500))
+    try:
+        users = []
+        for doc in db.collection("users").limit(safe_limit).stream():
+            data = doc.to_dict() or {}
+            managed = data.get("managed", {}) or {}
+            users.append(
+                {
+                    "uid": doc.id,
+                    "email": data.get("email"),
+                    "ownerName": data.get("ownerName"),
+                    "businessName": data.get("businessName"),
+                    "businessType": data.get("businessType"),
+                    "role": data.get("role", "paid-user"),
+                    "currency": data.get("currency", "INR"),
+                    "suspended": bool(managed.get("suspended", False)),
+                    "disabledServices": managed.get("disabledServices", []),
+                    "serviceLimits": managed.get("serviceLimits", {}),
+                    "featureFlags": managed.get("featureFlags", {}),
+                    "notes": managed.get("notes", ""),
+                    "managedUpdatedAt": managed.get("updatedAt"),
+                }
+            )
+
+        return {
+            "status": "success",
+            "count": len(users),
+            "users": users,
+            "requestedBy": admin.get("uid"),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to list users: {e}")
+
+
+@app.get("/api/admin/usage")
+async def admin_usage(month: Optional[str] = None, admin=Depends(require_admin)):
+    db = _get_firestore_client()
+    if db is None:
+        return {
+            "status": "unavailable",
+            "reason": "Firestore not configured",
+            "month": month or datetime.utcnow().strftime("%Y-%m"),
+            "rows": [],
+            "totals": {},
+            "requestedBy": admin.get("uid"),
+        }
+
+    month_key = month or datetime.utcnow().strftime("%Y-%m")
+    try:
+        usage_rows = []
+        totals: dict[str, int] = {}
+        for user_doc in db.collection("usage").stream():
+            uid = user_doc.id
+            month_snap = (
+                db.collection("usage")
+                .document(uid)
+                .collection("months")
+                .document(month_key)
+                .get()
+            )
+            if not month_snap.exists:
+                continue
+            data = month_snap.to_dict() or {}
+            clean = {}
+            for key, value in data.items():
+                if key.startswith("_"):
+                    continue
+                iv = _coerce_usage_value(value)
+                clean[key] = iv
+                totals[key] = totals.get(key, 0) + iv
+
+            usage_rows.append({"uid": uid, "usage": clean})
+
+        return {
+            "status": "success",
+            "month": month_key,
+            "rows": usage_rows,
+            "totals": totals,
+            "requestedBy": admin.get("uid"),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch usage: {e}")
+
+
+@app.patch("/api/admin/users/{target_uid}")
+async def admin_patch_user(target_uid: str, payload: AdminUserPatch, admin=Depends(require_admin)):
+    db = _get_firestore_client()
+    if db is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Admin user management requires Firestore configuration on backend.",
+        )
+
+    try:
+        user_ref = db.collection("users").document(target_uid)
+        snap = user_ref.get()
+        if not snap.exists:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        patch: dict[str, Any] = {"updatedAt": datetime.utcnow()}
+        managed_patch: dict[str, Any] = {
+            "updatedAt": datetime.utcnow(),
+            "updatedBy": admin.get("uid"),
+        }
+
+        if payload.role is not None:
+            normalized_role = str(payload.role).strip().lower()
+            allowed_roles = {"free-tier", "paid-user", "admin"}
+            if normalized_role not in allowed_roles:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Invalid role. Allowed roles: free-tier, paid-user, admin.",
+                )
+            patch["role"] = normalized_role
+        if payload.suspended is not None:
+            managed_patch["suspended"] = bool(payload.suspended)
+        if payload.disabledServices is not None:
+            managed_patch["disabledServices"] = sorted(
+                list({str(s).strip() for s in payload.disabledServices if str(s).strip()})
+            )
+        if payload.serviceLimits is not None:
+            managed_patch["serviceLimits"] = {
+                str(k): max(0, int(v)) for k, v in payload.serviceLimits.items()
+            }
+        if payload.featureFlags is not None:
+            managed_patch["featureFlags"] = {
+                str(k): bool(v) for k, v in payload.featureFlags.items()
+            }
+        if payload.notes is not None:
+            managed_patch["notes"] = str(payload.notes)[:500]
+
+        patch["managed"] = managed_patch
+        user_ref.set(patch, merge=True)
+
+        # Ensure legacy field cannot survive after any admin patch operation.
+        from firebase_admin import firestore as _fs
+        user_ref.set({"plan": _fs.DELETE_FIELD}, merge=True)
+
+        return {
+            "status": "success",
+            "uid": target_uid,
+            "updated": patch,
+            "requestedBy": admin.get("uid"),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update user: {e}")
+
+
+@app.post("/api/admin/users/{target_uid}/services/{service_key}")
+async def admin_toggle_service(
+    target_uid: str,
+    service_key: str,
+    payload: AdminServiceToggle,
+    admin=Depends(require_admin),
+):
+    db = _get_firestore_client()
+    if db is None:
+        raise HTTPException(
+            status_code=400,
+            detail="Admin service controls require Firestore configuration on backend.",
+        )
+
+    try:
+        user_ref = db.collection("users").document(target_uid)
+        snap = user_ref.get()
+        if not snap.exists:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        managed = (snap.to_dict() or {}).get("managed", {}) or {}
+        disabled = set(managed.get("disabledServices", []) or [])
+        if payload.enabled:
+            disabled.discard(service_key)
+        else:
+            disabled.add(service_key)
+
+        user_ref.set(
+            {
+                "managed": {
+                    "disabledServices": sorted(disabled),
+                    "updatedAt": datetime.utcnow(),
+                    "updatedBy": admin.get("uid"),
+                }
+            },
+            merge=True,
+        )
+
+        return {
+            "status": "success",
+            "uid": target_uid,
+            "service": service_key,
+            "enabled": payload.enabled,
+            "disabledServices": sorted(disabled),
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to toggle service: {e}")
+
+
+@app.get("/api/admin/activity")
+async def admin_activity(limit: int = 60, admin=Depends(require_admin)):
+    db = _get_firestore_client()
+    if db is None:
+        return {
+            "status": "unavailable",
+            "reason": "Firestore not configured",
+            "count": 0,
+            "activity": [],
+        }
+
+    safe_limit = max(1, min(limit, 200))
+    try:
+        rows = []
+        for user_doc in db.collection("users").stream():
+            uid = user_doc.id
+            gen = (
+                db.collection("users")
+                .document(uid)
+                .collection("generatedReports")
+                .limit(10)
+                .stream()
+            )
+            for d in gen:
+                data = d.to_dict() or {}
+                rows.append(
+                    {
+                        "uid": uid,
+                        "section": data.get("section"),
+                        "summary": data.get("summary"),
+                        "top_issue": data.get("top_issue"),
+                        "date": data.get("date"),
+                        "createdAt": data.get("createdAt"),
+                    }
+                )
+
+        def _row_sort_key(item: dict[str, Any]) -> str:
+            created = item.get("createdAt")
+            if hasattr(created, "isoformat"):
+                return created.isoformat()
+            return str(item.get("date") or "")
+
+        rows = sorted(rows, key=_row_sort_key, reverse=True)[:safe_limit]
+
+        return {
+            "status": "success",
+            "count": len(rows),
+            "activity": rows,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch activity: {e}")
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "engine": "Yukti Decision Intelligence v1.0"}
@@ -447,6 +999,7 @@ async def health():
 @app.post("/api/upload")
 async def upload_file(file: UploadFile = File(...), uid: str = Depends(get_current_user)):
     """Data Ingestion Layer: Parse and normalize uploaded dataset."""
+    _assert_service_allowed(uid, "data_upload")
     try:
         contents = await file.read()
         filename = file.filename
@@ -473,6 +1026,7 @@ async def upload_file(file: UploadFile = File(...), uid: str = Depends(get_curre
 @app.post("/api/demo")
 async def load_demo(uid: str = Depends(get_current_user)):
     """Load built-in sample business dataset for demonstration."""
+    _assert_service_allowed(uid, "data_upload")
     result = generate_sample_data()
     session_store["raw_data"] = result["data"]
     session_store["filename"] = result["filename"]
@@ -496,6 +1050,7 @@ async def run_full_analysis(uid: str = Depends(get_current_user)):
     Run the complete Yukti analysis pipeline:
     Schema Intelligence → Analytics → Predictions → Decisions → Insights
     """
+    _assert_service_allowed(uid, "analysis")
     global session_store
     # Re-hydrate from disk in case server reloaded after upload/demo
     if "raw_data" not in session_store:
@@ -591,6 +1146,7 @@ async def upload_daily_logs(payload: DailyLogsPayload, uid: str = Depends(get_cu
     Accept daily log entries from the frontend, convert to a DataFrame,
     and store in session so /api/analyze can process them.
     """
+    _assert_service_allowed(uid, "data_upload")
     try:
         if not payload.logs or len(payload.logs) == 0:
             raise HTTPException(status_code=400, detail="No log entries provided.")
@@ -666,6 +1222,7 @@ async def upload_daily_logs(payload: DailyLogsPayload, uid: str = Depends(get_cu
 @app.get("/api/report")
 async def download_report(uid: str = Depends(get_current_user)):
     """Generate and download PDF intelligence report."""
+    _assert_service_allowed(uid, "report_download")
     global session_store
     if "analysis" not in session_store:
         session_store = _load_session()
@@ -1287,6 +1844,7 @@ async def generate_strategy(
       5. Monthly roadmap
     All contextualised for India / Tamil Nadu local businesses.
     """
+    _assert_service_allowed(uid, "ai_strategy")
     import time as _time
     import logging
     log = logging.getLogger("yukti.strategy")
@@ -1438,6 +1996,7 @@ async def premium_analysis(
     Premium one-time month-end analysis powered by the custom Yukti model.
     Gate: each user gets exactly ONE premium analysis per calendar month.
     """
+    _assert_service_allowed(uid, "ai_premium")
     import time as _time
     from datetime import datetime as _dt
 
@@ -1570,6 +2129,7 @@ async def premium_analysis(
 @app.get("/api/premium-analysis/status")
 async def premium_analysis_status(uid: str = Depends(get_current_user)):
     """Check if the user has already used their monthly premium analysis."""
+    _assert_service_allowed(uid, "ai_premium")
     from datetime import datetime as _dt
 
     now = _dt.utcnow()
@@ -1618,6 +2178,7 @@ async def scan_bill_image(
 
     Fallback: If PaddleOCR is unavailable, tries Gemini Vision directly.
     """
+    _assert_service_allowed(uid, "bill_scan")
     log = logging.getLogger("yukti.bill_scan")
 
     # Validate file type
@@ -1746,22 +2307,43 @@ No markdown, no explanation, no code fences. Just the JSON."""
                 if _gtypes is None:
                     raise RuntimeError("google-genai types unavailable")
 
-                response = _gemini_client.models.generate_content(
-                    model="gemini-3.1-flash",
-                    contents=[
-                        _gtypes.Content(
-                            parts=[
-                                _gtypes.Part(
-                                    inline_data=_gtypes.Blob(
-                                        mime_type=content_type,
-                                        data=image_bytes,
-                                    )
-                                ),
-                                _gtypes.Part(text=vision_prompt),
-                            ]
+                response = None
+                vision_models = [
+                    "gemini-3-flash-preview",
+                    "gemini-2.5-flash",
+                    "gemini-2.0-flash",
+                ]
+
+                last_vision_error = None
+                for vision_model in vision_models:
+                    try:
+                        response = _gemini_client.models.generate_content(
+                            model=vision_model,
+                            contents=[
+                                _gtypes.Content(
+                                    parts=[
+                                        _gtypes.Part(
+                                            inline_data=_gtypes.Blob(
+                                                mime_type=content_type,
+                                                data=image_bytes,
+                                            )
+                                        ),
+                                        _gtypes.Part(text=vision_prompt),
+                                    ]
+                                )
+                            ],
                         )
-                    ],
-                )
+                        log.info("   ✅ Gemini Vision model selected: %s", vision_model)
+                        break
+                    except Exception as model_err:
+                        last_vision_error = model_err
+                        log.warning("   ⚠  Gemini vision model %s failed: %s", vision_model, model_err)
+
+                if response is None:
+                    raise RuntimeError(
+                        f"No supported Gemini vision model available: {last_vision_error}"
+                    )
+
                 raw_text = response.text.strip()
                 if raw_text.startswith("```"):
                     raw_text = raw_text.split("\n", 1)[1] if "\n" in raw_text else raw_text[3:]
@@ -1972,6 +2554,7 @@ def _require_data():
 @app.post("/api/smart-alerts")
 async def smart_alerts(uid: str = Depends(get_current_user)):
     """Generate proactive smart alerts from the current session data."""
+    _assert_service_allowed(uid, "ai_strategy")
     _require_data()
     try:
         ctx = _get_advisor_context()
@@ -2002,6 +2585,7 @@ async def smart_alerts(uid: str = Depends(get_current_user)):
 @app.post("/api/chat")
 async def business_chat(payload: ChatRequest, uid: str = Depends(get_current_user)):
     """Answer a natural-language business question about the loaded data."""
+    _assert_service_allowed(uid, "ai_strategy")
     _require_data()
     try:
         ctx = _get_advisor_context()
@@ -2032,6 +2616,7 @@ async def business_chat(payload: ChatRequest, uid: str = Depends(get_current_use
 @app.post("/api/weekly-digest")
 async def weekly_digest(uid: str = Depends(get_current_user)):
     """Generate a week-over-week digest with top 3 prioritised actions."""
+    _assert_service_allowed(uid, "ai_strategy")
     _require_data()
     try:
         ctx = _get_advisor_context()
@@ -2062,6 +2647,7 @@ async def weekly_digest(uid: str = Depends(get_current_user)):
 @app.get("/api/market-benchmark")
 async def market_benchmark(category: str = "general", uid: str = Depends(get_current_user)):
     """Return Tamil Nadu market benchmarks for the given business category."""
+    _assert_service_allowed(uid, "ai_strategy")
     cat = category.lower().strip()
     benchmark = MARKET_BENCHMARKS.get(cat, MARKET_BENCHMARKS.get("general", {}))
     return JSONResponse(content=_sanitize({"category": cat, "benchmark": benchmark}))
@@ -2070,6 +2656,7 @@ async def market_benchmark(category: str = "general", uid: str = Depends(get_cur
 @app.post("/api/pricing-insights")
 async def pricing_insights(uid: str = Depends(get_current_user)):
     """Generate pricing insights by comparing margins vs market benchmarks."""
+    _assert_service_allowed(uid, "ai_strategy")
     _require_data()
     try:
         ctx = _get_advisor_context()
@@ -2101,6 +2688,7 @@ async def pricing_insights(uid: str = Depends(get_current_user)):
 @app.post("/api/forecast-actions")
 async def forecast_actions(uid: str = Depends(get_current_user)):
     """Convert forecast trends into plain-language action cards."""
+    _assert_service_allowed(uid, "ai_strategy")
     _require_data()
     try:
         ctx = _get_advisor_context()

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import {
@@ -26,6 +26,7 @@ export default function LoginPage() {
 	const { login, loginWithGoogle, user } = useAuth();
 	const navigate = useNavigate();
 	const location = useLocation();
+	const handledStateKeyRef = useRef("");
 
 	const dismissToast = useCallback((id) => {
 		setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -44,6 +45,11 @@ export default function LoginPage() {
 			navigate("/dashboard", { replace: true });
 			return;
 		}
+
+		if (handledStateKeyRef.current === location.key) {
+			return;
+		}
+		handledStateKeyRef.current = location.key;
 
 		if (location.state?.verificationSent) {
 			pushToast(
@@ -66,7 +72,15 @@ export default function LoginPage() {
 			);
 			setSuccessState("Complete email verification, then sign in again.");
 		}
-	}, [location.state, navigate, pushToast, user]);
+		if (location.state?.suspendedAccessBlocked) {
+			pushToast(
+				"error",
+				"Account suspended",
+				"Your account was signed out by admin policy. Contact support to reactivate access.",
+			);
+			setSuccessState("");
+		}
+	}, [location.key, location.state, navigate, pushToast, user]);
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();

@@ -9,6 +9,19 @@ import numpy as np
 from datetime import datetime
 
 
+_DATETIME_FORMAT_CANDIDATES = [
+    "%Y-%m-%d",
+    "%Y/%m/%d",
+    "%d-%m-%Y",
+    "%d/%m/%Y",
+    "%m-%d-%Y",
+    "%m/%d/%Y",
+    "%Y-%m-%d %H:%M:%S",
+    "%d-%m-%Y %H:%M:%S",
+    "%m-%d-%Y %H:%M:%S",
+]
+
+
 def analyze_schema(data: list[dict]) -> dict:
     """Analyze dataset schema: types, profiles, distributions, quality."""
     df = pd.DataFrame(data)
@@ -79,10 +92,31 @@ def _is_temporal(series: pd.Series) -> bool:
     """Test if a series can be parsed as dates."""
     try:
         sample = series.dropna().head(50)
-        parsed = pd.to_datetime(sample, errors="coerce")
+        parsed = _parse_datetime_series(sample)
         return parsed.notna().sum() / max(len(sample), 1) > 0.7
     except Exception:
         return False
+
+
+def _parse_datetime_series(series: pd.Series) -> pd.Series:
+    """Parse datetime values with explicit formats before mixed fallback."""
+    if series is None or len(series) == 0:
+        return pd.to_datetime(series, errors="coerce")
+
+    text = series.astype(str).str.strip()
+
+    # Prefer explicit known formats first to avoid dateutil warnings and ambiguity.
+    for fmt in _DATETIME_FORMAT_CANDIDATES:
+        parsed = pd.to_datetime(text, errors="coerce", format=fmt)
+        if parsed.notna().sum() / max(len(text), 1) > 0.7:
+            return parsed
+
+    # Pandas >= 2 supports format='mixed' for heterogeneous date strings.
+    try:
+        return pd.to_datetime(text, errors="coerce", format="mixed")
+    except (TypeError, ValueError):
+        # Conservative fallback for older pandas releases.
+        return pd.to_datetime(text, errors="coerce")
 
 
 def _profile_column(series: pd.Series, col_type: str) -> dict:
@@ -125,7 +159,7 @@ def _profile_column(series: pd.Series, col_type: str) -> dict:
 
     elif col_type == "temporal":
         try:
-            dates = pd.to_datetime(series.dropna(), errors="coerce").dropna()
+            dates = _parse_datetime_series(series.dropna()).dropna()
             if len(dates) > 0:
                 base.update({
                     "earliest": dates.min().isoformat(),

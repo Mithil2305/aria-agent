@@ -27,6 +27,12 @@ export const RATE_LIMITS = {
 	report_download: 15,
 };
 
+const SERVICE_KEYS = Object.keys(RATE_LIMITS);
+
+export const ADMIN_LIMITS = Object.fromEntries(
+	SERVICE_KEYS.map((key) => [key, Number.POSITIVE_INFINITY]),
+);
+
 // ── Free-tier trial limits (one-time, not monthly) ──
 export const FREE_TIER_LIMITS = {
 	ai_strategy: 1,
@@ -42,6 +48,7 @@ export const FREE_TIER_LIMITS = {
  * @param {"free-tier"|"paid-user"|string} role
  */
 export function getLimitsForRole(role) {
+	if (role === "admin") return ADMIN_LIMITS;
 	return role === "free-tier" ? FREE_TIER_LIMITS : RATE_LIMITS;
 }
 
@@ -94,6 +101,46 @@ function usageRef(uid) {
 	return doc(db, "usage", uid, "months", getMonthKey());
 }
 
+/** Read admin-managed service controls from user profile doc. */
+export async function getUserServiceControls(uid) {
+	if (!uid) {
+		return {
+			suspended: false,
+			disabledServices: [],
+			serviceLimits: {},
+		};
+	}
+
+	try {
+		const snap = await getDoc(doc(db, "users", uid));
+		if (!snap.exists()) {
+			return {
+				suspended: false,
+				disabledServices: [],
+				serviceLimits: {},
+			};
+		}
+
+		const managed = snap.data()?.managed || {};
+		return {
+			suspended: !!managed.suspended,
+			disabledServices: Array.isArray(managed.disabledServices)
+				? managed.disabledServices
+				: [],
+			serviceLimits:
+				typeof managed.serviceLimits === "object" && managed.serviceLimits
+					? managed.serviceLimits
+					: {},
+		};
+	} catch {
+		return {
+			suspended: false,
+			disabledServices: [],
+			serviceLimits: {},
+		};
+	}
+}
+
 // ── Public API ──
 
 /**
@@ -106,16 +153,36 @@ function usageRef(uid) {
 export async function getUserUsage(uid, role = "paid-user") {
 	const snap = await getDoc(usageRef(uid));
 	const counts = snap.exists() ? snap.data() : {};
+	const controls = await getUserServiceControls(uid);
 	const limits = getLimitsForRole(role);
 
 	const result = {};
 	for (const [action, limit] of Object.entries(limits)) {
+		const overrideLimit = controls.serviceLimits?.[action];
+		const effectiveLimit =
+			role === "admin"
+				? Number.POSITIVE_INFINITY
+				: Number.isFinite(Number(overrideLimit))
+					? Number(overrideLimit)
+					: limit;
 		const used = counts[action] ?? 0;
+		const isDisabled = controls.disabledServices.includes(action);
+		const isSuspended = controls.suspended;
+		const remaining = Number.isFinite(effectiveLimit)
+			? Math.max(0, effectiveLimit - used)
+			: Number.POSITIVE_INFINITY;
+		const percentage =
+			Number.isFinite(effectiveLimit) && effectiveLimit > 0
+				? Math.round((used / effectiveLimit) * 100 * 10) / 10
+				: 0;
+
 		result[action] = {
 			used,
-			limit,
-			remaining: Math.max(0, limit - used),
-			percentage: limit > 0 ? Math.round((used / limit) * 100 * 10) / 10 : 0,
+			limit: effectiveLimit,
+			remaining,
+			percentage,
+			disabled: isDisabled,
+			suspended: isSuspended,
 		};
 	}
 	return result;
@@ -129,10 +196,47 @@ export async function getUserUsage(uid, role = "paid-user") {
  * Returns { allowed: true/false, used, limit, remaining }.
  */
 export async function checkUsage(uid, action, role = "paid-user") {
+	const controls = await getUserServiceControls(uid);
+	if (controls.suspended) {
+		return {
+			allowed: false,
+			used: 0,
+			limit: 0,
+			remaining: 0,
+			reason: "suspended",
+		};
+	}
+
+	if (controls.disabledServices.includes(action)) {
+		return {
+			allowed: false,
+			used: 0,
+			limit: 0,
+			remaining: 0,
+			reason: "disabled",
+		};
+	}
+
 	const limits = getLimitsForRole(role);
-	const limit = limits[action];
+	const defaultLimit = limits[action];
+	const overrideLimit = controls.serviceLimits?.[action];
+	const limit =
+		role === "admin"
+			? Number.POSITIVE_INFINITY
+			: Number.isFinite(Number(overrideLimit))
+				? Number(overrideLimit)
+				: defaultLimit;
 	if (limit === undefined)
 		return { allowed: true, used: 0, limit: 0, remaining: 0 };
+	if (!Number.isFinite(limit)) {
+		return {
+			allowed: true,
+			used: 0,
+			limit,
+			remaining: Number.POSITIVE_INFINITY,
+			reason: null,
+		};
+	}
 
 	const snap = await getDoc(usageRef(uid));
 	const used = snap.exists() ? (snap.data()[action] ?? 0) : 0;
@@ -142,6 +246,7 @@ export async function checkUsage(uid, action, role = "paid-user") {
 		used,
 		limit,
 		remaining: Math.max(0, limit - used),
+		reason: used < limit ? null : "quota",
 	};
 }
 
@@ -150,6 +255,7 @@ export async function checkUsage(uid, action, role = "paid-user") {
  * Call this AFTER a successful backend response.
  */
 export async function recordUsage(uid, action) {
+	if (!uid) return;
 	const ref = usageRef(uid);
 	await setDoc(
 		ref,
@@ -170,11 +276,28 @@ export async function checkAndRecordUsage(uid, action, role = "paid-user") {
 	const status = await checkUsage(uid, action, role);
 	if (!status.allowed) {
 		const label = CATEGORIES[action]?.label ?? action;
+		if (status.reason === "suspended") {
+			throw new Error(
+				"Your account is temporarily suspended by admin. Contact support for reactivation.",
+			);
+		}
+		if (status.reason === "disabled") {
+			throw new Error(
+				`${label} is currently disabled for your account by admin.`,
+			);
+		}
 		const msg =
 			role === "free-tier"
 				? `Free trial limit reached for ${label} (${status.limit} use). Upgrade to continue.`
 				: `Monthly limit reached for ${label} (${status.limit}/month). Resets on the 1st of next month.`;
 		throw new Error(msg);
+	}
+	if (!Number.isFinite(status.limit)) {
+		return {
+			used: status.used,
+			limit: status.limit,
+			remaining: Number.POSITIVE_INFINITY,
+		};
 	}
 	await recordUsage(uid, action);
 	return {

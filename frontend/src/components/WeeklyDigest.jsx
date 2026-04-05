@@ -13,6 +13,7 @@ import {
 import axios from "axios";
 import { useAuth } from "../contexts/AuthContext";
 import { saveSectionReport } from "../services/reportMemory";
+import { formatCompactCurrency } from "../utils/currency";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -73,18 +74,9 @@ function buildFallbackDigest(analysis) {
 	};
 }
 
-function formatINR(value) {
-	if (value == null) return "---";
-	const num = Number(value);
-	if (isNaN(num)) return String(value);
-	if (Math.abs(num) >= 10000000) return `₹${(num / 10000000).toFixed(1)} Cr`;
-	if (Math.abs(num) >= 100000) return `₹${(num / 100000).toFixed(1)} L`;
-	if (Math.abs(num) >= 1000) return `₹${(num / 1000).toFixed(1)}K`;
-	return `₹${num.toLocaleString("en-IN")}`;
-}
-
 export default function WeeklyDigest({ token, analysisReady }) {
-	const { user } = useAuth();
+	const { user, userProfile } = useAuth();
+	const currencyCode = userProfile?.currency || "INR";
 	const [digest, setDigest] = useState(null);
 	const [loading, setLoading] = useState(false);
 
@@ -204,7 +196,7 @@ export default function WeeklyDigest({ token, analysisReady }) {
 						<p className="text-white/80 text-sm">
 							Week revenue:{" "}
 							<span className="font-bold text-white">
-								{formatINR(digest.week_revenue)}
+								{formatCompactCurrency(digest.week_revenue, currencyCode)}
 							</span>
 						</p>
 					)}

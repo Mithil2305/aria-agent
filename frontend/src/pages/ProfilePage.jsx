@@ -82,6 +82,13 @@ export default function ProfilePage() {
 		.toUpperCase()
 		.slice(0, 2);
 
+	const roleLabel =
+		userProfile?.role === "admin"
+			? "Admin"
+			: userProfile?.role === "free-tier"
+				? "Free Tier"
+				: "Paid User";
+
 	return (
 		<div className="app-page">
 			<div className="app-page-inner max-w-2xl mx-auto">
@@ -109,7 +116,7 @@ export default function ProfilePage() {
 							</p>
 							<p className="text-sm text-surface-500">{user?.email}</p>
 							<span className="inline-block mt-1.5 px-2 py-0.5 rounded text-[10px] font-medium bg-gold-50 text-gold-600 uppercase tracking-wider">
-								{userProfile?.plan || "Free"} Plan
+								{roleLabel}
 							</span>
 						</div>
 					</div>

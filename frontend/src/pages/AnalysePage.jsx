@@ -25,11 +25,13 @@ import {
 	Database,
 	Sparkles,
 } from "lucide-react";
+import { formatCurrency } from "../utils/currency";
 
 export default function AnalysePage() {
 	const { user, userProfile, getIdToken } = useAuth();
 	const navigate = useNavigate();
 	const role = userProfile?.role || "paid-user";
+	const currencyCode = userProfile?.currency || "INR";
 	const { startAnalysisJob, isRunning } = useAnalysisJob();
 
 	const [logs, setLogs] = useState([]);
@@ -402,7 +404,7 @@ export default function AnalysePage() {
 												</td>
 												<td className="text-right px-4 py-2 text-gold-600 text-xs font-medium">
 													{log.revenue != null
-														? `$${Number(log.revenue).toLocaleString()}`
+														? formatCurrency(log.revenue, currencyCode)
 														: "—"}
 												</td>
 												<td className="text-right px-4 py-2 text-surface-500 text-xs hidden sm:table-cell">
@@ -413,7 +415,7 @@ export default function AnalysePage() {
 												</td>
 												<td className="text-right px-4 py-2 text-surface-500 text-xs hidden lg:table-cell">
 													{log.expenses != null
-														? `$${Number(log.expenses).toLocaleString()}`
+														? formatCurrency(log.expenses, currencyCode)
 														: "—"}
 												</td>
 											</tr>

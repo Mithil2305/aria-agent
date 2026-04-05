@@ -42,6 +42,27 @@ async function withUsageTracking(uid, action, apiFn, role = "paid-user") {
 	if (uid && action) {
 		const status = await checkUsage(uid, action, role);
 		if (!status.allowed) {
+			if (status.reason === "suspended") {
+				throw {
+					response: {
+						data: {
+							detail:
+								"Your account is temporarily suspended by admin. Contact support for access.",
+						},
+					},
+				};
+			}
+			if (status.reason === "disabled") {
+				throw {
+					response: {
+						data: {
+							detail:
+								"This service is currently disabled for your account by admin.",
+						},
+					},
+				};
+			}
+
 			const labels = {
 				data_upload: "Data Uploads",
 				analysis: "Analysis Runs",
@@ -65,6 +86,53 @@ async function withUsageTracking(uid, action, apiFn, role = "paid-user") {
 		recordUsage(uid, action).catch(() => {});
 	}
 	return result;
+}
+
+// ──────────────────── Admin APIs ────────────────────
+
+export async function getAdminOverview(token) {
+	const { data } = await API.get("/api/admin/overview", {
+		headers: authHeaders(token),
+	});
+	return data;
+}
+
+export async function getAdminUsers(token, limit = 200) {
+	const { data } = await API.get(`/api/admin/users?limit=${limit}`, {
+		headers: authHeaders(token),
+	});
+	return data;
+}
+
+export async function getAdminUsage(token, month) {
+	const suffix = month ? `?month=${encodeURIComponent(month)}` : "";
+	const { data } = await API.get(`/api/admin/usage${suffix}`, {
+		headers: authHeaders(token),
+	});
+	return data;
+}
+
+export async function patchAdminUser(token, uid, payload) {
+	const { data } = await API.patch(`/api/admin/users/${uid}`, payload, {
+		headers: { "Content-Type": "application/json", ...authHeaders(token) },
+	});
+	return data;
+}
+
+export async function toggleAdminUserService(token, uid, serviceKey, enabled) {
+	const { data } = await API.post(
+		`/api/admin/users/${uid}/services/${serviceKey}`,
+		{ enabled },
+		{ headers: { "Content-Type": "application/json", ...authHeaders(token) } },
+	);
+	return data;
+}
+
+export async function getAdminActivity(token, limit = 60) {
+	const { data } = await API.get(`/api/admin/activity?limit=${limit}`, {
+		headers: authHeaders(token),
+	});
+	return data;
 }
 
 // ──────────────────── Upload / Demo ────────────────────

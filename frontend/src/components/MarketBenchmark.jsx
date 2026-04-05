@@ -2,15 +2,14 @@ import { useState, useEffect } from "react";
 import {
 	BarChart3,
 	TrendingUp,
-	TrendingDown,
-	Minus,
 	Users,
 	ShoppingCart,
-	Clock,
 	Award,
 	Loader2,
 } from "lucide-react";
 import axios from "axios";
+import { useAuth } from "../contexts/AuthContext";
+import { formatCompactCurrency } from "../utils/currency";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -65,14 +64,6 @@ const FALLBACK_BENCHMARKS = {
 	},
 };
 
-function formatINR(value) {
-	if (value == null) return "---";
-	const num = Number(value);
-	if (Math.abs(num) >= 100000) return `₹${(num / 100000).toFixed(1)}L`;
-	if (Math.abs(num) >= 1000) return `₹${(num / 1000).toFixed(1)}K`;
-	return `₹${num.toLocaleString("en-IN")}`;
-}
-
 function BenchmarkRow({
 	label,
 	yourValue,
@@ -80,6 +71,7 @@ function BenchmarkRow({
 	isRupee,
 	higherIsBetter = true,
 	icon: Icon,
+	currencyCode,
 }) {
 	const hasData = yourValue != null && yourValue > 0;
 	const ratio =
@@ -102,7 +94,9 @@ function BenchmarkRow({
 			: "bg-amber-400";
 
 	const format = (v) =>
-		isRupee ? formatINR(v) : v?.toLocaleString("en-IN") || "—";
+		isRupee
+			? formatCompactCurrency(v, currencyCode)
+			: v?.toLocaleString("en-IN") || "—";
 
 	return (
 		<div className="py-3 border-b border-surface-100 last:border-0">
@@ -124,7 +118,6 @@ function BenchmarkRow({
 
 			{hasData && (
 				<div className="relative h-1.5 bg-surface-100 rounded-full overflow-hidden">
-					{/* Benchmark marker at 100% */}
 					<div className="absolute left-[71.4%] top-0 bottom-0 w-0.5 bg-surface-400 z-10" />
 					<div
 						className={`h-full rounded-full transition-all duration-700 ${barColor}`}
@@ -139,7 +132,7 @@ function BenchmarkRow({
 						? `🎉 You're ${((ratio - 1) * 100).toFixed(0)}% above market average`
 						: ratio < 0.7
 							? `⚠️ ${((1 - ratio) * 100).toFixed(0)}% below market average — room to grow`
-							: `On track with market average`}
+							: "On track with market average"}
 				</p>
 			)}
 		</div>
@@ -147,6 +140,8 @@ function BenchmarkRow({
 }
 
 export default function MarketBenchmark({ token, category, kpis }) {
+	const { userProfile } = useAuth();
+	const currencyCode = userProfile?.currency || "INR";
 	const [benchmarks, setBenchmarks] = useState(null);
 
 	useEffect(() => {
@@ -252,12 +247,14 @@ export default function MarketBenchmark({ token, category, kpis }) {
 					benchmarkValue={benchmarkData.avg_daily_revenue}
 					isRupee
 					icon={BarChart3}
+					currencyCode={currencyCode}
 				/>
 				<BenchmarkRow
 					label="Daily Customers"
 					yourValue={customerKpi?.current}
 					benchmarkValue={benchmarkData.avg_customers_per_day}
 					icon={Users}
+					currencyCode={currencyCode}
 				/>
 				<BenchmarkRow
 					label="Avg Basket Size"
@@ -270,18 +267,20 @@ export default function MarketBenchmark({ token, category, kpis }) {
 					benchmarkValue={benchmarkData.avg_basket_size}
 					isRupee
 					icon={ShoppingCart}
+					currencyCode={currencyCode}
 				/>
 				<BenchmarkRow
 					label="Profit Margin"
 					yourValue={yourMargin}
 					benchmarkValue={benchmarkData.avg_margin_pct}
 					icon={TrendingUp}
+					currencyCode={currencyCode}
 				/>
 			</div>
 
 			<div className="mt-4 px-3 py-2.5 rounded-lg bg-indigo-50 border border-indigo-200">
 				<p className="text-[11px] text-indigo-700 font-medium">
-					🏆 Peak Performance Tip for {categoryName}
+					Peak Performance Tip for {categoryName}
 				</p>
 				<p className="text-[11px] text-indigo-600 mt-0.5">
 					Peak hours: <strong>{benchmarkData.peak_hours}</strong> · Best days:{" "}

@@ -43,6 +43,7 @@ import {
 	getBusinessCategory,
 	getCategoryLabel,
 } from "../config/businessTypes";
+import { applyCurrencyPrefix, formatCurrency } from "../utils/currency";
 
 // Icon name string → Lucide component map
 const ICON_MAP = {
@@ -105,12 +106,13 @@ export default function DailyLogPage() {
 
 	// Dynamic fields based on business type
 	const businessType = userProfile?.businessType || "";
+	const currencyCode = userProfile?.currency || "INR";
 	const category = getBusinessCategory(businessType);
 	const categoryLabel = getCategoryLabel(businessType);
-	const metricFields = useMemo(
-		() => getMetricFields(businessType),
-		[businessType],
-	);
+	const metricFields = useMemo(() => {
+		const fields = getMetricFields(businessType);
+		return applyCurrencyPrefix(fields, currencyCode);
+	}, [businessType, currencyCode]);
 	const numericFields = useMemo(
 		() => metricFields.filter((f) => f.type === "number"),
 		[metricFields],
@@ -731,7 +733,7 @@ export default function DailyLogPage() {
 													</p>
 													<p className="text-xs text-surface-700 font-semibold mt-0.5 truncate">
 														{field.prefix
-															? `${field.prefix}${Number(value).toLocaleString("en-IN")}`
+															? formatCurrency(value, currencyCode)
 															: typeof value === "number"
 																? value.toLocaleString("en-IN")
 																: String(value)}

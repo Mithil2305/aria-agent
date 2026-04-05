@@ -1,25 +1,34 @@
 import { ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import { formatCompactCurrency } from "../utils/currency";
 
 /**
- * KPICards — Indian SMB edition
- * Shows key business numbers with ₹ formatting.
+ * KPICards — business metric summary cards
+ * Shows key business numbers using profile currency formatting.
  * "Yukti Confidence: High / Medium / Low" instead of raw percentages.
  */
 
 export default function KPICards({ kpis, expanded }) {
+	const { userProfile } = useAuth();
+	const currencyCode = userProfile?.currency || "INR";
 	if (!kpis || kpis.length === 0) return null;
 	const displayed = expanded ? kpis : kpis.slice(0, 6);
 
 	return (
 		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
 			{displayed.map((kpi, idx) => (
-				<KPICard key={kpi.column || idx} kpi={kpi} index={idx} />
+				<KPICard
+					key={kpi.column || idx}
+					kpi={kpi}
+					index={idx}
+					currencyCode={currencyCode}
+				/>
 			))}
 		</div>
 	);
 }
 
-function KPICard({ kpi, index }) {
+function KPICard({ kpi, index, currencyCode }) {
 	const isPositive = kpi.change > 0;
 	const isNeutral = Math.abs(kpi.change) < 2;
 	const trendColor = isNeutral
@@ -62,7 +71,7 @@ function KPICard({ kpi, index }) {
 						{kpi.label}
 					</p>
 					<p className="text-2xl font-bold text-surface-900 tracking-tight">
-						{formatINR(kpi.current)}
+						{formatCompactCurrency(kpi.current, currencyCode)}
 					</p>
 				</div>
 				<div
@@ -85,7 +94,9 @@ function KPICard({ kpi, index }) {
 			{/* Context row */}
 			<div className="flex items-center justify-between text-[11px] mb-3">
 				<span className={`font-medium ${trendColor}`}>{trendWord}</span>
-				<span className="text-surface-500">Avg: {formatINR(kpi.mean)}</span>
+				<span className="text-surface-500">
+					Avg: {formatCompactCurrency(kpi.mean, currencyCode)}
+				</span>
 			</div>
 
 			{/* Yukti Confidence: simple label */}
@@ -98,15 +109,4 @@ function KPICard({ kpi, index }) {
 			</div>
 		</div>
 	);
-}
-
-function formatINR(value) {
-	if (value == null) return "—";
-	const num = Number(value);
-	if (isNaN(num)) return String(value);
-	if (Math.abs(num) >= 10000000) return `₹${(num / 10000000).toFixed(1)} Cr`;
-	if (Math.abs(num) >= 100000) return `₹${(num / 100000).toFixed(1)} L`;
-	if (Math.abs(num) >= 1000) return `₹${(num / 1000).toFixed(1)}K`;
-	if (Number.isInteger(num)) return num.toLocaleString("en-IN");
-	return num.toFixed(2);
 }

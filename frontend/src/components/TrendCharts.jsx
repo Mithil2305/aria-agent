@@ -56,14 +56,18 @@ export default function TrendCharts({ trends, expanded }) {
 			</div>
 
 			<div
-				className={expanded ? "h-80" : "h-64"}
-				style={{ width: "100%", minWidth: 0, height: 300 }}
+				style={{
+					width: "100%",
+					minWidth: 0,
+					minHeight: expanded ? 320 : 256,
+					height: expanded ? 320 : 256,
+				}}
 			>
 				<ResponsiveContainer
 					width="100%"
 					height="100%"
 					minWidth={0}
-					minHeight={0}
+					minHeight={expanded ? 320 : 256}
 				>
 					<AreaChart
 						data={current.data}

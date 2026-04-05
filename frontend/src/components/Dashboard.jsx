@@ -56,6 +56,7 @@ import {
 	getCategoryLabel,
 	needsStockManagement,
 } from "../config/businessTypes";
+import { formatCurrency } from "../utils/currency";
 
 /* ================================================================
    Yukti Dashboard v4 — Professional Indian SMB Edition
@@ -80,6 +81,8 @@ export default function Dashboard({
 	previousReportDate = null,
 	advisorSection = null,
 }) {
+	const { userProfile } = useAuth();
+	const currencyCode = userProfile?.currency || "INR";
 	const [activeTab, setActiveTab] = useState("khata");
 	const [exporting, setExporting] = useState(false);
 
@@ -97,7 +100,11 @@ export default function Dashboard({
 	} = analysis;
 
 	const healthScore = computeHealthScore(kpis, anomalies, insights, schema);
-	const changeSummary = computeWhatChangedSummary(analysis, previousAnalysis);
+	const changeSummaryWithCurrency = computeWhatChangedSummary(
+		analysis,
+		previousAnalysis,
+		currencyCode,
+	);
 	const criticalCount = anomalies.filter(
 		(a) => a.severity === "critical",
 	).length;
@@ -578,12 +585,13 @@ export default function Dashboard({
 					avgCustomers={customerKpi?.current}
 					avgOrders={orderKpi?.current}
 					dataPoints={rowCount}
+					currencyCode={currencyCode}
 				/>
 
 				{advisorSection}
 
 				<WhatChangedStrip
-					summary={changeSummary}
+					summary={changeSummaryWithCurrency}
 					previousReportDate={previousReportDate}
 				/>
 
@@ -687,14 +695,18 @@ export default function Dashboard({
    QUICK STATS BAR
    ================================================================ */
 
-function QuickStatsBar({ avgRevenue, avgCustomers, avgOrders, dataPoints }) {
+function QuickStatsBar({
+	avgRevenue,
+	avgCustomers,
+	avgOrders,
+	dataPoints,
+	currencyCode,
+}) {
 	const stats = [
 		{
 			label: "Avg Daily Revenue",
 			value:
-				avgRevenue != null
-					? `₹${Number(avgRevenue).toLocaleString("en-IN")}`
-					: "---",
+				avgRevenue != null ? formatCurrency(avgRevenue, currencyCode) : "---",
 			icon: IndianRupee,
 		},
 		{
@@ -1006,6 +1018,8 @@ function MetricBox({
 	invertColor = false,
 	highlight = false,
 }) {
+	const { userProfile } = useAuth();
+	const currencyCode = userProfile?.currency || "INR";
 	const isUp = invertColor ? change < 0 : change > 0;
 	const isNeutral = change == null || Math.abs(change) < 2;
 	return (
@@ -1016,12 +1030,7 @@ function MetricBox({
 			<p
 				className={`text-2xl font-bold ${highlight ? "text-green-600" : "text-surface-900"}`}
 			>
-				{isRupee && (
-					<span className="text-lg font-semibold text-surface-400 mr-0.5">
-						₹
-					</span>
-				)}
-				{formatINR(value)}
+				{isRupee ? formatCurrency(value, currencyCode) : formatINR(value)}
 			</p>
 			{change != null && !highlight && (
 				<div
@@ -1098,11 +1107,18 @@ function SectionPlaybook({ playbook }) {
    ================================================================ */
 
 function KhataSection({ kpis, insights, trends, businessType }) {
+	const { userProfile } = useAuth();
+	const currencyCode = userProfile?.currency || "INR";
 	const [expanded, setExpanded] = useState(null);
 	const khataInsights = insights.khata || [];
 	const revenueKpi = findKpiByKeywords(kpis, ["revenue", "sales", "income"]);
 	const expenseKpi = findKpiByKeywords(kpis, ["expense", "cost", "spend"]);
-	const playbook = buildWeeklyPlaybook("khata", kpis, businessType);
+	const playbook = buildWeeklyPlaybook(
+		"khata",
+		kpis,
+		businessType,
+		currencyCode,
+	);
 
 	return (
 		<div className="space-y-6">
@@ -1169,9 +1185,16 @@ function KhataSection({ kpis, insights, trends, businessType }) {
 }
 
 function FootfallSection({ kpis, insights, businessType }) {
+	const { userProfile } = useAuth();
+	const currencyCode = userProfile?.currency || "INR";
 	const [expanded, setExpanded] = useState(null);
 	const footfallInsights = insights.footfall || [];
-	const playbook = buildWeeklyPlaybook("footfall", kpis, businessType);
+	const playbook = buildWeeklyPlaybook(
+		"footfall",
+		kpis,
+		businessType,
+		currencyCode,
+	);
 	const customerKpi = findKpiByKeywords(kpis, [
 		"customer",
 		"footfall",
@@ -1226,10 +1249,17 @@ function FootfallSection({ kpis, insights, businessType }) {
 }
 
 function GodownSection({ kpis, insights, businessType }) {
+	const { userProfile } = useAuth();
+	const currencyCode = userProfile?.currency || "INR";
 	const [expanded, setExpanded] = useState(null);
 	const godownInsights = insights.godown || [];
 	const invKpi = findKpiByKeywords(kpis, ["inventory", "stock", "godown"]);
-	const playbook = buildWeeklyPlaybook("godown", kpis, businessType);
+	const playbook = buildWeeklyPlaybook(
+		"godown",
+		kpis,
+		businessType,
+		currencyCode,
+	);
 
 	return (
 		<div className="space-y-6">
@@ -1267,10 +1297,17 @@ function GodownSection({ kpis, insights, businessType }) {
 }
 
 function CustomerSection({ kpis, insights, correlations, businessType }) {
+	const { userProfile } = useAuth();
+	const currencyCode = userProfile?.currency || "INR";
 	const [expanded, setExpanded] = useState(null);
 	const customerInsights = insights.customer || [];
 	const basketKpi = findKpiByKeywords(kpis, ["basket", "avg_order", "ticket"]);
-	const playbook = buildWeeklyPlaybook("customer", kpis, businessType);
+	const playbook = buildWeeklyPlaybook(
+		"customer",
+		kpis,
+		businessType,
+		currencyCode,
+	);
 
 	return (
 		<div className="space-y-6">
@@ -1593,6 +1630,7 @@ function AlertsSection({ anomalies, insights }) {
 
 function StrategySection() {
 	const { user, userProfile, getIdToken } = useAuth();
+	const currencyCode = userProfile?.currency || "INR";
 	const businessType = userProfile?.businessType || "";
 	const category = getBusinessCategory(businessType);
 	const categoryLabel = getCategoryLabel(businessType);
@@ -1755,7 +1793,10 @@ function StrategySection() {
 										Avg Daily Revenue
 									</p>
 									<p className="text-lg font-bold text-surface-900">
-										₹{strategy.stats.avg_daily_revenue.toLocaleString()}
+										{formatCurrency(
+											strategy.stats.avg_daily_revenue,
+											currencyCode,
+										)}
 									</p>
 								</div>
 							)}
@@ -2143,7 +2184,11 @@ function extractAnomalies(analysis) {
 	return analysis.anomalies || analysis?.predictions?.anomalies || [];
 }
 
-function computeWhatChangedSummary(currentAnalysis, previousAnalysis) {
+function computeWhatChangedSummary(
+	currentAnalysis,
+	previousAnalysis,
+	currencyCode,
+) {
 	if (!currentAnalysis || !previousAnalysis) {
 		return { hasPrevious: false, cards: [], topImpactLabel: null };
 	}
@@ -2217,11 +2262,8 @@ function computeWhatChangedSummary(currentAnalysis, previousAnalysis) {
 		});
 	};
 
-	addCard(
-		"Revenue",
-		currentRevenue?.current,
-		previousRevenue?.current,
-		(v) => `₹${Number(v).toLocaleString("en-IN")}`,
+	addCard("Revenue", currentRevenue?.current, previousRevenue?.current, (v) =>
+		formatCurrency(v, currencyCode),
 	);
 	addCard(
 		"Customers",
@@ -2250,7 +2292,7 @@ function computeWhatChangedSummary(currentAnalysis, previousAnalysis) {
 	};
 }
 
-function buildWeeklyPlaybook(section, kpis, businessType) {
+function buildWeeklyPlaybook(section, kpis, businessType, currencyCode) {
 	const category = getBusinessCategory(businessType || "");
 	const revenue = findKpiByKeywords(kpis, ["revenue", "sales", "income"]);
 	const expense = findKpiByKeywords(kpis, ["expense", "cost", "spend"]);
@@ -2276,13 +2318,13 @@ function buildWeeklyPlaybook(section, kpis, businessType) {
 				{
 					label: "Revenue Target",
 					value: revenueTarget
-						? `₹${Math.round(revenueTarget).toLocaleString("en-IN")}/day`
+						? `${formatCurrency(Math.round(revenueTarget), currencyCode)}/day`
 						: "Track daily",
 				},
 				{
 					label: "Expense Cap",
 					value: expenseTarget
-						? `₹${Math.round(expenseTarget).toLocaleString("en-IN")}/day`
+						? `${formatCurrency(Math.round(expenseTarget), currencyCode)}/day`
 						: "Reduce by 5%",
 				},
 			],
@@ -2337,7 +2379,7 @@ function buildWeeklyPlaybook(section, kpis, businessType) {
 				{
 					label: "Average Bill Target",
 					value: basketTarget
-						? `₹${Math.round(basketTarget).toLocaleString("en-IN")}`
+						? formatCurrency(Math.round(basketTarget), currencyCode)
 						: "Increase by 6%",
 				},
 				{ label: "Retention Goal", value: "Bring back 15 dormant customers" },

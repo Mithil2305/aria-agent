@@ -237,6 +237,7 @@ export default function LimitsPage() {
 							const colors = COLOR_MAP[key] || COLOR_MAP.analysis;
 							const IconComp = ICON_MAP[cat.icon] || BarChart3;
 							const pct = data.percentage || 0;
+							const unlimited = !Number.isFinite(data.limit);
 							const isNearLimit = pct >= 80;
 							const isAtLimit = data.remaining === 0;
 
@@ -258,16 +259,32 @@ export default function LimitsPage() {
 										</div>
 										<div className="text-right">
 											<p
-												className={`text-sm font-semibold tabular-nums ${isAtLimit ? "text-red-600" : isNearLimit ? "text-amber-600" : "text-surface-800"}`}
+												className={`text-sm font-semibold tabular-nums ${
+													unlimited
+														? "text-indigo-600"
+														: isAtLimit
+															? "text-red-600"
+															: isNearLimit
+																? "text-amber-600"
+																: "text-surface-800"
+												}`}
 											>
-												{data.used}
-												<span className="text-surface-400 font-normal">
-													{" "}
-													/ {data.limit}
-												</span>
+												{unlimited ? (
+													"Unlimited"
+												) : (
+													<>
+														{data.used}
+														<span className="text-surface-400 font-normal">
+															{" "}
+															/ {data.limit}
+														</span>
+													</>
+												)}
 											</p>
 											<p className="text-[10px] text-surface-400">
-												{data.remaining} remaining
+												{unlimited
+													? "No monthly cap"
+													: `${data.remaining} remaining`}
 											</p>
 										</div>
 									</div>
@@ -281,13 +298,13 @@ export default function LimitsPage() {
 									</div>
 
 									{/* Warning */}
-									{isAtLimit && (
+									{!unlimited && isAtLimit && (
 										<div className="flex items-center gap-1.5 mt-1.5 text-[10px] text-red-500 font-medium">
 											<AlertCircle size={11} />
 											Monthly limit reached — resets {resetDate}
 										</div>
 									)}
-									{isNearLimit && !isAtLimit && (
+									{!unlimited && isNearLimit && !isAtLimit && (
 										<div className="flex items-center gap-1.5 mt-1.5 text-[10px] text-amber-500 font-medium">
 											<AlertCircle size={11} />
 											Approaching limit — {data.remaining} left

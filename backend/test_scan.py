@@ -41,7 +41,7 @@ if _gemini_available and _gemini_client:
     try:
         from google.genai import types as _gtypes
         response = _gemini_client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-3-flash-preview",
             contents=[
                 _gtypes.Content(
                     parts=[

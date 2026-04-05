@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
 	Lightbulb,
 	TrendingUp,
@@ -17,11 +17,19 @@ import {
 	RefreshCw,
 	Star,
 	Zap,
-	Clock,
 	BarChart3,
+	Database,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
-import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
+import {
+	collection,
+	getDocs,
+	query,
+	orderBy,
+	limit,
+	addDoc,
+	serverTimestamp,
+} from "firebase/firestore";
 import { db } from "../firebase";
 import { getStrategyAdvice } from "../services/api";
 import {
@@ -29,6 +37,7 @@ import {
 	getCategoryLabel,
 	needsStockManagement,
 } from "../config/businessTypes";
+import { formatCurrency } from "../utils/currency";
 
 const PRIORITY_STYLES = {
 	high: "bg-red-50 text-red-600 border-red-200",
@@ -42,8 +51,32 @@ const PRIORITY_DOT = {
 	low: "bg-green-500",
 };
 
+const STRATEGY_PROGRESS_STEPS = [
+	{
+		label: "Collecting logs and stock entries",
+		icon: Database,
+		duration: 2200,
+	},
+	{
+		label: "Analyzing growth and risk patterns",
+		icon: BarChart3,
+		duration: 2800,
+	},
+	{
+		label: "Generating personalized recommendations",
+		icon: Sparkles,
+		duration: 3200,
+	},
+	{ label: "Preparing your strategy tabs", icon: CheckCircle2, duration: 1800 },
+];
+
+const STRATEGY_JOB_KEY = "yukti_strategy_job";
+const MAX_STRATEGY_HISTORY = 20;
+
 export default function StrategyAdvisorPage() {
 	const { user, userProfile, getIdToken } = useAuth();
+	const currencyCode = userProfile?.currency || "INR";
+	const mountedRef = useRef(true);
 
 	const businessType = userProfile?.businessType || "";
 	const category = getBusinessCategory(businessType);
@@ -54,11 +87,95 @@ export default function StrategyAdvisorPage() {
 	const [strategy, setStrategy] = useState(null);
 	const [error, setError] = useState(null);
 	const [activeTab, setActiveTab] = useState("sales");
+	const [progressIdx, setProgressIdx] = useState(0);
+	const [history, setHistory] = useState([]);
+	const [historyLoading, setHistoryLoading] = useState(false);
+
+	useEffect(() => {
+		mountedRef.current = true;
+		return () => {
+			mountedRef.current = false;
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!user) return;
+		let cancelled = false;
+
+		async function fetchHistory() {
+			setHistoryLoading(true);
+			try {
+				const q = query(
+					collection(db, "users", user.uid, "strategyReports"),
+					orderBy("createdAt", "desc"),
+					limit(MAX_STRATEGY_HISTORY),
+				);
+				const snap = await getDocs(q);
+				if (!cancelled) {
+					setHistory(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+				}
+			} catch {
+				if (!cancelled) setHistory([]);
+			} finally {
+				if (!cancelled) setHistoryLoading(false);
+			}
+		}
+
+		fetchHistory();
+		return () => {
+			cancelled = true;
+		};
+	}, [user]);
+
+	useEffect(() => {
+		try {
+			const raw = sessionStorage.getItem(STRATEGY_JOB_KEY);
+			if (!raw) return;
+			const job = JSON.parse(raw);
+			if (
+				job?.status === "running" &&
+				Date.now() - Number(job?.startedAt || 0) < 15 * 60 * 1000
+			) {
+				setLoading(true);
+			} else if (job?.status === "running") {
+				sessionStorage.removeItem(STRATEGY_JOB_KEY);
+			}
+		} catch {
+			// Ignore malformed payload
+		}
+	}, []);
+
+	useEffect(() => {
+		if (!loading) {
+			setProgressIdx(0);
+			return;
+		}
+
+		setProgressIdx(0);
+		const timers = STRATEGY_PROGRESS_STEPS.map((step, i) => {
+			const delay = STRATEGY_PROGRESS_STEPS.slice(0, i).reduce(
+				(acc, s) => acc + s.duration,
+				0,
+			);
+			return setTimeout(() => {
+				if (mountedRef.current) setProgressIdx(i);
+			}, delay);
+		});
+
+		return () => timers.forEach(clearTimeout);
+	}, [loading]);
 
 	const generateStrategy = useCallback(async () => {
 		if (!user) return;
 		setLoading(true);
 		setError(null);
+		sessionStorage.setItem(
+			STRATEGY_JOB_KEY,
+			JSON.stringify({
+				status: "running",
+				startedAt: Date.now(),
+			}),
+		);
 
 		try {
 			// Fetch daily logs
@@ -108,16 +225,77 @@ export default function StrategyAdvisorPage() {
 				role,
 			);
 
-			setStrategy(result);
+			const reportPayload = {
+				date: new Date().toISOString(),
+				createdAt: serverTimestamp(),
+				generated_by: result.generated_by || "rule_based",
+				businessType,
+				businessCategory: category,
+				summary:
+					result?.salesTips?.[0]?.description ||
+					result?.customerStrategies?.[0]?.description ||
+					"Strategy generated",
+				resultData: JSON.stringify(result),
+			};
+
+			const reportRef = await addDoc(
+				collection(db, "users", user.uid, "strategyReports"),
+				reportPayload,
+			);
+
+			if (mountedRef.current) {
+				setStrategy(result);
+				setHistory((prev) =>
+					[{ id: reportRef.id, ...reportPayload }, ...prev].slice(
+						0,
+						MAX_STRATEGY_HISTORY,
+					),
+				);
+			}
+
+			sessionStorage.setItem(
+				STRATEGY_JOB_KEY,
+				JSON.stringify({
+					status: "success",
+					completedAt: Date.now(),
+					reportId: reportRef.id,
+				}),
+			);
 		} catch (err) {
-			setError(
-				err?.response?.data?.detail ||
-					"Failed to generate strategy. Please try again.",
+			if (mountedRef.current) {
+				setError(
+					err?.response?.data?.detail ||
+						"Failed to generate strategy. Please try again.",
+				);
+			}
+			sessionStorage.setItem(
+				STRATEGY_JOB_KEY,
+				JSON.stringify({
+					status: "error",
+					completedAt: Date.now(),
+					error:
+						err?.response?.data?.detail ||
+						err?.message ||
+						"Strategy generation failed",
+				}),
 			);
 		} finally {
-			setLoading(false);
+			if (mountedRef.current) {
+				setLoading(false);
+			}
 		}
 	}, [user, userProfile?.role, businessType, category, hasStock, getIdToken]);
+
+	const loadHistoryItem = (item) => {
+		if (!item?.resultData) return;
+		try {
+			const parsed = JSON.parse(item.resultData);
+			setStrategy(parsed);
+			setError(null);
+		} catch {
+			setError("Could not load this saved strategy report.");
+		}
+	};
 
 	const TABS = [
 		{ key: "sales", label: "Sales Tips", icon: TrendingUp },
@@ -130,6 +308,13 @@ export default function StrategyAdvisorPage() {
 	return (
 		<div className="app-page">
 			<div className="app-page-inner max-w-5xl mx-auto">
+				{loading && (
+					<div className="mb-6 px-4 py-3 rounded-lg border border-indigo-200 bg-indigo-50/70 text-xs text-indigo-700">
+						Strategy generation is running in the background. You can keep
+						exploring other pages while Yukti prepares your recommendations.
+					</div>
+				)}
+
 				{/* Header */}
 				<div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
 					<div>
@@ -274,39 +459,68 @@ export default function StrategyAdvisorPage() {
 				{/* Loading state */}
 				{loading && !strategy && (
 					<div className="card-elevated p-12 text-center">
-						<Loader2
-							size={32}
-							className="text-indigo-500 animate-spin mx-auto mb-6"
-						/>
-						<p className="text-sm text-surface-700 font-semibold mb-4">
-							Generating Your Personalised Strategy…
-						</p>
-						<div className="max-w-xs mx-auto space-y-3 text-left">
-							{[
-								{ icon: "📊", text: "Fetching your daily logs & stock data" },
-								{ icon: "🧮", text: "Computing revenue trends & patterns" },
-								{ icon: "🤖", text: "Generating AI-powered recommendations" },
-								{ icon: "📋", text: "Preparing your tailored report" },
-							].map((step, i) => (
-								<div
-									key={i}
-									className="flex items-center gap-2.5 text-xs text-surface-500 animate-pulse"
-									style={{ animationDelay: `${i * 0.3}s` }}
-								>
-									<span className="text-sm">{step.icon}</span>
-									<span>{step.text}</span>
-								</div>
-							))}
+						<div className="w-14 h-14 rounded-2xl bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center mx-auto mb-5">
+							<Lightbulb size={26} className="text-white animate-pulse" />
 						</div>
-						<p className="text-[10px] text-surface-400 mt-5">
-							This may take 10-20 seconds depending on your data size
+						<p className="text-sm text-surface-700 font-semibold mb-2">
+							Generating Your Personalised Strategy
 						</p>
+						<p className="text-xs text-surface-400 mb-5">
+							You can continue using the app while this runs.
+						</p>
+						<div className="max-w-md mx-auto space-y-3 text-left">
+							{STRATEGY_PROGRESS_STEPS.map((step, idx) => {
+								const isActive = idx === progressIdx;
+								const isDone = idx < progressIdx;
+								return (
+									<div
+										key={step.label}
+										className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border transition-all duration-500 ${
+											isActive
+												? "bg-indigo-50 border-indigo-200"
+												: isDone
+													? "bg-green-50/60 border-green-200"
+													: "bg-white border-surface-200 opacity-60"
+										}`}
+									>
+										{isDone ? (
+											<CheckCircle2 size={15} className="text-green-600" />
+										) : isActive ? (
+											<Loader2
+												size={15}
+												className="text-indigo-600 animate-spin"
+											/>
+										) : (
+											<step.icon size={15} className="text-surface-400" />
+										)}
+										<span
+											className={`text-xs font-medium ${
+												isActive
+													? "text-indigo-700"
+													: isDone
+														? "text-green-700"
+														: "text-surface-500"
+											}`}
+										>
+											{step.label}
+										</span>
+									</div>
+								);
+							})}
+						</div>
 					</div>
 				)}
 
 				{/* Strategy content */}
 				{strategy && (
 					<>
+						{loading && (
+							<div className="mb-5 px-4 py-3 rounded-lg border border-indigo-200 bg-indigo-50 text-xs text-indigo-700 flex items-center gap-2">
+								<Loader2 size={14} className="animate-spin" />
+								Generating refreshed strategy in background...
+							</div>
+						)}
+
 						{/* Quick stats bar */}
 						{strategy.stats && (
 							<div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
@@ -316,7 +530,10 @@ export default function StrategyAdvisorPage() {
 											Avg Daily Revenue
 										</p>
 										<p className="text-lg font-bold text-surface-900">
-											₹{strategy.stats.avg_daily_revenue.toLocaleString()}
+											{formatCurrency(
+												strategy.stats.avg_daily_revenue,
+												currencyCode,
+											)}
 										</p>
 									</div>
 								)}
@@ -594,6 +811,54 @@ export default function StrategyAdvisorPage() {
 							</div>
 						)}
 					</>
+				)}
+
+				{(historyLoading || history.length > 0) && (
+					<div className="mt-8 bg-white rounded-xl border border-surface-200 p-4">
+						<div className="flex items-center justify-between mb-3">
+							<h3 className="text-sm font-semibold text-surface-900">
+								Previous Strategy Analyses
+							</h3>
+							{historyLoading && (
+								<Loader2 size={14} className="animate-spin text-surface-400" />
+							)}
+						</div>
+						<div className="space-y-2">
+							{history.map((item) => (
+								<button
+									key={item.id}
+									onClick={() => loadHistoryItem(item)}
+									className="w-full text-left rounded-lg border border-surface-200 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all px-3 py-2.5"
+								>
+									<div className="flex items-center justify-between gap-3">
+										<div>
+											<p className="text-xs font-semibold text-surface-800">
+												{item.businessType || "Strategy Report"}
+											</p>
+											<p className="text-[11px] text-surface-500 mt-0.5 line-clamp-1">
+												{item.summary || "Tap to load this strategy"}
+											</p>
+										</div>
+										<div className="text-right shrink-0">
+											<p className="text-[11px] text-surface-500">
+												{new Date(item.date || Date.now()).toLocaleDateString(
+													"en-IN",
+													{
+														day: "numeric",
+														month: "short",
+														year: "numeric",
+													},
+												)}
+											</p>
+											<p className="text-[10px] text-indigo-600 font-medium">
+												Load report
+											</p>
+										</div>
+									</div>
+								</button>
+							))}
+						</div>
+					</div>
 				)}
 			</div>
 		</div>

@@ -11,6 +11,7 @@ import {
 import axios from "axios";
 import { useAuth } from "../contexts/AuthContext";
 import { saveSectionReport } from "../services/reportMemory";
+import { formatCurrency } from "../utils/currency";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -23,7 +24,7 @@ function getStoredAnalysis() {
 	}
 }
 
-function formatValue(label, value) {
+function formatValue(label, value, currencyCode) {
 	if (value == null || value === "") return "--";
 	const lower = String(label || "").toLowerCase();
 	const numeric = Number(value);
@@ -33,12 +34,12 @@ function formatValue(label, value) {
 			lower.includes(k),
 		)
 	) {
-		return `Rs ${numeric.toLocaleString("en-IN")}`;
+		return formatCurrency(numeric, currencyCode);
 	}
 	return numeric.toLocaleString("en-IN");
 }
 
-function buildFallbackForecasts(analysis) {
+function buildFallbackForecasts(analysis, currencyCode) {
 	if (!analysis) return [];
 	const fromPredictions = (analysis.forecasts || []).slice(0, 4).map((fc) => {
 		const growth = Number(fc.growth_rate ?? fc.growthRate ?? 0);
@@ -51,7 +52,7 @@ function buildFallbackForecasts(analysis) {
 				type: "warning",
 				icon: "⚠",
 				headline: `${label} may dip by ${Math.abs(growth).toFixed(0)}% soon`,
-				detail: `Projected next value: ${formatValue(label, nextValue)}`,
+				detail: `Projected next value: ${formatValue(label, nextValue, currencyCode)}`,
 				action:
 					"Run a short promotion and trim non-essential spend for the next cycle.",
 				urgency: "high",
@@ -63,7 +64,7 @@ function buildFallbackForecasts(analysis) {
 				type: "opportunity",
 				icon: "↗",
 				headline: `${label} is trending up by ${growth.toFixed(0)}%`,
-				detail: `Projected next value: ${formatValue(label, nextValue)}`,
+				detail: `Projected next value: ${formatValue(label, nextValue, currencyCode)}`,
 				action: "Increase ready stock and staffing to capture this upside.",
 				urgency: "medium",
 			};
@@ -73,7 +74,7 @@ function buildFallbackForecasts(analysis) {
 			type: "neutral",
 			icon: "→",
 			headline: `${label} is likely to stay steady`,
-			detail: `Projected next value: ${formatValue(label, nextValue)}`,
+			detail: `Projected next value: ${formatValue(label, nextValue, currencyCode)}`,
 			action: "Test one focused experiment this week to break the plateau.",
 			urgency: "low",
 		};
@@ -133,7 +134,8 @@ const URGENCY_DOTS = {
 };
 
 export default function ActionableForecast({ token, analysisReady }) {
-	const { user } = useAuth();
+	const { user, userProfile } = useAuth();
+	const currencyCode = userProfile?.currency || "INR";
 	const [forecasts, setForecasts] = useState([]);
 	const [loading, setLoading] = useState(false);
 
@@ -148,7 +150,9 @@ export default function ActionableForecast({ token, analysisReady }) {
 			);
 			const cards = data.forecast_actions || data.actions || [];
 			setForecasts(
-				cards.length > 0 ? cards : buildFallbackForecasts(getStoredAnalysis()),
+				cards.length > 0
+					? cards
+					: buildFallbackForecasts(getStoredAnalysis(), currencyCode),
 			);
 			saveSectionReport(user, "forecast_actions", {
 				summary: `Generated ${cards.length} forecast action cards`,
@@ -158,7 +162,7 @@ export default function ActionableForecast({ token, analysisReady }) {
 			}).catch(() => {});
 		} catch (err) {
 			console.error("Forecast actions failed:", err);
-			setForecasts(buildFallbackForecasts(getStoredAnalysis()));
+			setForecasts(buildFallbackForecasts(getStoredAnalysis(), currencyCode));
 		} finally {
 			setLoading(false);
 		}
@@ -166,7 +170,7 @@ export default function ActionableForecast({ token, analysisReady }) {
 
 	useEffect(() => {
 		if (analysisReady) fetchForecasts();
-	}, [analysisReady]);
+	}, [analysisReady, currencyCode]);
 
 	if (!analysisReady) return null;
 

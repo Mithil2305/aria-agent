@@ -16,6 +16,7 @@ import IntegrationsPage from "./pages/IntegrationsPage";
 import StrategyAdvisorPage from "./pages/StrategyAdvisorPage";
 import PremiumAnalysisPage from "./pages/PremiumAnalysisPage";
 import LimitsPage from "./pages/LimitsPage";
+import AdminPage from "./pages/AdminPage";
 import SetupPage from "./pages/SetupPage";
 import { AnalysisJobProvider } from "./contexts/AnalysisJobContext";
 
@@ -59,6 +60,7 @@ function App() {
 							<Route path="/strategy" element={<StrategyAdvisorPage />} />
 							<Route path="/premium" element={<PremiumAnalysisPage />} />
 							<Route path="/limits" element={<LimitsPage />} />
+							<Route path="/admin" element={<AdminPage />} />
 						</Route>
 
 						{/* Catch-all */}

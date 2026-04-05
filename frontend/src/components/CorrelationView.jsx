@@ -83,8 +83,16 @@ export default function CorrelationView({ correlations }) {
 			</div>
 
 			{/* Scatter Plot */}
-			<div className="h-52">
-				<ResponsiveContainer width="100%" height="100%">
+			<div
+				className="h-52"
+				style={{ width: "100%", minWidth: 0, minHeight: 208 }}
+			>
+				<ResponsiveContainer
+					width="100%"
+					height="100%"
+					minWidth={0}
+					minHeight={208}
+				>
 					<ScatterChart margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
 						<CartesianGrid
 							strokeDasharray="3 3"

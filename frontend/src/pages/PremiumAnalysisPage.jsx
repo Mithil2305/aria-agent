@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import {
 	Crown,
@@ -26,10 +26,14 @@ import {
 	orderBy,
 	limit,
 	getDocs,
+	addDoc,
 	doc,
 	getDoc,
+	setDoc,
+	serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { formatCurrency } from "../utils/currency";
 
 /* ── Loading animation steps ─────────────────────── */
 const PROGRESS_STEPS = [
@@ -38,6 +42,9 @@ const PROGRESS_STEPS = [
 	{ label: "Generating premium insights…", icon: TrendingUp, duration: 3000 },
 	{ label: "Preparing your report…", icon: CheckCircle2, duration: 2000 },
 ];
+
+const PREMIUM_JOB_KEY = "yukti_premium_job";
+const MAX_PREMIUM_HISTORY = 20;
 
 /* ── Provider badge ──────────────────────────────── */
 function ProviderBadge({ generatedBy, label }) {
@@ -63,6 +70,8 @@ function ProviderBadge({ generatedBy, label }) {
 
 export default function PremiumAnalysisPage() {
 	const { user, userProfile } = useAuth();
+	const currencyCode = userProfile?.currency || "INR";
+	const mountedRef = useRef(true);
 
 	const [status, setStatus] = useState(null); // { month, used, available }
 	const [loading, setLoading] = useState(false);
@@ -70,6 +79,44 @@ export default function PremiumAnalysisPage() {
 	const [result, setResult] = useState(null);
 	const [error, setError] = useState(null);
 	const [progressIdx, setProgressIdx] = useState(0);
+	const [history, setHistory] = useState([]);
+	const [historyLoading, setHistoryLoading] = useState(false);
+
+	useEffect(() => {
+		mountedRef.current = true;
+		return () => {
+			mountedRef.current = false;
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!user) return;
+		let cancelled = false;
+
+		async function loadHistory() {
+			setHistoryLoading(true);
+			try {
+				const q = query(
+					collection(db, "users", user.uid, "premiumReports"),
+					orderBy("createdAt", "desc"),
+					limit(MAX_PREMIUM_HISTORY),
+				);
+				const snap = await getDocs(q);
+				if (!cancelled) {
+					setHistory(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+				}
+			} catch {
+				if (!cancelled) setHistory([]);
+			} finally {
+				if (!cancelled) setHistoryLoading(false);
+			}
+		}
+
+		loadHistory();
+		return () => {
+			cancelled = true;
+		};
+	}, [user]);
 
 	/* ── Check monthly status on mount ──────────── */
 	useEffect(() => {
@@ -106,6 +153,24 @@ export default function PremiumAnalysisPage() {
 		init();
 	}, [user]);
 
+	useEffect(() => {
+		try {
+			const raw = sessionStorage.getItem(PREMIUM_JOB_KEY);
+			if (!raw) return;
+			const job = JSON.parse(raw);
+			if (
+				job?.status === "running" &&
+				Date.now() - Number(job?.startedAt || 0) < 15 * 60 * 1000
+			) {
+				setLoading(true);
+			} else if (job?.status === "running") {
+				sessionStorage.removeItem(PREMIUM_JOB_KEY);
+			}
+		} catch {
+			// Ignore malformed payload
+		}
+	}, []);
+
 	/* ── Progress animation during loading ─────── */
 	useEffect(() => {
 		if (!loading) {
@@ -127,6 +192,14 @@ export default function PremiumAnalysisPage() {
 	async function handleGenerate() {
 		setLoading(true);
 		setError(null);
+		sessionStorage.setItem(
+			PREMIUM_JOB_KEY,
+			JSON.stringify({
+				status: "running",
+				startedAt: Date.now(),
+				month: status?.month || null,
+			}),
+		);
 		try {
 			const token = user ? await user.getIdToken() : null;
 
@@ -174,8 +247,57 @@ export default function PremiumAnalysisPage() {
 				role,
 			);
 
-			setResult(data);
-			setStatus((prev) => ({ ...prev, used: true, available: false }));
+			const nowIso = new Date().toISOString();
+			const monthKey =
+				status?.month || new Date().toISOString().slice(0, 7).replace("-", "_");
+
+			const reportPayload = {
+				date: nowIso,
+				createdAt: serverTimestamp(),
+				month: monthKey,
+				generated_by: data.generated_by || "yukti_model",
+				provider_label: data.provider_label || "Yukti Custom Model",
+				generation_time: data.generation_time || null,
+				analysisPreview: (data.analysis || "").slice(0, 260),
+				resultData: JSON.stringify(data),
+			};
+
+			const reportRef = await addDoc(
+				collection(db, "users", user.uid, "premiumReports"),
+				reportPayload,
+			);
+
+			await setDoc(
+				doc(db, "users", user.uid, "premiumAnalyses", monthKey),
+				{
+					...data,
+					generated_at: data.generated_at || nowIso,
+					month: monthKey,
+					updatedAt: serverTimestamp(),
+				},
+				{ merge: true },
+			);
+
+			if (mountedRef.current) {
+				setResult(data);
+				setStatus((prev) => ({ ...prev, used: true, available: false }));
+				setHistory((prev) =>
+					[{ id: reportRef.id, ...reportPayload }, ...prev].slice(
+						0,
+						MAX_PREMIUM_HISTORY,
+					),
+				);
+			}
+
+			sessionStorage.setItem(
+				PREMIUM_JOB_KEY,
+				JSON.stringify({
+					status: "success",
+					completedAt: Date.now(),
+					reportId: reportRef.id,
+					month: monthKey,
+				}),
+			);
 		} catch (e) {
 			console.error("Premium analysis failed:", e);
 			const isTimeout =
@@ -198,8 +320,21 @@ export default function PremiumAnalysisPage() {
 							? "Could not reach backend server (connection dropped). Please confirm backend is running on port 8000 and retry."
 							: "Failed to generate analysis. Please try again."),
 			);
+			sessionStorage.setItem(
+				PREMIUM_JOB_KEY,
+				JSON.stringify({
+					status: "error",
+					completedAt: Date.now(),
+					error:
+						e?.response?.data?.detail ||
+						e?.message ||
+						"Premium analysis failed",
+				}),
+			);
 		} finally {
-			setLoading(false);
+			if (mountedRef.current) {
+				setLoading(false);
+			}
 		}
 	}
 
@@ -208,6 +343,17 @@ export default function PremiumAnalysisPage() {
 		month: "long",
 		year: "numeric",
 	});
+
+	const loadHistoryItem = (item) => {
+		if (!item?.resultData) return;
+		try {
+			const parsed = JSON.parse(item.resultData);
+			setResult({ ...parsed, cached: true });
+			setError(null);
+		} catch {
+			setError("Could not load this saved premium report.");
+		}
+	};
 
 	if (checking) {
 		return (
@@ -220,6 +366,13 @@ export default function PremiumAnalysisPage() {
 	return (
 		<div className="app-page">
 			<div className="app-page-inner max-w-4xl mx-auto space-y-6">
+				{loading && (
+					<div className="px-4 py-3 rounded-lg border border-amber-200 bg-amber-50/80 text-xs text-amber-800">
+						Premium analysis is running in the background. You can move to other
+						pages and return when it&apos;s done.
+					</div>
+				)}
+
 				{/* ── Header ──────────────────────────────── */}
 				<div className="flex items-start justify-between">
 					<div>
@@ -457,11 +610,11 @@ export default function PremiumAnalysisPage() {
 								{[
 									{
 										label: "Avg Revenue",
-										value: `₹${(
-											result.stats.avg_daily_revenue || 0
-										).toLocaleString("en-IN", {
-											maximumFractionDigits: 0,
-										})}`,
+										value: formatCurrency(
+											result.stats.avg_daily_revenue || 0,
+											currencyCode,
+											{ maximumFractionDigits: 0 },
+										),
 									},
 									{
 										label: "Avg Customers",
@@ -469,11 +622,11 @@ export default function PremiumAnalysisPage() {
 									},
 									{
 										label: "Best Day",
-										value: `₹${(
-											result.stats.max_revenue_day || 0
-										).toLocaleString("en-IN", {
-											maximumFractionDigits: 0,
-										})}`,
+										value: formatCurrency(
+											result.stats.max_revenue_day || 0,
+											currencyCode,
+											{ maximumFractionDigits: 0 },
+										),
 									},
 									{
 										label: "Data Points",
@@ -494,6 +647,54 @@ export default function PremiumAnalysisPage() {
 								))}
 							</div>
 						)}
+					</div>
+				)}
+
+				{(historyLoading || history.length > 0) && (
+					<div className="bg-white rounded-xl border border-surface-200 p-4">
+						<div className="flex items-center justify-between mb-3">
+							<h3 className="text-sm font-semibold text-surface-900">
+								Previous Premium Analyses
+							</h3>
+							{historyLoading && (
+								<Loader2 size={14} className="animate-spin text-surface-400" />
+							)}
+						</div>
+						<div className="space-y-2">
+							{history.map((item) => (
+								<button
+									key={item.id}
+									onClick={() => loadHistoryItem(item)}
+									className="w-full text-left rounded-lg border border-surface-200 hover:border-amber-300 hover:bg-amber-50/40 transition-all px-3 py-2.5"
+								>
+									<div className="flex items-center justify-between gap-3">
+										<div>
+											<p className="text-xs font-semibold text-surface-800">
+												{item.month || "Premium Analysis"}
+											</p>
+											<p className="text-[11px] text-surface-500 mt-0.5 line-clamp-1">
+												{item.analysisPreview || "Premium report"}
+											</p>
+										</div>
+										<div className="text-right shrink-0">
+											<p className="text-[11px] text-surface-500">
+												{new Date(item.date || Date.now()).toLocaleDateString(
+													"en-IN",
+													{
+														day: "numeric",
+														month: "short",
+														year: "numeric",
+													},
+												)}
+											</p>
+											<p className="text-[10px] text-amber-600 font-medium">
+												Load report
+											</p>
+										</div>
+									</div>
+								</button>
+							))}
+						</div>
 					</div>
 				)}
 			</div>

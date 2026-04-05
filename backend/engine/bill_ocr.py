@@ -64,6 +64,10 @@ def _get_ocr():
     try:
         # Suppress noisy PaddlePaddle/PaddleX logs during init
         os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
+        # Work around known Paddle 3.x Windows oneDNN/PIR runtime failures.
+        os.environ.setdefault("FLAGS_use_mkldnn", "0")
+        os.environ.setdefault("FLAGS_enable_pir_api", "0")
+        os.environ.setdefault("FLAGS_enable_pir_in_executor", "0")
 
         _ocr_version = _detect_paddleocr_version()
         log.info("🔧 Detected PaddleOCR %s", _ocr_version)
