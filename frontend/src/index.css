@@ -646,7 +646,10 @@ tbody tr {
 	inset: 0;
 	pointer-events: none;
 	opacity: 0.12;
-	background-image: radial-gradient(rgba(56, 46, 30, 0.28) 0.6px, transparent 0.6px);
+	background-image: radial-gradient(
+		rgba(56, 46, 30, 0.28) 0.6px,
+		transparent 0.6px
+	);
 	background-size: 3px 3px;
 	mix-blend-mode: multiply;
 	z-index: 1;
@@ -658,8 +661,16 @@ tbody tr {
 	border-radius: 1.5rem;
 	border: 1px solid #e8dfd2;
 	background:
-		linear-gradient(145deg, rgba(255, 255, 255, 0.96) 0%, rgba(251, 247, 241, 0.95) 100%),
-		radial-gradient(circle at 84% 10%, rgba(223, 208, 180, 0.4), transparent 38%);
+		linear-gradient(
+			145deg,
+			rgba(255, 255, 255, 0.96) 0%,
+			rgba(251, 247, 241, 0.95) 100%
+		),
+		radial-gradient(
+			circle at 84% 10%,
+			rgba(223, 208, 180, 0.4),
+			transparent 38%
+		);
 	box-shadow:
 		0 26px 54px rgba(27, 33, 45, 0.08),
 		inset 0 1px 0 rgba(255, 255, 255, 0.75);
@@ -717,7 +728,11 @@ tbody tr {
 
 .auth-v2-metric-card,
 .auth-v2-rail-card {
-	background: linear-gradient(140deg, rgba(255, 255, 255, 0.93), rgba(250, 246, 238, 0.95));
+	background: linear-gradient(
+		140deg,
+		rgba(255, 255, 255, 0.93),
+		rgba(250, 246, 238, 0.95)
+	);
 	border: 1px solid #e6dac7;
 	border-radius: 1rem;
 	padding: 0.9rem 0.95rem;
@@ -784,7 +799,11 @@ tbody tr {
 	position: relative;
 	border-radius: 1.35rem;
 	border: 1px solid #e7dcc9;
-	background: linear-gradient(152deg, rgba(255, 255, 255, 0.96), rgba(251, 246, 238, 0.95));
+	background: linear-gradient(
+		152deg,
+		rgba(255, 255, 255, 0.96),
+		rgba(251, 246, 238, 0.95)
+	);
 	box-shadow:
 		0 22px 42px rgba(22, 28, 40, 0.1),
 		inset 0 1px 0 rgba(255, 255, 255, 0.8);
@@ -795,7 +814,11 @@ tbody tr {
 	content: "";
 	position: absolute;
 	inset: 0;
-	background: radial-gradient(circle at 100% 0%, rgba(221, 206, 176, 0.28), transparent 42%);
+	background: radial-gradient(
+		circle at 100% 0%,
+		rgba(221, 206, 176, 0.28),
+		transparent 42%
+	);
 	pointer-events: none;
 }
 

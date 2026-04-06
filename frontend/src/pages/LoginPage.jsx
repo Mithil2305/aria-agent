@@ -198,8 +198,7 @@ export default function LoginPage() {
 						</div>
 						<h1 className="auth-v2-title">
 							Your decisions deserve
-							<br />
-							a stronger signal.
+							<br />a stronger signal.
 						</h1>
 						<p className="auth-v2-subtitle">
 							Resume your 6-layer insight workflow, weekly strategy loops, and
@@ -245,9 +244,11 @@ export default function LoginPage() {
 					<div className="auth-v2-panel-inner">
 						<div className="text-center mb-6">
 							<div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gold-600 mb-3 shadow-sm">
-							<Sparkles size={22} className="text-white" />
+								<Sparkles size={22} className="text-white" />
 							</div>
-							<h2 className="text-xl font-semibold text-slate-900">Welcome Back</h2>
+							<h2 className="text-xl font-semibold text-slate-900">
+								Welcome Back
+							</h2>
 							<p className="text-slate-600 text-sm mt-1">
 								Sign in to continue with Yukti
 							</p>
@@ -262,24 +263,29 @@ export default function LoginPage() {
 							disabled={googleLoading}
 							className="auth-google-btn w-full flex items-center justify-center gap-2"
 						>
-						<svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
-							<path
-								fill="#EA4335"
-								d="M24 9.5c3.6 0 6.8 1.2 9.3 3.6l6.9-6.9C36.1 2.4 30.5 0 24 0 14.6 0 6.4 5.4 2.4 13.3l8 6.2C12.3 13.4 17.7 9.5 24 9.5z"
-							/>
-							<path
-								fill="#4285F4"
-								d="M46.1 24.5c0-1.6-.1-2.7-.4-3.9H24v7.4h12.7c-.3 1.8-1.8 4.6-5.1 6.4l7.8 6c4.6-4.3 6.7-10.5 6.7-15.9z"
-							/>
-							<path
-								fill="#FBBC05"
-								d="M10.4 28.5c-.5-1.3-.8-2.8-.8-4.5s.3-3.2.8-4.5l-8-6.2C.9 16.4 0 20.1 0 24s.9 7.6 2.4 10.7l8-6.2z"
-							/>
-							<path
-								fill="#34A853"
-								d="M24 48c6.5 0 12-2.1 16-5.8l-7.8-6c-2.1 1.5-4.9 2.6-8.2 2.6-6.3 0-11.7-3.9-13.6-9.9l-8 6.2C6.4 42.6 14.6 48 24 48z"
-							/>
-						</svg>
+							<svg
+								width="16"
+								height="16"
+								viewBox="0 0 48 48"
+								aria-hidden="true"
+							>
+								<path
+									fill="#EA4335"
+									d="M24 9.5c3.6 0 6.8 1.2 9.3 3.6l6.9-6.9C36.1 2.4 30.5 0 24 0 14.6 0 6.4 5.4 2.4 13.3l8 6.2C12.3 13.4 17.7 9.5 24 9.5z"
+								/>
+								<path
+									fill="#4285F4"
+									d="M46.1 24.5c0-1.6-.1-2.7-.4-3.9H24v7.4h12.7c-.3 1.8-1.8 4.6-5.1 6.4l7.8 6c4.6-4.3 6.7-10.5 6.7-15.9z"
+								/>
+								<path
+									fill="#FBBC05"
+									d="M10.4 28.5c-.5-1.3-.8-2.8-.8-4.5s.3-3.2.8-4.5l-8-6.2C.9 16.4 0 20.1 0 24s.9 7.6 2.4 10.7l8-6.2z"
+								/>
+								<path
+									fill="#34A853"
+									d="M24 48c6.5 0 12-2.1 16-5.8l-7.8-6c-2.1 1.5-4.9 2.6-8.2 2.6-6.3 0-11.7-3.9-13.6-9.9l-8 6.2C6.4 42.6 14.6 48 24 48z"
+								/>
+							</svg>
 							{googleLoading ? "Connecting Google..." : "Continue with Google"}
 						</button>
 
@@ -288,56 +294,58 @@ export default function LoginPage() {
 						</div>
 
 						<form onSubmit={handleSubmit} className="space-y-4">
-						<div>
-							<label className="auth-v2-label">
-								<Mail size={12} strokeWidth={1.5} />
-								Email
-							</label>
-							<input
-								type="email"
-								value={email}
-								onChange={(e) => setEmail(e.target.value)}
-								className="auth-input w-full"
-								placeholder="you@business.com"
-								autoFocus
-								required
-							/>
-						</div>
-
-						<div>
-							<label className="auth-v2-label">
-								<Lock size={12} strokeWidth={1.5} />
-								Password
-							</label>
-							<div className="relative">
+							<div>
+								<label className="auth-v2-label">
+									<Mail size={12} strokeWidth={1.5} />
+									Email
+								</label>
 								<input
-									type={showPassword ? "text" : "password"}
-									value={password}
-									onChange={(e) => setPassword(e.target.value)}
-									className="auth-input w-full pr-10"
-									placeholder="••••••••"
+									type="email"
+									value={email}
+									onChange={(e) => setEmail(e.target.value)}
+									className="auth-input w-full"
+									placeholder="you@business.com"
+									autoFocus
 									required
 								/>
-								<button
-									type="button"
-									onClick={() => setShowPassword(!showPassword)}
-									className="auth-v2-eye-btn"
-									tabIndex={-1}
-								>
-									{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-								</button>
 							</div>
-						</div>
 
-						<button
-							type="submit"
-							disabled={loading}
-							className="auth-submit-btn w-full flex items-center justify-center gap-2"
-						>
-							{loading ? <Loader2 size={15} className="animate-spin" /> : null}
-							{loading ? "Signing in..." : "Sign In"}
-							{!loading && <ArrowRight size={15} />}
-						</button>
+							<div>
+								<label className="auth-v2-label">
+									<Lock size={12} strokeWidth={1.5} />
+									Password
+								</label>
+								<div className="relative">
+									<input
+										type={showPassword ? "text" : "password"}
+										value={password}
+										onChange={(e) => setPassword(e.target.value)}
+										className="auth-input w-full pr-10"
+										placeholder="••••••••"
+										required
+									/>
+									<button
+										type="button"
+										onClick={() => setShowPassword(!showPassword)}
+										className="auth-v2-eye-btn"
+										tabIndex={-1}
+									>
+										{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+									</button>
+								</div>
+							</div>
+
+							<button
+								type="submit"
+								disabled={loading}
+								className="auth-submit-btn w-full flex items-center justify-center gap-2"
+							>
+								{loading ? (
+									<Loader2 size={15} className="animate-spin" />
+								) : null}
+								{loading ? "Signing in..." : "Sign In"}
+								{!loading && <ArrowRight size={15} />}
+							</button>
 						</form>
 
 						<p className="text-center text-sm text-slate-600 mt-5">
