@@ -89,6 +89,22 @@ function monthLabel(key) {
 	});
 }
 
+function getFieldPlaceholder(field) {
+	const base = String(field?.placeholder || "").trim();
+	if (!field?.prefix) return base;
+
+	const escapedPrefix = field.prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	const withoutExistingPrefix = base
+		.replace(new RegExp(`^${escapedPrefix}\\s*`, "i"), "")
+		.trim();
+
+	return withoutExistingPrefix
+		? `${field.prefix} ${withoutExistingPrefix}`
+		: field.prefix;
+}
+
+const QUICK_FIELD_KEYS = ["revenue", "expenses", "customers", "orders"];
+
 export default function DailyLogPage() {
 	const { user, userProfile } = useAuth();
 	const [date, setDate] = useState(todayISO());
@@ -117,13 +133,12 @@ export default function DailyLogPage() {
 		() => metricFields.filter((f) => f.type === "number"),
 		[metricFields],
 	);
-	const quickFieldKeys = ["revenue", "expenses", "customers", "orders"];
 	const quickFields = useMemo(
-		() => metricFields.filter((f) => quickFieldKeys.includes(f.key)),
+		() => metricFields.filter((f) => QUICK_FIELD_KEYS.includes(f.key)),
 		[metricFields],
 	);
 	const advancedFields = useMemo(
-		() => metricFields.filter((f) => !quickFieldKeys.includes(f.key)),
+		() => metricFields.filter((f) => !QUICK_FIELD_KEYS.includes(f.key)),
 		[metricFields],
 	);
 
@@ -488,23 +503,18 @@ export default function DailyLogPage() {
 										{field.label}
 										{field.required && <span className="text-red-500">*</span>}
 									</label>
-									<div className="relative">
-										{field.prefix && (
-											<span className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-500 text-sm">
-												{field.prefix}
-											</span>
-										)}
+									<div>
 										<input
 											type="number"
 											inputMode="decimal"
 											min="0"
 											step="any"
-											placeholder={field.placeholder}
+											placeholder={getFieldPlaceholder(field)}
 											value={formData[field.key] ?? ""}
 											onChange={(e) =>
 												handleFieldChange(field.key, e.target.value)
 											}
-											className={`input-field w-full ${field.prefix ? "pl-7" : ""}`}
+											className="input-field w-full"
 										/>
 									</div>
 								</div>
@@ -540,16 +550,11 @@ export default function DailyLogPage() {
 											/>
 											{field.label}
 										</label>
-										<div className="relative">
-											{field.prefix && (
-												<span className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-500 text-sm">
-													{field.prefix}
-												</span>
-											)}
+										<div>
 											{field.type === "text" ? (
 												<input
 													type="text"
-													placeholder={field.placeholder}
+													placeholder={getFieldPlaceholder(field)}
 													value={formData[field.key] ?? ""}
 													onChange={(e) =>
 														handleFieldChange(field.key, e.target.value)
@@ -562,12 +567,12 @@ export default function DailyLogPage() {
 													inputMode="decimal"
 													min="0"
 													step="any"
-													placeholder={field.placeholder}
+													placeholder={getFieldPlaceholder(field)}
 													value={formData[field.key] ?? ""}
 													onChange={(e) =>
 														handleFieldChange(field.key, e.target.value)
 													}
-													className={`input-field w-full ${field.prefix ? "pl-7" : ""}`}
+													className="input-field w-full"
 												/>
 											)}
 										</div>
