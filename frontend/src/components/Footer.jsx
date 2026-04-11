@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { Twitter, Linkedin, Github, Mail, ArrowRight } from "lucide-react";
+import BrandLogo from "./BrandLogo";
 
 export default function Footer() {
 	const currentYear = new Date().getFullYear();
@@ -36,14 +37,12 @@ export default function Footer() {
 					{/* Brand Section */}
 					<div className="lg:col-span-4 flex flex-col items-start">
 						<div className="flex items-center gap-3 mb-6 cursor-pointer group">
-							<div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center group-hover:scale-95 transition-transform duration-300">
-								<span className="text-white font-bold text-xl leading-none">
-									Y
-								</span>
-							</div>
-							<span className="font-bold text-2xl tracking-tight text-slate-900">
-								Yukti
-							</span>
+							<BrandLogo
+								size={40}
+								showText
+								markClassName="text-slate-900 group-hover:scale-95 transition-transform duration-300"
+								textClassName="font-bold text-2xl text-slate-900"
+							/>
 						</div>
 						<p className="text-slate-500 leading-relaxed mb-8 max-w-sm">
 							The intelligent analytics platform purpose-built for Indian SMBs.

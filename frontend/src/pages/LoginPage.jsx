@@ -1,34 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import { useNavigate, Link, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-	Mail,
-	Lock,
 	ArrowRight,
-	Loader2,
 	Eye,
 	EyeOff,
-	Sparkles,
-	Orbit,
+	LineChart,
+	Loader2,
+	Lock,
+	Mail,
 	ShieldCheck,
-	Workflow,
-	BarChart3,
-	Rocket,
+	Sparkles,
 } from "lucide-react";
 import ToastStack from "../components/ToastStack";
+import BrandLogo from "../components/BrandLogo";
 
-const LOGIN_SIGNAL_CARDS = [
+const HIGHLIGHTS = [
 	{
-		title: "Forecast confidence",
-		value: "92%",
-		detail: "Model confidence for the next 14-day revenue window.",
-		icon: Orbit,
+		title: "Forecast Signal",
+		value: "92% confidence",
+		detail: "Short-term demand window calibrated from your latest data.",
+		icon: LineChart,
 	},
 	{
-		title: "Anomaly shield",
-		value: "Always on",
-		detail: "Weekly risk alerts generated from your live business data.",
+		title: "Risk Monitoring",
+		value: "Always active",
+		detail: "Anomaly and margin-risk alerts keep your team proactive.",
 		icon: ShieldCheck,
 	},
 ];
@@ -64,9 +61,7 @@ export default function LoginPage() {
 			return;
 		}
 
-		if (handledStateKeyRef.current === location.key) {
-			return;
-		}
+		if (handledStateKeyRef.current === location.key) return;
 		handledStateKeyRef.current = location.key;
 
 		if (location.state?.verificationSent) {
@@ -82,6 +77,7 @@ export default function LoginPage() {
 				"Account created. Verify your email to unlock your dashboard.",
 			);
 		}
+
 		if (location.state?.unverifiedAccessBlocked) {
 			pushToast(
 				"info",
@@ -90,6 +86,7 @@ export default function LoginPage() {
 			);
 			setSuccessState("Complete email verification, then sign in again.");
 		}
+
 		if (location.state?.suspendedAccessBlocked) {
 			pushToast(
 				"error",
@@ -108,9 +105,9 @@ export default function LoginPage() {
 			await login(email, password);
 			setSuccessState("Sign in successful. Taking you to your dashboard...");
 			pushToast("success", "Welcome back", "You are signed in successfully.");
-			window.setTimeout(() => navigate("/dashboard"), 380);
+			window.setTimeout(() => navigate("/dashboard"), 350);
 		} catch (err) {
-			const code = err.code || "";
+			const code = err?.code || "";
 			if (code.includes("email-not-verified")) {
 				pushToast(
 					"error",
@@ -178,206 +175,179 @@ export default function LoginPage() {
 	};
 
 	return (
-		<div className="landing-shell auth-v2-shell min-h-screen px-4 py-6 sm:py-10 relative overflow-hidden">
+		<div className="min-h-screen bg-[#fafafa] text-slate-900 relative overflow-hidden px-4 py-8 sm:py-12">
 			<ToastStack toasts={toasts} onDismiss={dismissToast} />
-			<div className="landing-grid-bg" />
-			<div className="landing-aurora landing-aurora-a" />
-			<div className="landing-aurora landing-aurora-b" />
-			<div className="auth-v2-noise" />
 
-			<div className="relative z-10 max-w-7xl mx-auto grid lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
-				<motion.section
-					initial={{ opacity: 0, y: 24 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ duration: 0.6, ease: "easeOut" }}
-					className="auth-v2-story hidden lg:flex lg:col-span-7"
-				>
-					<div className="auth-v2-story-content">
-						<div className="auth-v2-badge">
-							<Workflow size={14} /> Yukti Intelligence Platform
+			<div className="pointer-events-none absolute inset-0">
+				<div className="absolute -top-24 -left-20 h-[36vw] w-[36vw] rounded-full bg-slate-300/40 blur-[90px]" />
+				<div className="absolute bottom-0 right-0 h-[32vw] w-[32vw] rounded-full bg-slate-200/55 blur-[95px]" />
+			</div>
+
+			<div className="relative z-10 mx-auto max-w-6xl grid gap-6 lg:grid-cols-2 items-stretch">
+				<section className="hidden lg:flex rounded-4xl border border-slate-200 bg-white/90 backdrop-blur-xl p-8 shadow-[0_24px_50px_-34px_rgba(15,23,42,0.35)]">
+					<div className="flex flex-col w-full justify-between gap-8">
+						<div>
+							<p className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600">
+								<Sparkles size={13} /> Yukti Intelligence Platform
+							</p>
+							<h1 className="mt-5 text-4xl font-extrabold leading-tight tracking-tight text-black">
+								Welcome back to your
+								<br />
+								decision workspace.
+							</h1>
+							<p className="mt-4 text-slate-600 max-w-md leading-relaxed">
+								Resume forecasting, risk monitoring, and strategy execution from
+								one focused dashboard.
+							</p>
 						</div>
-						<h1 className="auth-v2-title">
-							Your decisions deserve
-							<br />a stronger signal.
-						</h1>
-						<p className="auth-v2-subtitle">
-							Resume your 6-layer insight workflow, weekly strategy loops, and
-							live anomaly intelligence from one focused workspace.
-						</p>
 
-						<div className="auth-v2-story-grid">
-							{LOGIN_SIGNAL_CARDS.map((item) => {
+						<div className="grid gap-3">
+							{HIGHLIGHTS.map((item) => {
 								const Icon = item.icon;
 								return (
-									<div key={item.title} className="auth-v2-metric-card">
-										<div className="auth-v2-metric-icon">
-											<Icon size={16} className="text-amber-700" />
+									<div
+										key={item.title}
+										className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+									>
+										<div className="flex items-center gap-2 text-slate-700">
+											<Icon size={14} />
+											<p className="text-xs font-semibold uppercase tracking-wide">
+												{item.title}
+											</p>
 										</div>
-										<p className="auth-v2-metric-title">{item.title}</p>
-										<p className="auth-v2-metric-value">{item.value}</p>
-										<p className="auth-v2-metric-detail">{item.detail}</p>
+										<p className="mt-1 text-base font-bold text-black">
+											{item.value}
+										</p>
+										<p className="mt-1 text-sm text-slate-600">{item.detail}</p>
 									</div>
 								);
 							})}
-							<div className="auth-v2-rail-card">
-								<div>
-									<p className="auth-v2-metric-title">Live dashboard signal</p>
-									<p className="auth-v2-metric-detail mt-1">
-										Track margin, trend drift, and category performance in one
-										view.
-									</p>
-								</div>
-								<span className="auth-v2-chip">
-									<BarChart3 size={14} /> Ready
-								</span>
-							</div>
 						</div>
 					</div>
-				</motion.section>
+				</section>
 
-				<motion.section
-					initial={{ opacity: 0, y: 16 }}
-					animate={{ opacity: 1, y: 0 }}
-					transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
-					className="auth-v2-panel lg:col-span-5"
-				>
-					<div className="auth-v2-panel-inner">
-						<div className="text-center mb-6">
-							<div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gold-600 mb-3 shadow-sm">
-								<Sparkles size={22} className="text-white" />
-							</div>
-							<h2 className="text-xl font-semibold text-slate-900">
-								Welcome Back
-							</h2>
-							<p className="text-slate-600 text-sm mt-1">
-								Sign in to continue with Yukti
-							</p>
-							{successState ? (
-								<p className="text-emerald-700 text-xs mt-3">{successState}</p>
-							) : null}
-						</div>
+				<section className="rounded-4xl border border-slate-200 bg-white/95 backdrop-blur-xl p-6 sm:p-8 shadow-[0_24px_50px_-34px_rgba(15,23,42,0.35)]">
+					<div className="text-center mb-6">
+						<BrandLogo
+							size={44}
+							className="justify-center mb-3"
+							markClassName="text-slate-900"
+						/>
+						<h2 className="text-2xl font-bold tracking-tight text-black">
+							Sign in
+						</h2>
+						<p className="text-sm text-slate-600 mt-1">
+							Access your Yukti dashboard and continue where you left off.
+						</p>
+						{successState ? (
+							<p className="text-xs text-emerald-700 mt-3">{successState}</p>
+						) : null}
+					</div>
 
-						<button
-							type="button"
-							onClick={handleGoogle}
-							disabled={googleLoading}
-							className="auth-google-btn w-full flex items-center justify-center gap-2"
-						>
-							<svg
-								width="16"
-								height="16"
-								viewBox="0 0 48 48"
-								aria-hidden="true"
-							>
-								<path
-									fill="#EA4335"
-									d="M24 9.5c3.6 0 6.8 1.2 9.3 3.6l6.9-6.9C36.1 2.4 30.5 0 24 0 14.6 0 6.4 5.4 2.4 13.3l8 6.2C12.3 13.4 17.7 9.5 24 9.5z"
-								/>
-								<path
-									fill="#4285F4"
-									d="M46.1 24.5c0-1.6-.1-2.7-.4-3.9H24v7.4h12.7c-.3 1.8-1.8 4.6-5.1 6.4l7.8 6c4.6-4.3 6.7-10.5 6.7-15.9z"
-								/>
-								<path
-									fill="#FBBC05"
-									d="M10.4 28.5c-.5-1.3-.8-2.8-.8-4.5s.3-3.2.8-4.5l-8-6.2C.9 16.4 0 20.1 0 24s.9 7.6 2.4 10.7l8-6.2z"
-								/>
-								<path
-									fill="#34A853"
-									d="M24 48c6.5 0 12-2.1 16-5.8l-7.8-6c-2.1 1.5-4.9 2.6-8.2 2.6-6.3 0-11.7-3.9-13.6-9.9l-8 6.2C6.4 42.6 14.6 48 24 48z"
-								/>
-							</svg>
-							{googleLoading ? "Connecting Google..." : "Continue with Google"}
-						</button>
+					<button
+						type="button"
+						onClick={handleGoogle}
+						disabled={googleLoading}
+						className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+					>
+						<svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
+							<path
+								fill="#EA4335"
+								d="M24 9.5c3.6 0 6.8 1.2 9.3 3.6l6.9-6.9C36.1 2.4 30.5 0 24 0 14.6 0 6.4 5.4 2.4 13.3l8 6.2C12.3 13.4 17.7 9.5 24 9.5z"
+							/>
+							<path
+								fill="#4285F4"
+								d="M46.1 24.5c0-1.6-.1-2.7-.4-3.9H24v7.4h12.7c-.3 1.8-1.8 4.6-5.1 6.4l7.8 6c4.6-4.3 6.7-10.5 6.7-15.9z"
+							/>
+							<path
+								fill="#FBBC05"
+								d="M10.4 28.5c-.5-1.3-.8-2.8-.8-4.5s.3-3.2.8-4.5l-8-6.2C.9 16.4 0 20.1 0 24s.9 7.6 2.4 10.7l8-6.2z"
+							/>
+							<path
+								fill="#34A853"
+								d="M24 48c6.5 0 12-2.1 16-5.8l-7.8-6c-2.1 1.5-4.9 2.6-8.2 2.6-6.3 0-11.7-3.9-13.6-9.9l-8 6.2C6.4 42.6 14.6 48 24 48z"
+							/>
+						</svg>
+						{googleLoading ? "Connecting Google..." : "Continue with Google"}
+					</button>
 
-						<div className="auth-divider my-5">
-							<span>or</span>
-						</div>
+					<div className="my-5 flex items-center gap-3 text-xs text-slate-400">
+						<div className="h-px flex-1 bg-slate-200" />
+						<span>or sign in with email</span>
+						<div className="h-px flex-1 bg-slate-200" />
+					</div>
 
-						<form onSubmit={handleSubmit} className="space-y-4">
-							<div>
-								<label className="auth-v2-label">
-									<Mail size={12} strokeWidth={1.5} />
-									Email
-								</label>
+					<form onSubmit={handleSubmit} className="space-y-4">
+						<div>
+							<label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+								Email
+							</label>
+							<div className="relative">
+								<Mail
+									size={14}
+									className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+								/>
 								<input
 									type="email"
 									value={email}
 									onChange={(e) => setEmail(e.target.value)}
-									className="auth-input w-full"
 									placeholder="you@business.com"
 									autoFocus
 									required
+									className="w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-900"
 								/>
 							</div>
+						</div>
 
-							<div>
-								<label className="auth-v2-label">
-									<Lock size={12} strokeWidth={1.5} />
-									Password
-								</label>
-								<div className="relative">
-									<input
-										type={showPassword ? "text" : "password"}
-										value={password}
-										onChange={(e) => setPassword(e.target.value)}
-										className="auth-input w-full pr-10"
-										placeholder="••••••••"
-										required
-									/>
-									<button
-										type="button"
-										onClick={() => setShowPassword(!showPassword)}
-										className="auth-v2-eye-btn"
-										tabIndex={-1}
-									>
-										{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-									</button>
-								</div>
+						<div>
+							<label className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+								Password
+							</label>
+							<div className="relative">
+								<Lock
+									size={14}
+									className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+								/>
+								<input
+									type={showPassword ? "text" : "password"}
+									value={password}
+									onChange={(e) => setPassword(e.target.value)}
+									placeholder="••••••••"
+									required
+									className="w-full rounded-xl border border-slate-300 bg-white pl-9 pr-10 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-900"
+								/>
+								<button
+									type="button"
+									onClick={() => setShowPassword((v) => !v)}
+									className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-black"
+									tabIndex={-1}
+								>
+									{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+								</button>
 							</div>
-
-							<button
-								type="submit"
-								disabled={loading}
-								className="auth-submit-btn w-full flex items-center justify-center gap-2"
-							>
-								{loading ? (
-									<Loader2 size={15} className="animate-spin" />
-								) : null}
-								{loading ? "Signing in..." : "Sign In"}
-								{!loading && <ArrowRight size={15} />}
-							</button>
-						</form>
-
-						<p className="text-center text-sm text-slate-600 mt-5">
-							Don't have an account?{" "}
-							<Link
-								to="/register"
-								className="text-amber-700 hover:text-amber-800 font-medium transition-colors"
-							>
-								Create one
-							</Link>
-						</p>
-
-						<div className="mt-5 pt-4 border-t border-amber-100 flex items-center justify-between gap-3 text-xs text-slate-600">
-							<span className="inline-flex items-center gap-1.5">
-								<Rocket size={13} className="text-amber-700" />
-								Go from login to insight in minutes
-							</span>
-							<Link
-								to="/about"
-								className="text-amber-700 hover:text-amber-800 font-medium"
-							>
-								Why Yukti
-							</Link>
 						</div>
-					</div>
 
-					<div className="auth-v2-mobile-story lg:hidden mt-4">
-						<div className="auth-v2-mobile-chip">
-							<BarChart3 size={14} /> 4 AI Providers + secure workflow
-						</div>
-					</div>
-				</motion.section>
+						<button
+							type="submit"
+							disabled={loading}
+							className="w-full rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+						>
+							{loading ? <Loader2 size={15} className="animate-spin" /> : null}
+							{loading ? "Signing in..." : "Sign In"}
+							{!loading ? <ArrowRight size={15} /> : null}
+						</button>
+					</form>
+
+					<p className="mt-5 text-center text-sm text-slate-600">
+						Don't have an account?{" "}
+						<Link
+							to="/register"
+							className="font-semibold text-slate-800 hover:text-black"
+						>
+							Create one
+						</Link>
+					</p>
+				</section>
 			</div>
 		</div>
 	);

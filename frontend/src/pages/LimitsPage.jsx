@@ -67,13 +67,50 @@ const COLOR_MAP = {
 	},
 };
 
+function getAdminLimitsDashboard() {
+	const now = new Date();
+	const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+	const nextMonth =
+		now.getMonth() === 11
+			? new Date(now.getFullYear() + 1, 0, 1)
+			: new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+	const daysRemaining = Math.ceil((nextMonth - now) / (1000 * 60 * 60 * 24));
+	const resetDate = nextMonth.toISOString().slice(0, 10);
+
+	const usage = Object.fromEntries(
+		Object.keys(CATEGORIES).map((key) => [
+			key,
+			{
+				used: 0,
+				limit: Number.POSITIVE_INFINITY,
+				remaining: Number.POSITIVE_INFINITY,
+				percentage: 0,
+			},
+		]),
+	);
+
+	return {
+		month,
+		daysRemaining,
+		resetDate,
+		usage,
+		categories: CATEGORIES,
+	};
+}
+
 export default function LimitsPage() {
 	const { user, userProfile, getTrialStatus } = useAuth();
 	const [limitsData, setLimitsData] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
+	const isAdminEmail =
+		String(user?.email || "")
+			.trim()
+			.toLowerCase() === "admin@yukti.com";
+	const isAdmin = userProfile?.role === "admin" || isAdminEmail;
 
-	const role = userProfile?.role || "paid-user";
+	const role = isAdmin ? "admin" : userProfile?.role || "paid-user";
 	const trialStatus = getTrialStatus();
 
 	const fetchLimits = useCallback(async () => {
@@ -81,6 +118,10 @@ export default function LimitsPage() {
 		setLoading(true);
 		setError(null);
 		try {
+			if (isAdmin) {
+				setLimitsData(getAdminLimitsDashboard());
+				return;
+			}
 			const data = await getLimitsDashboard(user.uid, role);
 			setLimitsData(data);
 		} catch (err) {
@@ -88,7 +129,7 @@ export default function LimitsPage() {
 		} finally {
 			setLoading(false);
 		}
-	}, [user, role]);
+	}, [user, role, isAdmin]);
 
 	useEffect(() => {
 		fetchLimits();

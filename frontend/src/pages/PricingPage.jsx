@@ -1,134 +1,175 @@
-import {
-	CheckCircle2,
-	BadgeIndianRupee,
-	ShieldCheck,
-	Sparkles,
-} from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const includedItems = [
-	"Initial onboarding and business profile setup",
-	"Data pipeline activation and schema alignment",
-	"Dashboard, analysis, strategy advisor, and report modules",
-	"Integration setup support for supported billing/POS connectors",
-	"Role-based access controls and account security defaults",
-	"Ongoing product updates and platform improvements",
-];
-
-const faqs = [
+const plans = [
 	{
-		q: "Is GST included in the monthly fee?",
-		a: "No. Monthly pricing is Rs.999 plus applicable GST.",
+		name: "Free",
+		price: "Rs.0",
+		subtitle: "7-day trial only",
+		description: "Try Yukti for 7 days with one-time feature access.",
+		features: [
+			"Data Uploads: 2 total",
+			"Analysis Runs: 2 total",
+			"Strategy Advisor: 1 total",
+			"Premium Analysis: 1 total",
+			"Bill Scanner: 1 total",
+			"PDF Reports: 1 total",
+			"Dashboard + Smart Alerts + Ask Yukti",
+			"Auto deactivation after 7 days",
+		],
+		cta: "Start free trial",
+		ctaTo: "/register",
+		cardClass: "bg-white border-slate-200",
 	},
 	{
-		q: "Is setup charged one-time or recurring?",
-		a: "Setup (Rs.3499) is a one-time initial implementation fee.",
+		name: "Paid",
+		upfrontPrice: "Rs.3499 upfront",
+		price: "Rs.999/month",
+		// subtitle: "+ GST",
+		description:
+			"Full monthly access with limits that reset every month. One-time onboarding fee applies at activation.",
+		features: [
+			"Initial onboarding/setup fee: Rs.3499 (one-time upfront)",
+			"Data Uploads: 30/month",
+			"Analysis Runs: 30/month",
+			"Strategy Advisor: 15/month",
+			"Premium Analysis: 2/month",
+			"Bill Scanner: 20/month",
+			"PDF Reports: 15/month",
+			"Weekly Digest + Market Compare + Pricing Tips",
+			"Includes all dashboard modules",
+		],
+		cta: "Get started",
+		ctaTo: "/register",
+		cardClass: "bg-black border-slate-900 text-white",
+		recommended: true,
 	},
 	{
-		q: "Do I need to pay setup again if I continue monthly?",
-		a: "No. After setup is completed, only the monthly subscription applies.",
-	},
-	{
-		q: "Can I request enterprise pricing?",
-		a: "Yes. For multi-location deployments or custom onboarding, contact sales@mudmedia.in.",
+		name: "Enterprise",
+		price: "Custom",
+		subtitle: "Talk to sales",
+		description: "For advanced deployment and organization-wide rollout.",
+		features: [
+			"Everything in Paid",
+			"Multi-branch deployment",
+			"Custom integrations",
+			"Dedicated onboarding",
+			"Priority support and SLA",
+			"Custom service limits per feature",
+			"Optional unlimited-style usage setup",
+			"Admin controls for suspensions and feature access",
+		],
+		cta: "Contact sales",
+		ctaHref: "mailto:chat.mudmedia@gmail.com",
+		cardClass: "bg-slate-50 border-slate-200",
 	},
 ];
 
 export default function PricingPage() {
 	return (
-		<div className="min-h-screen bg-slate-50 px-6 py-16 lg:px-8">
-			<div className="mx-auto max-w-6xl">
-				<div className="rounded-3xl border border-slate-200 bg-white p-8 md:p-12 shadow-sm">
-					<p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-						Pricing
-					</p>
-					<h1 className="mt-3 text-4xl font-black tracking-tight text-slate-900 md:text-5xl">
-						Simple pricing for serious business decisions
-					</h1>
-					<p className="mt-4 max-w-4xl text-base leading-relaxed text-slate-600">
-						Yukti is priced to be practical for Indian SMB teams that need
-						actionable intelligence without enterprise BI complexity.
-					</p>
-				</div>
+		<div className="min-h-screen bg-[#fafafa] text-slate-900 selection:bg-black selection:text-white relative overflow-x-hidden">
+			<div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+				<div className="absolute -top-24 -left-24 h-[40vw] w-[40vw] rounded-full bg-slate-300/40 blur-[100px]" />
+				<div className="absolute bottom-0 right-0 h-[36vw] w-[36vw] rounded-full bg-slate-200/60 blur-[110px]" />
+			</div>
 
-				<div className="mt-8 grid gap-6 lg:grid-cols-3">
-					<div className="rounded-2xl border border-slate-200 bg-white p-6 lg:col-span-1">
-						<div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-800">
-							<BadgeIndianRupee size={18} />
+			<div className="relative z-10 px-6 py-16 lg:px-8">
+				<div className="mx-auto max-w-6xl">
+					<section className="rounded-4xl border border-slate-200 bg-white/90 backdrop-blur-xl p-8 md:p-10 shadow-[0_25px_55px_-35px_rgba(15,23,42,0.35)]">
+						<div className="text-center">
+							<p className="inline-flex rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600">
+								Our pricing
+							</p>
+							<h1 className="mt-4 text-4xl md:text-5xl font-extrabold tracking-tight text-black">
+								Choose the plan that fits your team
+							</h1>
+							<p className="mt-3 text-slate-600 text-base">
+								Same Yukti product, different limits and support levels.
+							</p>
+							<p className="mt-2 text-sm font-semibold text-slate-700">
+								Paid activation includes a one-time Rs.3499 upfront onboarding
+								fee.
+							</p>
 						</div>
-						<p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-							Initial Setup
-						</p>
-						<p className="mt-2 text-4xl font-black text-slate-900">Rs.3499</p>
-						<p className="mt-2 text-sm text-slate-600">
-							One-time onboarding and implementation fee.
-						</p>
-					</div>
+					</section>
 
-					<div className="rounded-2xl border-2 border-slate-900 bg-slate-900 p-6 text-white lg:col-span-2">
-						<div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white">
-							<Sparkles size={18} />
-						</div>
-						<p className="text-sm font-semibold uppercase tracking-wide text-slate-300">
-							Monthly Subscription
-						</p>
-						<p className="mt-2 text-5xl font-black">Rs.999</p>
-						<p className="mt-1 text-sm font-medium text-slate-300">
-							+ GST / month
-						</p>
-						<p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300">
-							Includes analytics workflows, forecasting, anomaly detection,
-							recommendation engine, and ongoing support for product usage.
-						</p>
-						<div className="mt-5 flex flex-wrap gap-3">
-							<Link
-								to="/register"
-								className="rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+					<section className="mt-8 grid gap-6 lg:grid-cols-3">
+						{plans.map((plan) => (
+							<div
+								key={plan.name}
+								className={`rounded-3xl border p-6 relative ${plan.cardClass}`}
 							>
-								Start with Yukti
-							</Link>
-							<a
-								href="mailto:sales@mudmedia.in"
-								className="rounded-full border border-white/30 px-5 py-2.5 text-sm font-semibold text-white hover:bg-white/10"
-							>
-								Talk to Sales
-							</a>
-						</div>
-					</div>
-				</div>
-
-				<div className="mt-8 grid gap-6 lg:grid-cols-2">
-					<div className="rounded-2xl border border-slate-200 bg-white p-6">
-						<h2 className="text-2xl font-bold text-slate-900">What you get</h2>
-						<ul className="mt-4 space-y-3 text-sm text-slate-700">
-							{includedItems.map((item) => (
-								<li key={item} className="flex items-start gap-2">
-									<CheckCircle2 size={16} className="mt-0.5 text-emerald-600" />
-									<span>{item}</span>
-								</li>
-							))}
-						</ul>
-					</div>
-
-					<div className="rounded-2xl border border-slate-200 bg-white p-6">
-						<div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-800">
-							<ShieldCheck size={18} />
-						</div>
-						<h2 className="text-2xl font-bold text-slate-900">Pricing FAQ</h2>
-						<div className="mt-4 space-y-4">
-							{faqs.map((faq) => (
-								<div
-									key={faq.q}
-									className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+								{plan.recommended && (
+									<span className="absolute right-4 top-4 rounded-full bg-white/15 border border-white/20 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white">
+										Most Popular
+									</span>
+								)}
+								<p
+									className={`text-sm font-bold uppercase tracking-wide ${plan.recommended ? "text-slate-200" : "text-slate-900"}`}
 								>
-									<p className="text-sm font-semibold text-slate-900">
-										{faq.q}
-									</p>
-									<p className="mt-1 text-sm text-slate-600">{faq.a}</p>
+									{plan.name}
+								</p>
+								<p
+									className={`mt-3 text-5xl font-black ${plan.recommended ? "text-white" : "text-slate-900"}`}
+								>
+									{plan.upfrontPrice ? (
+										<>
+											<span className="block text-3xl leading-tight">
+												{plan.upfrontPrice}
+											</span>
+											<span className="mt-1 block text-2xl font-semibold leading-tight">
+												+ {plan.price}
+											</span>
+										</>
+									) : (
+										plan.price
+									)}
+								</p>
+								<p
+									className={`mt-1 text-sm font-medium ${plan.recommended ? "text-slate-300" : "text-slate-600"}`}
+								>
+									{plan.subtitle}
+								</p>
+								<p
+									className={`mt-3 text-sm ${plan.recommended ? "text-slate-300" : "text-slate-700"}`}
+								>
+									{plan.description}
+								</p>
+
+								<ul
+									className={`mt-5 space-y-2.5 text-sm ${plan.recommended ? "text-slate-200" : "text-slate-700"}`}
+								>
+									{plan.features.map((feature) => (
+										<li key={feature} className="flex items-start gap-2">
+											<CheckCircle2
+												size={15}
+												className={`mt-0.5 ${plan.recommended ? "text-slate-400" : "text-slate-500"}`}
+											/>
+											<span>{feature}</span>
+										</li>
+									))}
+								</ul>
+
+								<div className="mt-6">
+									{plan.ctaTo ? (
+										<Link
+											to={plan.ctaTo}
+											className={`block w-full rounded-xl px-4 py-2.5 text-center text-sm font-semibold ${plan.recommended ? "bg-white text-slate-900 hover:bg-slate-100" : "bg-black text-white hover:bg-slate-800"}`}
+										>
+											{plan.cta}
+										</Link>
+									) : (
+										<a
+											href={plan.ctaHref}
+											className={`block w-full rounded-xl px-4 py-2.5 text-center text-sm font-semibold ${plan.recommended ? "bg-white text-slate-900 hover:bg-slate-100" : "bg-black text-white hover:bg-slate-800"}`}
+										>
+											{plan.cta}
+										</a>
+									)}
 								</div>
-							))}
-						</div>
-					</div>
+							</div>
+						))}
+					</section>
 				</div>
 			</div>
 		</div>

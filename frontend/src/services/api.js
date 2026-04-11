@@ -11,8 +11,13 @@
 import axios from "axios";
 import { checkUsage, recordUsage } from "./usageLimits";
 
+const DEFAULT_API_BASE =
+	typeof window !== "undefined"
+		? `${window.location.protocol}//${window.location.hostname}:8000`
+		: "http://localhost:8000";
+
 const API = axios.create({
-	baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000",
+	baseURL: DEFAULT_API_BASE,
 	timeout: 120_000,
 });
 

@@ -1,5 +1,6 @@
 import { useAuth } from "../contexts/AuthContext";
 import { Clock, ExternalLink, LogOut, ShieldX } from "lucide-react";
+import BrandLogo from "../components/BrandLogo";
 
 export default function TrialExpiredPage() {
 	const { logout, userProfile } = useAuth();
@@ -11,12 +12,15 @@ export default function TrialExpiredPage() {
 			<div className="w-full max-w-md text-center">
 				{/* Brand */}
 				<div className="mb-8 animate-fade-in-up">
-					<h1 className="text-2xl font-semibold text-surface-900 tracking-tight">
-						Yukti
-					</h1>
-					<p className="text-xs text-surface-400 mt-1 tracking-wide uppercase">
-						Business Intelligence
-					</p>
+					<BrandLogo
+						size={52}
+						showText
+						subtitle="Business Intelligence"
+						className="justify-center"
+						markClassName="text-surface-900"
+						textClassName="text-2xl text-surface-900"
+						subtitleClassName="text-surface-400 mt-0.5 tracking-wide uppercase"
+					/>
 				</div>
 
 				{/* Card */}

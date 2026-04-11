@@ -1,26 +1,24 @@
-import { useCallback, useEffect, useState } from "react";
-import { useAuth } from "../contexts/AuthContext";
-import { useNavigate, Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
-	Mail,
-	Lock,
-	User,
-	Building2,
-	ArrowRight,
 	ArrowLeft,
-	Loader2,
+	ArrowRight,
+	Building2,
+	CheckCircle2,
+	DollarSign,
 	Eye,
 	EyeOff,
-	Phone,
+	Loader2,
+	Lock,
+	Mail,
 	MapPin,
-	DollarSign,
+	Phone,
 	Store,
-	CheckCircle2,
-	Sparkles,
-	Workflow,
-	BadgeCheck,
+	User,
 } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 import ToastStack from "../components/ToastStack";
+import BrandLogo from "../components/BrandLogo";
 
 const BUSINESS_TYPES = [
 	"Supermarket",
@@ -46,10 +44,34 @@ const CURRENCIES = [
 ];
 
 const STEPS = [
-	{ label: "Account", icon: Mail },
-	{ label: "Business", icon: Store },
-	{ label: "Details", icon: MapPin },
+	{ key: "account", label: "Account", icon: Mail },
+	{ key: "business", label: "Business", icon: Store },
+	{ key: "details", label: "Details", icon: MapPin },
 ];
+
+const LEFT_PANEL_FEATURES = [
+	{
+		title: "Fast Onboarding",
+		value: "2-minute setup",
+		detail: "Get workspace defaults and account profile ready in one flow.",
+	},
+	{
+		title: "Action-Ready Insights",
+		value: "Weekly decisions",
+		detail: "Convert data into practical next-step recommendations quickly.",
+	},
+	{
+		title: "Built for SMBs",
+		value: "Practical analytics",
+		detail: "Simple workflow that teams can run without BI specialists.",
+	},
+];
+
+const inputClass =
+	"w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 outline-none focus:border-slate-900";
+
+const labelClass =
+	"mb-1.5 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500";
 
 export default function RegisterPage() {
 	const [step, setStep] = useState(0);
@@ -70,8 +92,20 @@ export default function RegisterPage() {
 	const [toasts, setToasts] = useState([]);
 	const [loading, setLoading] = useState(false);
 	const [googleLoading, setGoogleLoading] = useState(false);
+
 	const { register, registerWithGoogle, user } = useAuth();
 	const navigate = useNavigate();
+
+	useEffect(() => {
+		if (user) navigate("/dashboard", { replace: true });
+	}, [navigate, user]);
+
+	const selectedCurrency = useMemo(
+		() => CURRENCIES.find((c) => c.code === form.currency) || CURRENCIES[0],
+		[form.currency],
+	);
+
+	const isLastStep = step === STEPS.length - 1;
 
 	const dismissToast = useCallback((id) => {
 		setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -85,25 +119,16 @@ export default function RegisterPage() {
 		}, 4200);
 	}, []);
 
-	useEffect(() => {
-		if (user) navigate("/dashboard", { replace: true });
-	}, [navigate, user]);
-
-	const selectedCurrency =
-		CURRENCIES.find((c) => c.code === form.currency) || CURRENCIES[0];
-
-	const update = (key) => (e) =>
+	const update = (key) => (e) => {
 		setForm((prev) => ({ ...prev, [key]: e.target.value }));
+	};
 
 	const validateStep = () => {
 		setSuccessState("");
+
 		if (step === 0) {
 			if (!form.ownerName.trim()) {
-				pushToast(
-					"error",
-					"Missing name",
-					"Please enter your full name to continue.",
-				);
+				pushToast("error", "Missing name", "Please enter your full name.");
 				return false;
 			}
 			if (!form.email.trim()) {
@@ -131,6 +156,7 @@ export default function RegisterPage() {
 				return false;
 			}
 		}
+
 		if (step === 1) {
 			if (!form.businessName.trim()) {
 				pushToast(
@@ -149,21 +175,23 @@ export default function RegisterPage() {
 				return false;
 			}
 		}
+
 		return true;
 	};
 
 	const handleNext = () => {
-		if (validateStep()) setStep((s) => s + 1);
+		if (validateStep()) setStep((prev) => prev + 1);
 	};
 
 	const handleBack = () => {
 		setSuccessState("");
-		setStep((s) => s - 1);
+		setStep((prev) => Math.max(prev - 1, 0));
 	};
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		if (!validateStep()) return;
+
 		setSuccessState("");
 		setLoading(true);
 		try {
@@ -175,12 +203,14 @@ export default function RegisterPage() {
 				address: form.address.trim(),
 				currency: form.currency,
 			});
+
 			setSuccessState("Account created. Redirecting you to sign in...");
 			pushToast(
 				"success",
 				"Account created",
 				"We sent a verification email. Verify it before your first sign in.",
 			);
+
 			window.setTimeout(
 				() =>
 					navigate("/login", {
@@ -193,7 +223,7 @@ export default function RegisterPage() {
 				420,
 			);
 		} catch (err) {
-			const code = err.code || "";
+			const code = err?.code || "";
 			if (code.includes("email-already-in-use")) {
 				pushToast(
 					"error",
@@ -259,102 +289,48 @@ export default function RegisterPage() {
 		}
 	};
 
-	const isLastStep = step === STEPS.length - 1;
-
 	return (
-		<div className="auth-shell min-h-screen px-4 py-6 sm:py-10">
+		<div className="min-h-screen bg-[#f7f7f4] relative overflow-hidden px-4 py-8 sm:py-12">
 			<ToastStack toasts={toasts} onDismiss={dismissToast} />
-			<div className="auth-bg-glow auth-bg-glow-a" />
-			<div className="auth-bg-glow auth-bg-glow-b" />
 
-			<div className="relative z-10 max-w-6xl mx-auto grid lg:grid-cols-2 gap-6 items-stretch">
-				<section className="auth-hero-card p-7 sm:p-9 hidden lg:flex flex-col justify-between">
-					<div>
-						<div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-amber-200 bg-white/80 text-amber-700 text-xs tracking-wide uppercase">
-							<Workflow size={14} /> Guided onboarding
-						</div>
-						<h1 className="text-slate-900 text-4xl font-semibold leading-tight mt-6">
-							Build your data engine.
-							<br />
-							From day one.
-						</h1>
-						<p className="text-slate-600 mt-4 max-w-md">
-							Create your Yukti workspace, upload data, and receive
-							strategy-ready insights in minutes.
-						</p>
-					</div>
+			<div className="pointer-events-none absolute inset-0">
+				<div className="absolute -top-24 -left-24 h-[40vw] w-[40vw] rounded-full bg-cyan-200/40 blur-[90px]" />
+				<div className="absolute bottom-0 right-0 h-[34vw] w-[34vw] rounded-full bg-slate-300/50 blur-[110px]" />
+			</div>
 
-					<div className="auth-hero-stack">
-						<div className="auth-float-card">
-							<BadgeCheck size={16} className="text-amber-700" />
-							<div>
-								<p className="text-slate-900 text-sm font-medium">
-									7-day free trial
-								</p>
-								<p className="text-slate-600 text-xs">
-									No credit card required
-								</p>
-							</div>
-						</div>
-						<div className="auth-float-card auth-float-card-offset">
-							<Sparkles size={16} className="text-amber-700" />
-							<div>
-								<p className="text-slate-900 text-sm font-medium">
-									Custom Indian ML model
-								</p>
-								<p className="text-slate-600 text-xs">
-									35,800+ curated training samples
-								</p>
-							</div>
-						</div>
-					</div>
-				</section>
-
-				<section className="auth-form-card p-6 sm:p-8">
-					<div className="text-center mb-5">
-						<div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gold-600 mb-3 shadow-sm">
-							<Sparkles size={22} className="text-white" />
-						</div>
-						<h2 className="text-xl font-semibold text-slate-900">
-							Start Your Free Trial
+			<div className="relative z-10 mx-auto flex w-full max-w-6xl justify-center">
+				<section className="w-full max-w-148 rounded-4xl border border-slate-200 bg-white/95 p-6 shadow-[0_24px_50px_-34px_rgba(15,23,42,0.35)] backdrop-blur-xl sm:p-8">
+					<div className="mb-5 text-center">
+						<h2 className="mt-3 text-2xl font-bold tracking-tight text-slate-900">
+							Create your account
 						</h2>
-						<p className="text-slate-600 text-sm mt-1">
-							Set up your account in under 2 minutes
+						<p className="mt-1 text-sm text-slate-600">
+							Build your Yukti workspace and start your free trial.
 						</p>
 						{successState ? (
-							<p className="text-emerald-200 text-xs mt-3">{successState}</p>
+							<p className="mt-2 text-xs font-medium text-emerald-700">
+								{successState}
+							</p>
 						) : null}
 					</div>
 
-					<div className="flex items-center justify-center gap-2 mb-5">
-						{STEPS.map((s, i) => {
-							const Icon = s.icon;
-							const done = i < step;
-							const active = i === step;
+					<div className="mb-5 flex items-center justify-center gap-2">
+						{STEPS.map((item, index) => {
+							const Icon = item.icon;
+							const active = index === step;
+							const done = index < step;
 							return (
-								<div key={s.label} className="flex items-center gap-2">
-									{i > 0 && (
+								<div key={item.key} className="flex items-center gap-2">
+									{index > 0 ? (
 										<div
-											className={`w-8 h-0.5 rounded-full transition-colors duration-300 ${
-												done ? "bg-amber-400" : "bg-slate-300"
-											}`}
+											className={`h-0.5 w-8 rounded-full ${done ? "bg-slate-800" : "bg-slate-300"}`}
 										/>
-									)}
+									) : null}
 									<div
-										className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-300 ${
-											active
-												? "bg-amber-300 text-amber-950"
-												: done
-													? "bg-amber-100 text-amber-800 border border-amber-200"
-													: "bg-white text-slate-500 border border-slate-300"
-										}`}
+										className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold ${active ? "border-slate-900 bg-slate-900 text-white" : done ? "border-slate-300 bg-slate-100 text-slate-800" : "border-slate-300 bg-white text-slate-500"}`}
 									>
-										{done ? (
-											<CheckCircle2 size={12} />
-										) : (
-											<Icon size={12} strokeWidth={1.8} />
-										)}
-										<span className="hidden sm:inline">{s.label}</span>
+										{done ? <CheckCircle2 size={12} /> : <Icon size={12} />}
+										<span className="hidden sm:inline">{item.label}</span>
 									</div>
 								</div>
 							);
@@ -365,7 +341,7 @@ export default function RegisterPage() {
 						type="button"
 						onClick={handleGoogle}
 						disabled={googleLoading}
-						className="auth-google-btn w-full flex items-center justify-center gap-2 mb-5"
+						className="mb-5 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
 					>
 						<svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">
 							<path
@@ -399,193 +375,185 @@ export default function RegisterPage() {
 						}
 						className="space-y-4"
 					>
-						{step === 0 && (
-							<div className="space-y-4">
+						{step === 0 ? (
+							<>
 								<div>
-									<label className="flex items-center gap-1.5 text-xs font-medium text-slate-300 mb-1.5">
-										<User size={12} strokeWidth={1.5} /> Full Name
+									<label className={labelClass}>
+										<User size={12} /> Full Name
 									</label>
 									<input
 										type="text"
 										value={form.ownerName}
 										onChange={update("ownerName")}
-										className="auth-input w-full"
+										className={inputClass}
 										placeholder="John Doe"
 										autoFocus
 										required
 									/>
 								</div>
-
 								<div>
-									<label className="flex items-center gap-1.5 text-xs font-medium text-slate-300 mb-1.5">
-										<Mail size={12} strokeWidth={1.5} /> Email
+									<label className={labelClass}>
+										<Mail size={12} /> Email
 									</label>
 									<input
 										type="email"
 										value={form.email}
 										onChange={update("email")}
-										className="auth-input w-full"
+										className={inputClass}
 										placeholder="you@business.com"
 										required
 									/>
 								</div>
-
 								<div>
-									<label className="flex items-center gap-1.5 text-xs font-medium text-slate-300 mb-1.5">
-										<Lock size={12} strokeWidth={1.5} /> Password
+									<label className={labelClass}>
+										<Lock size={12} /> Password
 									</label>
 									<div className="relative">
 										<input
 											type={showPassword ? "text" : "password"}
 											value={form.password}
 											onChange={update("password")}
-											className="auth-input w-full pr-10"
+											className={`${inputClass} pr-10`}
 											placeholder="••••••••"
 											required
 										/>
 										<button
 											type="button"
-											onClick={() => setShowPassword(!showPassword)}
-											className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+											onClick={() => setShowPassword((prev) => !prev)}
+											className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900"
 											tabIndex={-1}
 										>
 											{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
 										</button>
 									</div>
 								</div>
-
 								<div>
-									<label className="flex items-center gap-1.5 text-xs font-medium text-slate-300 mb-1.5">
-										<Lock size={12} strokeWidth={1.5} /> Confirm Password
+									<label className={labelClass}>
+										<Lock size={12} /> Confirm Password
 									</label>
 									<div className="relative">
 										<input
 											type={showConfirm ? "text" : "password"}
 											value={form.confirm}
 											onChange={update("confirm")}
-											className="auth-input w-full pr-10"
+											className={`${inputClass} pr-10`}
 											placeholder="••••••••"
 											required
 										/>
 										<button
 											type="button"
-											onClick={() => setShowConfirm(!showConfirm)}
-											className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
+											onClick={() => setShowConfirm((prev) => !prev)}
+											className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-900"
 											tabIndex={-1}
 										>
 											{showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
 										</button>
 									</div>
 								</div>
-							</div>
-						)}
+							</>
+						) : null}
 
-						{step === 1 && (
-							<div className="space-y-4">
+						{step === 1 ? (
+							<>
 								<div>
-									<label className="flex items-center gap-1.5 text-xs font-medium text-slate-300 mb-1.5">
-										<Building2 size={12} strokeWidth={1.5} /> Business Name
+									<label className={labelClass}>
+										<Building2 size={12} /> Business Name
 									</label>
 									<input
 										type="text"
 										value={form.businessName}
 										onChange={update("businessName")}
-										className="auth-input w-full"
+										className={inputClass}
 										placeholder="My Grocery Store"
 										autoFocus
 										required
 									/>
 								</div>
-
 								<div>
-									<label className="flex items-center gap-1.5 text-xs font-medium text-slate-300 mb-1.5">
-										<Store size={12} strokeWidth={1.5} /> Business Type
+									<label className={labelClass}>
+										<Store size={12} /> Business Type
 									</label>
 									<select
 										value={form.businessType}
 										onChange={update("businessType")}
-										className="auth-input w-full appearance-none cursor-pointer"
+										className={`${inputClass} cursor-pointer appearance-none`}
 										required
 									>
 										<option value="" disabled>
 											Select your business type
 										</option>
-										{BUSINESS_TYPES.map((t) => (
-											<option key={t} value={t}>
-												{t}
+										{BUSINESS_TYPES.map((item) => (
+											<option key={item} value={item}>
+												{item}
 											</option>
 										))}
 									</select>
 								</div>
-
 								<div>
-									<label className="flex items-center gap-1.5 text-xs font-medium text-slate-300 mb-1.5">
-										<DollarSign size={12} strokeWidth={1.5} /> Currency (
-										{selectedCurrency.symbol})
+									<label className={labelClass}>
+										<DollarSign size={12} /> Currency ({selectedCurrency.symbol}
+										)
 									</label>
 									<select
 										value={form.currency}
 										onChange={update("currency")}
-										className="auth-input w-full appearance-none cursor-pointer"
+										className={`${inputClass} cursor-pointer appearance-none`}
 									>
-										{CURRENCIES.map((c) => (
-											<option key={c.code} value={c.code}>
-												{c.label} ({c.symbol})
+										{CURRENCIES.map((item) => (
+											<option key={item.code} value={item.code}>
+												{item.label} ({item.symbol})
 											</option>
 										))}
 									</select>
 								</div>
-							</div>
-						)}
+							</>
+						) : null}
 
-						{step === 2 && (
-							<div className="space-y-4">
+						{step === 2 ? (
+							<>
 								<div>
-									<label className="flex items-center gap-1.5 text-xs font-medium text-slate-300 mb-1.5">
-										<Phone size={12} strokeWidth={1.5} /> Phone Number
-										(optional)
+									<label className={labelClass}>
+										<Phone size={12} /> Phone Number (optional)
 									</label>
 									<input
 										type="tel"
 										value={form.phone}
 										onChange={update("phone")}
-										className="auth-input w-full"
+										className={inputClass}
 										placeholder="+91 98765 43210"
 										autoFocus
 									/>
 								</div>
-
 								<div>
-									<label className="flex items-center gap-1.5 text-xs font-medium text-slate-300 mb-1.5">
-										<MapPin size={12} strokeWidth={1.5} /> Business Address
-										(optional)
+									<label className={labelClass}>
+										<MapPin size={12} /> Business Address (optional)
 									</label>
 									<textarea
 										value={form.address}
 										onChange={update("address")}
-										className="auth-input w-full resize-none"
+										className={`${inputClass} resize-none`}
 										placeholder="123 Main Street, City"
 										rows={3}
 									/>
 								</div>
-							</div>
-						)}
+							</>
+						) : null}
 
-						<div className="flex items-center gap-3 mt-2">
-							{step > 0 && (
+						<div className="mt-2 flex items-center gap-3">
+							{step > 0 ? (
 								<button
 									type="button"
 									onClick={handleBack}
-									className="auth-back-btn flex items-center gap-1.5 px-4"
+									className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
 								>
 									<ArrowLeft size={14} /> Back
 								</button>
-							)}
+							) : null}
 
 							<button
 								type="submit"
 								disabled={loading}
-								className="auth-submit-btn flex-1 flex items-center justify-center gap-2"
+								className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
 							>
 								{loading ? (
 									<Loader2 size={15} className="animate-spin" />
@@ -595,16 +563,16 @@ export default function RegisterPage() {
 									: isLastStep
 										? "Create Account"
 										: "Continue"}
-								{!loading && <ArrowRight size={15} />}
+								{!loading ? <ArrowRight size={15} /> : null}
 							</button>
 						</div>
 					</form>
 
-					<p className="text-center text-sm text-slate-600 mt-5">
+					<p className="mt-5 text-center text-sm text-slate-600">
 						Already have an account?{" "}
 						<Link
 							to="/login"
-							className="text-amber-700 hover:text-amber-800 font-medium transition-colors"
+							className="font-semibold text-slate-800 hover:text-black"
 						>
 							Sign in
 						</Link>

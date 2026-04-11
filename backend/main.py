@@ -1480,6 +1480,31 @@ PLATFORM_FIELD_MAPS = {
 # If a platform has a vendor-specific API, users can still override with
 # apiBaseUrl/endpointPath in saved credentials.
 PLATFORM_API_DEFAULTS = {
+    "square": {
+        "base_env": "SQUARE_API_BASE",
+        "default_base": "",
+        "default_path": "/payments",
+    },
+    "shopify": {
+        "base_env": "SHOPIFY_API_BASE",
+        "default_base": "",
+        "default_path": "/orders.json",
+    },
+    "clover": {
+        "base_env": "CLOVER_API_BASE",
+        "default_base": "",
+        "default_path": "/payments",
+    },
+    "lightspeed": {
+        "base_env": "LIGHTSPEED_API_BASE",
+        "default_base": "",
+        "default_path": "/transactions",
+    },
+    "toast": {
+        "base_env": "TOAST_API_BASE",
+        "default_base": "",
+        "default_path": "/orders/v2/ordersBulk",
+    },
     "tally_prime": {
         "base_env": "TALLY_PRIME_API_BASE",
         "default_base": "",
@@ -1532,6 +1557,21 @@ PLATFORM_API_DEFAULTS = {
     },
     "petpooja": {
         "base_env": "PETPOOJA_API_BASE",
+        "default_base": "",
+        "default_path": "/transactions",
+    },
+    "busy_accounting": {
+        "base_env": "BUSY_ACCOUNTING_API_BASE",
+        "default_base": "",
+        "default_path": "/transactions",
+    },
+    "posist": {
+        "base_env": "POSIST_API_BASE",
+        "default_base": "",
+        "default_path": "/transactions",
+    },
+    "khatabook": {
+        "base_env": "KHATABOOK_API_BASE",
         "default_base": "",
         "default_path": "/transactions",
     },

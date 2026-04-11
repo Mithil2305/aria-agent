@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { needsStockManagement } from "../config/businessTypes";
 import { useAnalysisJob } from "../contexts/AnalysisJobContext";
+import BrandLogo from "./BrandLogo";
 
 const NAV_ITEMS = [
 	{ to: "/daily-log", icon: ClipboardEdit, label: "Daily Log" },
@@ -39,6 +40,11 @@ export default function AppLayout() {
 	const { job } = useAnalysisJob();
 	const navigate = useNavigate();
 	const [mobileNavOpen, setMobileNavOpen] = useState(false);
+	const isAdminEmail =
+		String(user?.email || "")
+			.trim()
+			.toLowerCase() === "admin@yukti.com";
+	const isAdmin = userProfile?.role === "admin" || isAdminEmail;
 
 	const handleLogout = async () => {
 		await logout();
@@ -72,14 +78,12 @@ export default function AppLayout() {
 						onClick={() => navigate("/dashboard")}
 						className="inline-flex items-center gap-2"
 					>
-						<div className="w-7 h-7 bg-black rounded-lg flex items-center justify-center">
-							<span className="text-white font-bold text-sm leading-none">
-								Y
-							</span>
-						</div>
-						<span className="font-semibold text-sm tracking-tight text-slate-900">
-							Yukti
-						</span>
+						<BrandLogo
+							size={28}
+							showText
+							markClassName="text-slate-900"
+							textClassName="text-sm text-slate-900"
+						/>
 					</button>
 					<button
 						onClick={() => navigate("/profile")}
@@ -112,20 +116,17 @@ export default function AppLayout() {
 							navigate("/dashboard");
 							setMobileNavOpen(false);
 						}}
-						className="flex items-center gap-2"
+						className="inline-flex"
 					>
-						<div className="w-8 h-8 bg-black rounded-xl flex items-center justify-center">
-							<span className="text-white font-bold text-lg leading-none">
-								Y
-							</span>
-						</div>
-						<h1 className="text-base font-semibold text-surface-900 tracking-tight">
-							Yukti
-						</h1>
+						<BrandLogo
+							size={32}
+							showText
+							subtitle="Business Intelligence"
+							markClassName="text-slate-900"
+							textClassName="text-base text-surface-900"
+							subtitleClassName="text-surface-400"
+						/>
 					</button>
-					<p className="text-[11px] text-surface-400 mt-0.5">
-						Business Intelligence
-					</p>
 				</div>
 
 				<div className="divider mx-4" />
@@ -137,7 +138,7 @@ export default function AppLayout() {
 					</p>
 					{[
 						...NAV_ITEMS,
-						...(userProfile?.role === "admin"
+						...(isAdmin
 							? [{ to: "/admin", icon: Shield, label: "Admin" }]
 							: []),
 						...(needsStockManagement(userProfile?.businessType)

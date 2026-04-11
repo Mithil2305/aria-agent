@@ -11,7 +11,7 @@ import axios from "axios";
 import { useAuth } from "../contexts/AuthContext";
 import { formatCompactCurrency } from "../utils/currency";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE = `${window.location.protocol}//${window.location.hostname}:8000`;
 
 const FALLBACK_BENCHMARKS = {
 	grocery: {

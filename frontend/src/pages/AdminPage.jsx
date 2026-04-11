@@ -137,8 +137,12 @@ function activityTime(item) {
 }
 
 export default function AdminPage() {
-	const { userProfile, getIdToken } = useAuth();
-	const isAdmin = userProfile?.role === "admin";
+	const { user, userProfile, getIdToken } = useAuth();
+	const isAdminEmail =
+		String(user?.email || "")
+			.trim()
+			.toLowerCase() === "admin@yukti.com";
+	const isAdmin = userProfile?.role === "admin" || isAdminEmail;
 
 	const [overview, setOverview] = useState(null);
 	const [users, setUsers] = useState([]);

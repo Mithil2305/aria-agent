@@ -55,6 +55,7 @@ function PublicLayout() {
 		<>
 			<Navbar />
 			<Outlet />
+			<Footer />
 		</>
 	);
 }
@@ -123,7 +124,6 @@ function App() {
 					</Routes>
 				</AnalysisJobProvider>
 			</AuthProvider>
-			<Footer />
 		</BrowserRouter>
 	);
 }

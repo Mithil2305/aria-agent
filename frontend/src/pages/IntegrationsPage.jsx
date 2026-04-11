@@ -59,9 +59,7 @@ function generateSecret() {
 
 export default function IntegrationsPage() {
 	const { user, userProfile, getIdToken } = useAuth();
-	const apiBase =
-		import.meta.env.VITE_API_URL ||
-		`${window.location.protocol}//${window.location.hostname}:8000`;
+	const apiBase = `${window.location.protocol}//${window.location.hostname}:8000`;
 	const webhookUrl = `${apiBase.replace(/\/$/, "")}/api/integrations/webhook/custom_webhook`;
 
 	const businessType = userProfile?.businessType || "";
@@ -114,6 +112,8 @@ export default function IntegrationsPage() {
 		for (const field of platform.authFields) {
 			if (field.type === "readonly" && field.key === "webhookSecret") {
 				initialForm[field.key] = generateSecret();
+			} else if (typeof field.defaultValue === "string") {
+				initialForm[field.key] = field.defaultValue;
 			} else {
 				initialForm[field.key] = "";
 			}
@@ -127,7 +127,11 @@ export default function IntegrationsPage() {
 		if (!selectedPlatform || !user) return;
 
 		for (const field of selectedPlatform.authFields) {
-			if (field.type !== "readonly" && !authForm[field.key]?.trim()) {
+			if (
+				field.type !== "readonly" &&
+				field.required !== false &&
+				!authForm[field.key]?.trim()
+			) {
 				setError(`Please fill in ${field.label}.`);
 				return;
 			}
@@ -166,7 +170,11 @@ export default function IntegrationsPage() {
 
 		// Validate required fields
 		for (const field of selectedPlatform.authFields) {
-			if (field.type !== "readonly" && !authForm[field.key]?.trim()) {
+			if (
+				field.type !== "readonly" &&
+				field.required !== false &&
+				!authForm[field.key]?.trim()
+			) {
 				setError(`Please fill in ${field.label}.`);
 				return;
 			}

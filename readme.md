@@ -24,6 +24,20 @@ aria-agent/
 
 ## Local Development
 
+### Single command (recommended)
+
+From the workspace root:
+
+```bash
+npm install
+npm run yukti
+```
+
+This starts both:
+
+- Backend API on `http://127.0.0.1:8000`
+- Frontend dev server on `http://localhost:5173`
+
 ### 1. Backend
 
 ```bash

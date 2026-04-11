@@ -688,34 +688,162 @@ export default function HomePage() {
 							</div>
 							<div className="mx-auto w-1/3 h-5 bg-white rounded-md border border-slate-200/60 shadow-inner" />
 						</div>
-						<div className="flex-1 p-8 grid grid-cols-1 md:grid-cols-4 gap-6 opacity-60">
-							<div className="md:col-span-1 space-y-5 hidden md:block border-r border-slate-100 pr-6">
-								<div className="h-8 bg-slate-100 rounded-xl w-2/3" />
-								<div className="h-5 bg-slate-50 rounded-lg w-full mt-8" />
-								<div className="h-5 bg-slate-50 rounded-lg w-5/6" />
-								<div className="h-5 bg-slate-50 rounded-lg w-3/4" />
-								<div className="h-40 bg-slate-100 rounded-2xl mt-12" />
-							</div>
-							<div className="md:col-span-3 space-y-6">
-								<div className="flex gap-4">
-									<div className="h-28 bg-slate-100 rounded-2xl flex-1 border border-slate-50 relative overflow-hidden">
-										<div className="absolute right-0 bottom-0 w-16 h-16 bg-slate-200 rounded-tl-full opacity-50" />
-									</div>
-									<div className="h-28 bg-slate-100 rounded-2xl flex-1 border border-slate-50" />
-									<div className="h-28 bg-slate-100 rounded-2xl flex-1 border border-slate-50" />
+						<div className="flex-1 p-4 md:p-6 lg:p-8 grid grid-cols-1 md:grid-cols-4 gap-5 opacity-85">
+							<div className="md:col-span-1 hidden md:flex flex-col border-r border-slate-100 pr-5">
+								<div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 mb-4">
+									<p className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">
+										Workspace
+									</p>
+									<p className="text-xs font-bold text-slate-800 mt-1">
+										Yukti Board
+									</p>
 								</div>
-								<div className="h-72 bg-gradient-to-b from-slate-50 to-slate-100 rounded-2xl w-full border border-slate-100 relative">
-									<div className="absolute bottom-0 left-0 right-0 h-1/2 opacity-20">
-										<svg
-											preserveAspectRatio="none"
-											viewBox="0 0 100 100"
-											className="w-full h-full"
+								<div className="space-y-2.5">
+									{[
+										"Overview",
+										"Next Month Plan",
+										"Restock Signals",
+										"Playbooks",
+									].map((item) => (
+										<div
+											key={item}
+											className="flex items-center gap-2 text-[11px] text-slate-600"
 										>
+											<span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+											<span>{item}</span>
+										</div>
+									))}
+								</div>
+								<div className="mt-5 rounded-xl border border-slate-200 bg-white p-3">
+									<p className="text-[10px] text-slate-500 uppercase tracking-wide font-semibold">
+										Next Month Outlook
+									</p>
+									<p className="text-xl font-bold text-slate-900 mt-1">
+										+16.2%
+									</p>
+									<p className="text-[11px] text-emerald-700 mt-1">
+										Expected demand uplift
+									</p>
+								</div>
+								<div className="mt-auto rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+									<div className="h-2 rounded-full bg-slate-200 w-full" />
+									<div className="h-2 rounded-full bg-slate-200 w-5/6" />
+									<div className="h-2 rounded-full bg-slate-200 w-2/3" />
+								</div>
+							</div>
+							<div className="md:col-span-3 space-y-5">
+								<div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+									{[
+										{
+											label: "Next Month Revenue",
+											value: "INR 3.8L",
+											trend: "+16.2%",
+										},
+										{
+											label: "Expected Orders",
+											value: "1,410",
+											trend: "+13.0%",
+										},
+										{
+											label: "Restock Priority",
+											value: "7 SKUs",
+											trend: "Act this week",
+										},
+									].map((stat) => (
+										<div
+											key={stat.label}
+											className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+										>
+											<p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+												{stat.label}
+											</p>
+											<p className="text-lg font-bold text-slate-900 mt-1">
+												{stat.value}
+											</p>
+											<p className="text-[11px] text-emerald-700 mt-1 font-semibold">
+												{stat.trend}
+											</p>
+										</div>
+									))}
+								</div>
+								<div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+									<div className="lg:col-span-2 rounded-2xl bg-gradient-to-b from-slate-50 to-slate-100 border border-slate-200 p-4 relative overflow-hidden">
+										<p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2">
+											Next 30 days forecast
+										</p>
+										<svg viewBox="0 0 320 130" className="w-full h-32">
+											{[0, 1, 2, 3].map((line) => (
+												<line
+													key={line}
+													x1="0"
+													x2="320"
+													y1={16 + line * 28}
+													y2={16 + line * 28}
+													stroke="#dbe2ea"
+													strokeDasharray="4 6"
+												/>
+											))}
 											<path
-												d="M0,100 C20,80 40,90 60,40 C80,-10 100,30 100,30 L100,100 Z"
-												fill="black"
+												d="M 8 114 C 45 92 68 98 96 80 C 130 58 160 68 188 48 C 220 28 252 34 312 18"
+												fill="none"
+												stroke="#0f172a"
+												strokeWidth="3"
+												strokeLinecap="round"
+											/>
+											<path
+												d="M 8 114 C 45 92 68 98 96 80 C 130 58 160 68 188 48 C 220 28 252 34 312 18 L 312 130 L 8 130 Z"
+												fill="url(#sparkGrad)"
+												opacity="0.5"
 											/>
 										</svg>
+										<div className="absolute right-4 top-4 text-[10px] px-2 py-1 rounded-full bg-white border border-slate-200 text-slate-700 font-semibold">
+											Confidence 91%
+										</div>
+									</div>
+									<div className="rounded-2xl border border-slate-200 bg-white p-3">
+										<p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-2">
+											Yukti says do this next month
+										</p>
+										<div className="space-y-2">
+											<div className="rounded-lg bg-emerald-50 border border-emerald-100 px-2.5 py-2 text-[11px] text-emerald-800">
+												Restock cooking oil and atta by week 1
+											</div>
+											<div className="rounded-lg bg-amber-50 border border-amber-100 px-2.5 py-2 text-[11px] text-amber-800">
+												Do not restock slow sauces this cycle
+											</div>
+											<div className="rounded-lg bg-slate-50 border border-slate-200 px-2.5 py-2 text-[11px] text-slate-700">
+												Push combos on weekends for higher margin
+											</div>
+										</div>
+									</div>
+								</div>
+								<div className="rounded-2xl border border-slate-200 bg-white p-3">
+									<div className="grid grid-cols-12 text-[10px] uppercase tracking-wider text-slate-500 font-semibold px-2 mb-1.5">
+										<span className="col-span-5">Stock item</span>
+										<span className="col-span-3">Days left</span>
+										<span className="col-span-4">Action</span>
+									</div>
+									<div className="space-y-1.5">
+										{[
+											{ c: "Cooking Oil", o: "5", s: "Restock now" },
+											{ c: "Atta 10kg", o: "7", s: "Restock this week" },
+											{ c: "Premium Sauces", o: "28", s: "Do not restock" },
+										].map((row) => (
+											<div
+												key={row.c}
+												className="grid grid-cols-12 items-center rounded-lg bg-slate-50 border border-slate-200 px-2 py-1.5 text-[11px]"
+											>
+												<span className="col-span-5 font-medium text-slate-700">
+													{row.c}
+												</span>
+												<span className="col-span-3 text-slate-800 font-semibold">
+													{row.o}
+												</span>
+												<span className="col-span-4 text-emerald-700 font-semibold">
+													{row.s}
+												</span>
+											</div>
+										))}
 									</div>
 								</div>
 							</div>

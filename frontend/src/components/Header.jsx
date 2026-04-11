@@ -1,4 +1,5 @@
-import { Activity, Layers } from "lucide-react";
+import { Layers } from "lucide-react";
+import BrandLogo from "./BrandLogo";
 
 export default function Header({ stage, fileName }) {
 	return (
@@ -6,9 +7,7 @@ export default function Header({ stage, fileName }) {
 			<div className="max-w-[1400px] mx-auto px-6 py-3 flex items-center justify-between">
 				<div className="flex items-center gap-3">
 					<div className="relative">
-						<div className="w-9 h-9 rounded-lg bg-surface-100 border border-surface-300 flex items-center justify-center">
-							<Activity size={18} className="text-gold-600" />
-						</div>
+						<BrandLogo size={36} markClassName="text-surface-900" />
 						{stage === "dashboard" && (
 							<div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-white animate-pulse" />
 						)}
