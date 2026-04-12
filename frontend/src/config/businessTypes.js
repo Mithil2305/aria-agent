@@ -51,7 +51,7 @@ const COMMON_FIELDS = [
 	},
 	{
 		key: "customers",
-		label: "Customers / Footfall",
+		label: "No.of Customers",
 		icon: "Users",
 		placeholder: "e.g. 120",
 		type: "number",
@@ -64,7 +64,7 @@ const COMMON_FIELDS = [
 const GROCERY_FIELDS = [
 	{
 		key: "orders",
-		label: "Transactions",
+		label: "Total Transactions",
 		icon: "ShoppingCart",
 		placeholder: "e.g. 85",
 		type: "number",

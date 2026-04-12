@@ -92,16 +92,6 @@ function monthLabel(key) {
 	});
 }
 
-function toFirestoreErrorMessage(err, fallback) {
-	if (err?.code === "permission-denied") {
-		return "Firestore permission denied. Update your Firestore rules and ensure you are logged in.";
-	}
-	if (err?.code === "unauthenticated") {
-		return "You are not authenticated. Please sign in again.";
-	}
-	return err?.message || fallback;
-}
-
 export default function DailyLogPage() {
 	const { user, userProfile } = useAuth();
 	const { startActivity, updateActivityProgress, completeActivity } =
