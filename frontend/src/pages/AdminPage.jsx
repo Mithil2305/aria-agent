@@ -136,6 +136,19 @@ function activityTime(item) {
 	return "recently";
 }
 
+function userDisplayName(u) {
+	return (
+		u?.ownerName ||
+		u?.email ||
+		(u?.uid ? `${u.uid.slice(0, 10)}...` : "Unknown")
+	);
+}
+
+function shortUid(uid) {
+	if (!uid) return "-";
+	return uid.length > 14 ? `${uid.slice(0, 6)}...${uid.slice(-4)}` : uid;
+}
+
 export default function AdminPage() {
 	const { user, userProfile, getIdToken } = useAuth();
 	const isAdminEmail =
@@ -541,42 +554,74 @@ export default function AdminPage() {
 							))}
 						</div>
 
-						<div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
-							<div className="xl:col-span-4 rounded-2xl border border-surface-200 bg-white p-5">
-								<h3 className="text-2xl font-medium text-surface-900 mb-4">
-									Recent Activities
-								</h3>
-								<div className="space-y-3 max-h-72 overflow-auto pr-1">
-									{activity.slice(0, 8).map((item, idx) => (
-										<div
-											key={`${item.uid}-${idx}`}
-											className="flex items-start gap-3"
-										>
-											<div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600">
-												<Activity size={14} />
-											</div>
-											<div>
-												<p className="text-sm font-medium text-surface-800">
-													{item.section || "activity"} · {item.uid}
-												</p>
-												<p className="text-xs text-surface-500 line-clamp-2">
-													{item.summary || item.top_issue || "No details"}
-												</p>
-												<p className="text-[11px] text-surface-400 mt-0.5">
-													{activityTime(item)}
-												</p>
-											</div>
-										</div>
-									))}
-									{activity.length === 0 && (
-										<p className="text-xs text-surface-500">
-											No activity found.
-										</p>
-									)}
+						<div className="space-y-4">
+							<div className="rounded-2xl border border-surface-200 bg-white p-5">
+								<div className="flex items-center justify-between mb-4">
+									<h3 className="text-2xl font-medium text-surface-900">
+										Recent Activities
+									</h3>
+									<span className="text-xs text-surface-500">
+										Latest {Math.min(activity.length, 5)}
+									</span>
+								</div>
+
+								<div
+									className="max-h-72 overflow-auto rounded-xl border border-surface-200 [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-surface-100 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-surface-300 hover:[&::-webkit-scrollbar-thumb]:bg-surface-400"
+									style={{
+										scrollbarWidth: "thin",
+										scrollbarColor: "#cbd5e1 #f1f5f9",
+									}}
+								>
+									<table className="min-w-220 w-full text-xs">
+										<thead className="bg-surface-50">
+											<tr className="text-left text-surface-500 border-b border-surface-200">
+												<th className="py-2 px-3 w-[28%]">Section</th>
+												<th className="py-2 px-3 w-[24%]">User</th>
+												<th className="py-2 px-3">Details</th>
+												<th className="py-2 px-3 w-[14%]">Date</th>
+											</tr>
+										</thead>
+										<tbody>
+											{activity.map((item, idx) => (
+												<tr
+													key={`${item.uid}-${idx}`}
+													className="border-b border-surface-100 align-top"
+												>
+													<td className="py-2 px-3">
+														<div className="inline-flex items-center gap-1.5 rounded-md border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-indigo-700">
+															<Activity size={12} />
+															<span className="font-medium">
+																{item.section || "activity"}
+															</span>
+														</div>
+													</td>
+													<td className="py-2 px-3 text-surface-700 font-medium">
+														{shortUid(item.uid)}
+													</td>
+													<td className="py-2 px-3 text-surface-600 leading-relaxed max-w-55 truncate">
+														{item.summary || item.top_issue || "No details"}
+													</td>
+													<td className="py-2 px-3 text-surface-500 whitespace-nowrap">
+														{activityTime(item)}
+													</td>
+												</tr>
+											))}
+											{activity.length === 0 && (
+												<tr>
+													<td
+														colSpan={4}
+														className="py-6 px-3 text-center text-surface-500"
+													>
+														No activity found.
+													</td>
+												</tr>
+											)}
+										</tbody>
+									</table>
 								</div>
 							</div>
 
-							<div className="xl:col-span-8 rounded-2xl border border-surface-200 bg-white p-5">
+							<div className="rounded-2xl border border-surface-200 bg-white p-5">
 								<div className="flex items-center justify-between mb-4">
 									<h3 className="text-2xl font-medium text-surface-900">
 										User Status
@@ -587,31 +632,35 @@ export default function AdminPage() {
 								</div>
 
 								<div className="overflow-x-auto rounded-xl border border-surface-200">
-									<table className="min-w-full text-xs">
+									<table className="min-w-full text-xs table-fixed">
 										<thead className="bg-surface-50">
 											<tr className="text-left text-surface-500 border-b border-surface-200">
-												<th className="py-2 px-3">User</th>
-												<th className="py-2 px-3">Role</th>
+												<th className="py-2 px-3 w-10">#</th>
+												<th className="py-2 px-3 w-[30%]">User</th>
+												<th className="py-2 px-3 w-[18%]">Role</th>
 												<th className="py-2 px-3">Service Controls</th>
-												<th className="py-2 px-3">Status</th>
+												<th className="py-2 px-3 w-[16%]">Account</th>
 											</tr>
 										</thead>
 										<tbody>
-											{paginatedUsers.map((u) => (
+											{paginatedUsers.map((u, idx) => (
 												<tr
 													key={u.uid}
 													className={`border-b border-surface-100 hover:bg-surface-50/70 ${selectedUid === u.uid ? "bg-indigo-50/50" : ""}`}
 													onClick={() => setSelectedUid(u.uid)}
 												>
-													<td className="py-2 px-3">
-														<p className="text-surface-800 font-medium">
-															{u.ownerName || u.email || u.uid}
+													<td className="py-3 px-3 text-surface-500">
+														{(usersPage - 1) * USERS_PER_PAGE + idx + 1}
+													</td>
+													<td className="py-3 px-3">
+														<p className="text-surface-800 font-semibold truncate">
+															{userDisplayName(u)}
 														</p>
-														<p className="text-surface-400">
+														<p className="text-surface-400 truncate">
 															{u.email || u.uid}
 														</p>
 													</td>
-													<td className="py-2 px-3">
+													<td className="py-3 px-3">
 														<select
 															value={u.role || "paid-user"}
 															onChange={(e) =>
@@ -619,7 +668,7 @@ export default function AdminPage() {
 															}
 															onClick={(e) => e.stopPropagation()}
 															disabled={savingUid === u.uid}
-															className="rounded-lg border border-surface-300 px-2 py-1 bg-white"
+															className="w-full rounded-lg border border-surface-300 px-2 py-1.5 bg-white text-surface-700"
 														>
 															{ROLE_OPTIONS.map((role) => (
 																<option key={role} value={role}>
@@ -628,8 +677,8 @@ export default function AdminPage() {
 															))}
 														</select>
 													</td>
-													<td className="py-2 px-3">
-														<div className="flex flex-wrap gap-1">
+													<td className="py-3 px-3">
+														<div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
 															{SERVICE_KEYS.map((serviceKey) => {
 																const disabled = (
 																	u.disabledServices || []
@@ -646,7 +695,12 @@ export default function AdminPage() {
 																			);
 																		}}
 																		disabled={savingUid === u.uid}
-																		className={`px-2 py-0.5 rounded-full border ${disabled ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}
+																		className={`px-2 py-1 rounded-md border text-[11px] font-medium truncate ${
+																			disabled
+																				? "border-red-200 bg-red-50 text-red-700"
+																				: "border-emerald-200 bg-emerald-50 text-emerald-700"
+																		}`}
+																		title={formatServiceLabel(serviceKey)}
 																	>
 																		{formatServiceLabel(serviceKey)}
 																	</button>
@@ -654,20 +708,30 @@ export default function AdminPage() {
 															})}
 														</div>
 													</td>
-													<td className="py-2 px-3">
+													<td className="py-3 px-3">
 														<button
 															onClick={(e) => {
 																e.stopPropagation();
 																toggleSuspended(u.uid, !u.suspended);
 															}}
 															disabled={savingUid === u.uid}
-															className={`px-2.5 py-1 rounded-full border text-[11px] font-medium ${u.suspended ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}
+															className={`w-full px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold ${u.suspended ? "border-red-200 bg-red-50 text-red-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}
 														>
 															{u.suspended ? "Suspended" : "Active"}
 														</button>
 													</td>
 												</tr>
 											))}
+											{paginatedUsers.length === 0 && (
+												<tr>
+													<td
+														colSpan={5}
+														className="py-6 px-3 text-center text-surface-500"
+													>
+														No users found.
+													</td>
+												</tr>
+											)}
 										</tbody>
 									</table>
 								</div>

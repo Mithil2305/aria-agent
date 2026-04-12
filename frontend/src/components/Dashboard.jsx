@@ -508,12 +508,12 @@ export default function Dashboard({
 	];
 
 	return (
-		<div className="min-h-[calc(100vh-60px)]">
-			<div className="max-w-300 mx-auto px-4 sm:px-6 py-6">
+		<div className="min-h-[calc(100vh-60px)] bg-white">
+			<div className="max-w-300 mx-auto px-3 sm:px-5 lg:px-6 py-5">
 				{/* Hero Summary */}
-				<div className="mb-6 animate-fade-in-up">
-					<div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-						<div className="flex-1">
+				<div className="card p-4 sm:p-5 mb-5 animate-fade-in-up">
+					<div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+						<div className="lg:col-span-8">
 							<div className="flex items-center gap-3 mb-2 flex-wrap">
 								<HealthBadge score={healthScore} />
 								<TrendBadge trendLock={trendLock} />
@@ -533,29 +533,31 @@ export default function Dashboard({
 								{analysis.narrative}
 							</p>
 						</div>
-						<div className="flex items-center gap-2 shrink-0">
-							<button
-								onClick={handleExportPDF}
-								disabled={exporting}
-								className="btn-primary flex items-center gap-2 text-xs disabled:opacity-60"
-							>
-								{exporting ? (
-									<>
-										<Loader2 size={14} className="animate-spin" /> Generating
-										PDF...
-									</>
-								) : (
-									<>
-										<Download size={14} /> Download Report
-									</>
-								)}
-							</button>
-							<button
-								onClick={onReset}
-								className="btn-secondary flex items-center gap-2 text-xs"
-							>
-								<RefreshCcw size={14} /> New Analysis
-							</button>
+						<div className="lg:col-span-4 flex items-start lg:justify-end">
+							<div className="flex flex-wrap lg:justify-end items-center gap-2 w-full">
+								<button
+									onClick={handleExportPDF}
+									disabled={exporting}
+									className="btn-primary flex items-center gap-2 text-xs disabled:opacity-60 w-full sm:w-auto justify-center"
+								>
+									{exporting ? (
+										<>
+											<Loader2 size={14} className="animate-spin" /> Generating
+											PDF...
+										</>
+									) : (
+										<>
+											<Download size={14} /> Download Report
+										</>
+									)}
+								</button>
+								<button
+									onClick={onReset}
+									className="btn-secondary flex items-center gap-2 text-xs w-full sm:w-auto justify-center"
+								>
+									<RefreshCcw size={14} /> New Analysis
+								</button>
+							</div>
 						</div>
 					</div>
 
@@ -599,7 +601,7 @@ export default function Dashboard({
 				<AIProviderBadge provider={aiProvider} />
 
 				{/* Tabs */}
-				<div className="flex items-center gap-1 mb-6 p-1 bg-surface-100 rounded-xl border border-surface-300 overflow-x-auto">
+				<div className="flex md:flex-wrap items-center gap-1 mb-6 p-1 bg-surface-100 rounded-xl border border-surface-300 overflow-x-auto md:overflow-visible">
 					{TABS.map((tab) => {
 						const isActive = activeTab === tab.id;
 						const TabIcon = tab.icon;

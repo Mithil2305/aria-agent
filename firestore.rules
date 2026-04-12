@@ -1,0 +1,42 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;  
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // User profile + user-scoped app data.
+    match /users/{uid} {
+      allow read, write: if isOwner(uid) || isAdmin();
+
+      // Covers: dailyLogs, reports, generatedReports, stockEntries,
+      // analyses, premiumReports, premiumAnalyses, strategyReports, integrations, etc.
+      match /{subCollection=**}/{docId} {
+        allow read, write: if isOwner(uid) || isAdmin();
+      }
+    }
+
+    // Usage counters stored as usage/{uid}/months/{YYYY-MM}
+    match /usage/{uid} {
+      allow read, write: if isOwner(uid) || isAdmin();
+
+      match /{subCollection=**}/{docId} {
+        allow read, write: if isOwner(uid) || isAdmin();
+      }
+    }
+
+    // Deny everything else by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

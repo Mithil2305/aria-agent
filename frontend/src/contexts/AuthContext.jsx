@@ -28,6 +28,8 @@ import { auth, db } from "../firebase";
 
 const AuthContext = createContext(null);
 const ADMIN_EMAIL = "admin@yukti.com";
+const PROFILE_CACHE_PREFIX = "yukti_profile_cache_";
+const AUTH_MAX_WAIT_MS = 2500;
 
 function isAdminEmail(email) {
 	return (
@@ -35,6 +37,30 @@ function isAdminEmail(email) {
 			.trim()
 			.toLowerCase() === ADMIN_EMAIL
 	);
+}
+
+function readCachedProfile(uid) {
+	if (!uid) return null;
+	try {
+		const raw = localStorage.getItem(`${PROFILE_CACHE_PREFIX}${uid}`);
+		if (!raw) return null;
+		const parsed = JSON.parse(raw);
+		return parsed && typeof parsed === "object" ? parsed : null;
+	} catch {
+		return null;
+	}
+}
+
+function writeCachedProfile(uid, profile) {
+	if (!uid || !profile) return;
+	try {
+		localStorage.setItem(
+			`${PROFILE_CACHE_PREFIX}${uid}`,
+			JSON.stringify(profile),
+		);
+	} catch {
+		// Ignore localStorage failures
+	}
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -77,6 +103,7 @@ export function AuthProvider({ children }) {
 			};
 			await setDoc(ref, profile);
 			setUserProfile(profile);
+			writeCachedProfile(firebaseUser.uid, profile);
 			return profile;
 		}
 
@@ -117,23 +144,40 @@ export function AuthProvider({ children }) {
 			});
 		}
 
-		setUserProfile({ ...existing, ...patch });
-		return { ...existing, ...patch };
+		const merged = { ...existing, ...patch };
+		setUserProfile(merged);
+		writeCachedProfile(firebaseUser.uid, merged);
+		return merged;
 	};
 
 	useEffect(() => {
 		const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
 			setUser(firebaseUser);
+			let loadingSettled = false;
+			const settleLoading = () => {
+				if (loadingSettled) return;
+				loadingSettled = true;
+				setLoading(false);
+			};
+			const maxWaitTimer = setTimeout(settleLoading, AUTH_MAX_WAIT_MS);
+
 			if (firebaseUser) {
+				const cached = readCachedProfile(firebaseUser.uid);
+				if (cached) {
+					setUserProfile(cached);
+					settleLoading();
+				}
 				try {
 					await ensureUserProfileDoc(firebaseUser);
 				} catch {
-					setUserProfile(null);
+					if (!cached) setUserProfile(null);
 				}
 			} else {
 				setUserProfile(null);
 			}
-			setLoading(false);
+
+			clearTimeout(maxWaitTimer);
+			settleLoading();
 		});
 		return unsub;
 	}, []);
@@ -217,7 +261,11 @@ export function AuthProvider({ children }) {
 		if (updates.ownerName) {
 			await updateProfile(user, { displayName: updates.ownerName });
 		}
-		setUserProfile((prev) => ({ ...prev, ...updates }));
+		setUserProfile((prev) => {
+			const next = { ...prev, ...updates };
+			writeCachedProfile(user.uid, next);
+			return next;
+		});
 	};
 
 	/**

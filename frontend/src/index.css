@@ -1,49 +1,197 @@
-@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 
 @theme {
 	--font-sans:
-		"Manrope", "SF Pro Text", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+		"Plus Jakarta Sans", "SF Pro Text", "Segoe UI", ui-sans-serif, system-ui,
+		sans-serif;
 
-	/* ── Light SaaS palette ── */
+	/* Core design guide palette */
+	--color-primary-deep: #2a4466;
+	--color-accent-vibrant: #3d5ea1;
+	--color-accent-soft: #4394bf;
+	--color-pastel-base: #6cc4cc;
 
-	/* Surface — white/gray foundation */
-	--color-surface-50: #ffffff;
-	--color-surface-100: #f8f9fb;
-	--color-surface-200: #f1f3f5;
-	--color-surface-300: #e5e7eb;
-	--color-surface-400: #9ca3af;
-	--color-surface-500: #6b7280;
-	--color-surface-600: #4b5563;
-	--color-surface-700: #374151;
-	--color-surface-800: #1f2937;
-	--color-surface-900: #111827;
-	--color-surface-950: #030712;
+	/* Surface + semantic palette mapped to guide */
+	--color-surface-50: #f7fffa;
+	--color-surface-100: #eef8f5;
+	--color-surface-200: #dceff0;
+	--color-surface-300: #c8dfe3;
+	--color-surface-400: #9bc2cf;
+	--color-surface-500: #6f9bb1;
+	--color-surface-600: #4394bf;
+	--color-surface-700: #3d5ea1;
+	--color-surface-800: #2a4466;
+	--color-surface-900: #2a4466;
+	--color-surface-950: #1f3552;
 
-	/* Primary — warm luxury accent */
-	--color-gold-50: #fdf8ef;
-	--color-gold-100: #f6eddc;
-	--color-gold-200: #eddab8;
-	--color-gold-300: #e3c791;
-	--color-gold-400: #d5ad64;
-	--color-gold-500: #c59643;
-	--color-gold-600: #b68435;
-	--color-gold-700: #966826;
-	--color-gold-800: #73501f;
-	--color-gold-900: #513916;
+	/* Keep existing gold token references mapped to new accent family */
+	--color-gold-50: #f7fffa;
+	--color-gold-100: #e8f7f7;
+	--color-gold-200: #c7ebee;
+	--color-gold-300: #9ad9df;
+	--color-gold-400: #6cc4cc;
+	--color-gold-500: #4394bf;
+	--color-gold-600: #3d5ea1;
+	--color-gold-700: #2a4466;
+	--color-gold-800: #233a59;
+	--color-gold-900: #1e3049;
 
-	/* Brand — neutral warm */
-	--color-brand-50: #f9fafb;
-	--color-brand-100: #f3f4f6;
-	--color-brand-200: #e5e7eb;
-	--color-brand-300: #d1d5db;
-	--color-brand-400: #9ca3af;
-	--color-brand-500: #6b7280;
-	--color-brand-600: #4b5563;
-	--color-brand-700: #374151;
-	--color-brand-800: #1f2937;
-	--color-brand-900: #111827;
-	--color-brand-950: #030712;
+	--color-brand-50: #f7fffa;
+	--color-brand-100: #edf8fb;
+	--color-brand-200: #d4edf6;
+	--color-brand-300: #a9d8ea;
+	--color-brand-400: #6cc4cc;
+	--color-brand-500: #4394bf;
+	--color-brand-600: #3d5ea1;
+	--color-brand-700: #2a4466;
+	--color-brand-800: #223b5a;
+	--color-brand-900: #1c2f4a;
+	--color-brand-950: #16263d;
+
+	/* Override commonly used Tailwind utility families app-wide */
+	--color-indigo-50: #f7fffa;
+	--color-indigo-100: #e8f7f7;
+	--color-indigo-200: #c7ebee;
+	--color-indigo-300: #9ad9df;
+	--color-indigo-400: #6cc4cc;
+	--color-indigo-500: #4394bf;
+	--color-indigo-600: #3d5ea1;
+	--color-indigo-700: #2a4466;
+	--color-indigo-800: #233a59;
+	--color-indigo-900: #1e3049;
+
+	--color-slate-50: #f7fffa;
+	--color-slate-100: #eef8f5;
+	--color-slate-200: #dceff0;
+	--color-slate-300: #c8dfe3;
+	--color-slate-400: #8aa9b8;
+	--color-slate-500: #5e8197;
+	--color-slate-600: #3d5ea1;
+	--color-slate-700: #2a4466;
+	--color-slate-800: #233a59;
+	--color-slate-900: #1e3049;
+
+	--color-blue-50: #f7fffa;
+	--color-blue-100: #edf8fb;
+	--color-blue-200: #d4edf6;
+	--color-blue-300: #a9d8ea;
+	--color-blue-400: #6cc4cc;
+	--color-blue-500: #4394bf;
+	--color-blue-600: #3d5ea1;
+	--color-blue-700: #2a4466;
+	--color-blue-800: #233a59;
+	--color-blue-900: #1e3049;
+
+	--color-cyan-50: #f7fffa;
+	--color-cyan-100: #e8f7f7;
+	--color-cyan-200: #c7ebee;
+	--color-cyan-300: #9ad9df;
+	--color-cyan-400: #6cc4cc;
+	--color-cyan-500: #4394bf;
+	--color-cyan-600: #3d5ea1;
+	--color-cyan-700: #2a4466;
+	--color-cyan-800: #233a59;
+	--color-cyan-900: #1e3049;
+
+	--color-teal-50: #f7fffa;
+	--color-teal-100: #e8f7f7;
+	--color-teal-200: #c7ebee;
+	--color-teal-300: #9ad9df;
+	--color-teal-400: #6cc4cc;
+	--color-teal-500: #4394bf;
+	--color-teal-600: #3d5ea1;
+	--color-teal-700: #2a4466;
+	--color-teal-800: #233a59;
+	--color-teal-900: #1e3049;
+
+	--color-purple-50: #f7fffa;
+	--color-purple-100: #edf8fb;
+	--color-purple-200: #d4edf6;
+	--color-purple-300: #a9d8ea;
+	--color-purple-400: #6cc4cc;
+	--color-purple-500: #4394bf;
+	--color-purple-600: #3d5ea1;
+	--color-purple-700: #2a4466;
+	--color-purple-800: #233a59;
+	--color-purple-900: #1e3049;
+
+	--color-pink-50: #f7fffa;
+	--color-pink-100: #edf8fb;
+	--color-pink-200: #d4edf6;
+	--color-pink-300: #a9d8ea;
+	--color-pink-400: #6cc4cc;
+	--color-pink-500: #4394bf;
+	--color-pink-600: #3d5ea1;
+	--color-pink-700: #2a4466;
+	--color-pink-800: #233a59;
+	--color-pink-900: #1e3049;
+
+	--color-red-50: #f7fffa;
+	--color-red-100: #edf8fb;
+	--color-red-200: #d4edf6;
+	--color-red-300: #a9d8ea;
+	--color-red-400: #6cc4cc;
+	--color-red-500: #4394bf;
+	--color-red-600: #3d5ea1;
+	--color-red-700: #2a4466;
+	--color-red-800: #233a59;
+	--color-red-900: #1e3049;
+
+	--color-amber-50: #f7fffa;
+	--color-amber-100: #e8f7f7;
+	--color-amber-200: #c7ebee;
+	--color-amber-300: #9ad9df;
+	--color-amber-400: #6cc4cc;
+	--color-amber-500: #4394bf;
+	--color-amber-600: #3d5ea1;
+	--color-amber-700: #2a4466;
+	--color-amber-800: #233a59;
+	--color-amber-900: #1e3049;
+
+	--color-yellow-50: #f7fffa;
+	--color-yellow-100: #e8f7f7;
+	--color-yellow-200: #c7ebee;
+	--color-yellow-300: #9ad9df;
+	--color-yellow-400: #6cc4cc;
+	--color-yellow-500: #4394bf;
+	--color-yellow-600: #3d5ea1;
+	--color-yellow-700: #2a4466;
+	--color-yellow-800: #233a59;
+	--color-yellow-900: #1e3049;
+
+	--color-orange-50: #f7fffa;
+	--color-orange-100: #e8f7f7;
+	--color-orange-200: #c7ebee;
+	--color-orange-300: #9ad9df;
+	--color-orange-400: #6cc4cc;
+	--color-orange-500: #4394bf;
+	--color-orange-600: #3d5ea1;
+	--color-orange-700: #2a4466;
+	--color-orange-800: #233a59;
+	--color-orange-900: #1e3049;
+
+	--color-green-50: #f7fffa;
+	--color-green-100: #e8f7f7;
+	--color-green-200: #c7ebee;
+	--color-green-300: #9ad9df;
+	--color-green-400: #6cc4cc;
+	--color-green-500: #4394bf;
+	--color-green-600: #3d5ea1;
+	--color-green-700: #2a4466;
+	--color-green-800: #233a59;
+	--color-green-900: #1e3049;
+
+	--color-emerald-50: #f7fffa;
+	--color-emerald-100: #e8f7f7;
+	--color-emerald-200: #c7ebee;
+	--color-emerald-300: #9ad9df;
+	--color-emerald-400: #6cc4cc;
+	--color-emerald-500: #4394bf;
+	--color-emerald-600: #3d5ea1;
+	--color-emerald-700: #2a4466;
+	--color-emerald-800: #233a59;
+	--color-emerald-900: #1e3049;
 }
 
 /* ── Base ── */
@@ -53,77 +201,43 @@ html {
 }
 
 body {
-	background:
-		radial-gradient(
-			circle at 8% 0%,
-			rgba(226, 232, 240, 0.48),
-			transparent 38%
-		),
-		radial-gradient(
-			circle at 96% 8%,
-			rgba(203, 213, 225, 0.42),
-			transparent 32%
-		),
-		linear-gradient(170deg, #fafafa 0%, #f8fafc 52%, #f3f4f6 100%);
-	color: #1f2937;
+	background: #f7fffa;
+	color: #2a4466;
 }
 
 h1,
 h2,
 h3,
 h4 {
-	font-family: "Sora", "Manrope", ui-sans-serif, system-ui, sans-serif;
+	font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 	letter-spacing: -0.02em;
+	color: #2a4466;
 }
 
 .app-shell-bg {
 	position: relative;
 	overflow-x: hidden;
-	background:
-		radial-gradient(
-			circle at 6% 0%,
-			rgba(203, 213, 225, 0.35),
-			transparent 30%
-		),
-		radial-gradient(
-			circle at 92% 8%,
-			rgba(148, 163, 184, 0.22),
-			transparent 32%
-		),
-		linear-gradient(165deg, #fafafa 0%, #f8fafc 48%, #f1f5f9 100%);
+	background: #f7fffa;
 }
 
 .app-shell-grid {
-	position: absolute;
-	inset: 0;
-	background-image:
-		linear-gradient(rgba(148, 163, 184, 0.1) 1px, transparent 1px),
-		linear-gradient(90deg, rgba(148, 163, 184, 0.1) 1px, transparent 1px);
-	background-size: 36px 36px;
-	mask-image: radial-gradient(circle at center, black 52%, transparent 100%);
-	z-index: 0;
+	display: none;
 }
 
 .app-shell-blob {
-	position: absolute;
-	width: 26rem;
-	height: 26rem;
-	filter: blur(88px);
-	opacity: 0.24;
-	z-index: 0;
-	animation: aurora-float 12s ease-in-out infinite alternate;
+	display: none;
 }
 
 .app-shell-blob-a {
 	left: -8rem;
 	top: -4rem;
-	background: #cbd5e1;
+	background: #6cc4cc;
 }
 
 .app-shell-blob-b {
 	right: -10rem;
 	top: 22vh;
-	background: #e2e8f0;
+	background: #4394bf;
 	animation-delay: 1.5s;
 }
 
@@ -138,12 +252,11 @@ h4 {
 	width: 100%;
 	max-width: 72rem;
 	margin: 0 auto;
-	border: 1px solid rgba(226, 232, 240, 0.85);
+	border: 1px solid #dceff0;
 	border-radius: 1.5rem;
 	padding: 1.25rem;
-	background: rgba(255, 255, 255, 0.78);
-	backdrop-filter: blur(12px);
-	box-shadow: 0 24px 48px rgba(15, 23, 42, 0.07);
+	background: #f7fffa;
+	box-shadow: 0 8px 24px rgba(42, 68, 102, 0.08);
 }
 
 @media (min-width: 768px) {
@@ -181,68 +294,64 @@ h4 {
 
 /* ── Surfaces ── */
 .card {
-	background: #ffffff;
-	border: 1px solid #e5e7eb;
-	border-radius: 12px;
+	background: #f7fffa;
+	border: 1px solid #dceff0;
+	border-radius: 16px;
+	box-shadow: 0 8px 24px rgba(42, 68, 102, 0.08);
 }
 
 .card-elevated {
-	background: #ffffff;
-	border: 1px solid #e5e7eb;
+	background: #f7fffa;
+	border: 1px solid #dceff0;
 	border-radius: 16px;
-	box-shadow:
-		0 1px 3px rgba(0, 0, 0, 0.06),
-		0 1px 2px rgba(0, 0, 0, 0.04);
+	box-shadow: 0 8px 24px rgba(42, 68, 102, 0.08);
 }
 
 .card-hover {
-	background: #ffffff;
-	border: 1px solid #e5e7eb;
-	border-radius: 12px;
-	transition:
-		border-color 0.2s ease,
-		box-shadow 0.2s ease;
+	background: #f7fffa;
+	border: 1px solid #dceff0;
+	border-radius: 16px;
+	transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .card-hover:hover {
-	border-color: #c7d2fe;
-	box-shadow: 0 4px 12px rgba(99, 102, 241, 0.08);
+	border-color: #6cc4cc;
+	box-shadow: 0 12px 32px rgba(42, 68, 102, 0.14);
+	transform: translateY(-2px);
 }
 
 /* ── Input styling ── */
 .input-field {
-	background: #ffffff;
-	border: 1px solid #e5e7eb;
-	color: #1f2937;
-	border-radius: 10px;
+	background: #f7fffa;
+	border: 1px solid #c7ebee;
+	color: #2a4466;
+	border-radius: 8px;
 	font-size: 14px;
 	padding: 10px 14px;
-	transition:
-		border-color 0.2s ease,
-		box-shadow 0.2s ease;
+	transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .input-field::placeholder {
-	color: #9ca3af;
+	color: #5e8197;
 }
 .input-field:focus {
 	outline: none;
-	border-color: #818cf8;
-	box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
+	border-color: #4394bf;
+	box-shadow: 0 0 0 3px rgba(67, 148, 191, 0.2);
 }
 
 /* ── Primary button ── */
 .btn-primary {
-	background: #4f46e5;
+	background: #2a4466;
 	color: #ffffff;
 	font-weight: 600;
-	font-size: 13px;
+	font-size: 14px;
 	padding: 10px 20px;
-	border-radius: 10px;
-	transition: all 0.2s ease;
+	border-radius: 8px;
+	transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 	border: none;
 }
 .btn-primary:hover {
-	background: #4338ca;
-	box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+	background: #3d5ea1;
+	box-shadow: 0 12px 32px rgba(42, 68, 102, 0.2);
 	transform: translateY(-1px);
 }
 .btn-primary:disabled {
@@ -252,18 +361,18 @@ h4 {
 }
 
 .btn-secondary {
-	background: #f8f9fb;
-	color: #374151;
+	background: #f7fffa;
+	color: #2a4466;
 	font-weight: 500;
-	font-size: 13px;
+	font-size: 14px;
 	padding: 10px 20px;
-	border-radius: 10px;
-	border: 1px solid #e5e7eb;
-	transition: all 0.2s ease;
+	border-radius: 8px;
+	border: 1px solid #c7ebee;
+	transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .btn-secondary:hover {
-	background: #f1f3f5;
-	border-color: #d1d5db;
+	background: rgba(108, 196, 204, 0.14);
+	border-color: #6cc4cc;
 }
 
 /* ── Animations ── */
@@ -300,18 +409,18 @@ h4 {
 /* ── Charts ── */
 .recharts-cartesian-grid-horizontal line,
 .recharts-cartesian-grid-vertical line {
-	stroke: rgba(229, 231, 235, 0.6) !important;
+	stroke: rgba(108, 196, 204, 0.4) !important;
 }
 
 .recharts-text {
-	fill: #6b7280 !important;
+	fill: rgba(42, 68, 102, 0.7) !important;
 	font-size: 11px !important;
 }
 
 /* ── Divider ── */
 .divider {
 	height: 1px;
-	background: #e5e7eb;
+	background: #dceff0;
 }
 
 /* ── Date picker ── */
@@ -321,32 +430,36 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 /* ── Table ── */
 tbody tr {
-	transition: background-color 0.15s ease;
+	transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+tbody tr:hover {
+	background: rgba(108, 196, 204, 0.12);
 }
 
 /* ── Status indicators ── */
 .status-positive {
-	color: #16a34a;
+	color: #3d5ea1;
 }
 .status-negative {
-	color: #dc2626;
+	color: #2a4466;
 }
 .status-warning {
-	color: #d97706;
+	color: #4394bf;
 }
 .status-neutral {
-	color: #6b7280;
+	color: rgba(42, 68, 102, 0.7);
 }
 
 /* ── Legacy class alias ── */
 .glass {
-	background: #ffffff;
-	border: 1px solid #e5e7eb;
+	background: #f7fffa;
+	border: 1px solid #dceff0;
 	border-radius: 12px;
 }
 
 .neural-bg {
-	background: #111110;
+	background: #2a4466;
 }
 
 /* ── Marketing + Auth visuals ── */

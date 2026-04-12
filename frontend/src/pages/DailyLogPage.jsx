@@ -44,6 +44,7 @@ import {
 	getCategoryLabel,
 } from "../config/businessTypes";
 import { applyCurrencyPrefix, formatCurrency } from "../utils/currency";
+import { useAnalysisJob } from "../contexts/AnalysisJobContext";
 
 // Icon name string → Lucide component map
 const ICON_MAP = {
@@ -65,6 +66,8 @@ const ICON_MAP = {
 	Trash2,
 	Store,
 };
+const QUICK_FIELD_KEYS = ["revenue", "expenses", "customers", "orders"];
+
 function resolveIcon(iconName) {
 	return ICON_MAP[iconName] || Package;
 }
@@ -89,8 +92,20 @@ function monthLabel(key) {
 	});
 }
 
+function toFirestoreErrorMessage(err, fallback) {
+	if (err?.code === "permission-denied") {
+		return "Firestore permission denied. Update your Firestore rules and ensure you are logged in.";
+	}
+	if (err?.code === "unauthenticated") {
+		return "You are not authenticated. Please sign in again.";
+	}
+	return err?.message || fallback;
+}
+
 export default function DailyLogPage() {
 	const { user, userProfile } = useAuth();
+	const { startActivity, updateActivityProgress, completeActivity } =
+		useAnalysisJob();
 	const [date, setDate] = useState(todayISO());
 	const [formData, setFormData] = useState({});
 	const [notes, setNotes] = useState("");
@@ -117,13 +132,12 @@ export default function DailyLogPage() {
 		() => metricFields.filter((f) => f.type === "number"),
 		[metricFields],
 	);
-	const quickFieldKeys = ["revenue", "expenses", "customers", "orders"];
 	const quickFields = useMemo(
-		() => metricFields.filter((f) => quickFieldKeys.includes(f.key)),
+		() => metricFields.filter((f) => QUICK_FIELD_KEYS.includes(f.key)),
 		[metricFields],
 	);
 	const advancedFields = useMemo(
-		() => metricFields.filter((f) => !quickFieldKeys.includes(f.key)),
+		() => metricFields.filter((f) => !QUICK_FIELD_KEYS.includes(f.key)),
 		[metricFields],
 	);
 
@@ -142,8 +156,13 @@ export default function DailyLogPage() {
 			if (data.length > 0) {
 				setSelectedMonth((prev) => prev || monthKey(data[0].date));
 			}
-		} catch {
-			// Silent fail
+		} catch (err) {
+			setError(
+				toFirestoreErrorMessage(
+					err,
+					"Could not load daily logs from Firestore.",
+				),
+			);
 		} finally {
 			setLoadingLogs(false);
 		}
@@ -258,11 +277,14 @@ export default function DailyLogPage() {
 			resetForm();
 			setTimeout(() => setSaved(false), 3000);
 			loadLogs();
-		} catch {
+		} catch (err) {
 			setError(
-				editingLogId
-					? "Failed to update entry."
-					: "Failed to save. Please try again.",
+				toFirestoreErrorMessage(
+					err,
+					editingLogId
+						? "Failed to update entry."
+						: "Failed to save. Please try again.",
+				),
 			);
 		} finally {
 			setSaving(false);
@@ -274,8 +296,8 @@ export default function DailyLogPage() {
 		try {
 			await deleteDoc(doc(db, "users", user.uid, "dailyLogs", logId));
 			setLogs((prev) => prev.filter((l) => l.id !== logId));
-		} catch {
-			// Silent fail
+		} catch (err) {
+			setError(toFirestoreErrorMessage(err, "Failed to delete this entry."));
 		}
 	};
 
@@ -285,6 +307,14 @@ export default function DailyLogPage() {
 
 		setCsvUploading(true);
 		setError(null);
+		const importActivityId = startActivity({
+			type: "upload",
+			label: "CSV Import",
+			message: "Importing daily log CSV in background",
+			fileName: file.name,
+			durationMs: 45000,
+			progressCap: 90,
+		});
 
 		try {
 			const text = await file.text();
@@ -344,17 +374,48 @@ export default function DailyLogPage() {
 
 				await addDoc(collection(db, "users", user.uid, "dailyLogs"), entry);
 				imported++;
+				if (imported % 2 === 0 || i === lines.length - 1) {
+					const ratio = i / Math.max(lines.length - 1, 1);
+					const progress = Math.min(95, 10 + ratio * 85);
+					updateActivityProgress(
+						importActivityId,
+						progress,
+						`Imported ${imported} of ${lines.length - 1} rows`,
+					);
+				}
 			}
 
 			if (imported === 0) {
+				completeActivity(importActivityId, {
+					status: "error",
+					message: "CSV import failed",
+					error: "No valid rows found in CSV.",
+					forceProgress: 100,
+				});
 				setError("No valid rows found in CSV.");
 			} else {
+				completeActivity(importActivityId, {
+					status: "success",
+					message: "CSV imported successfully",
+					forceProgress: 100,
+				});
 				setSaved(true);
 				setTimeout(() => setSaved(false), 3000);
 				loadLogs();
 			}
-		} catch {
-			setError("Failed to parse CSV file.");
+		} catch (err) {
+			completeActivity(importActivityId, {
+				status: "error",
+				message: "CSV import failed",
+				error: toFirestoreErrorMessage(
+					err,
+					"Failed to parse or import CSV file.",
+				),
+				forceProgress: 100,
+			});
+			setError(
+				toFirestoreErrorMessage(err, "Failed to parse or import CSV file."),
+			);
 		} finally {
 			setCsvUploading(false);
 			e.target.value = "";
@@ -404,159 +465,100 @@ export default function DailyLogPage() {
 					</div>
 				)}
 
-				{/* Rapid Entry Form */}
-				<div className="card-elevated p-6 mb-6">
-					<div className="flex items-start justify-between gap-4 mb-5">
-						<div>
-							<h2 className="text-sm font-semibold text-surface-900">
-								{editingLogId ? "Edit Log Entry" : "Quick Daily Entry"}
-							</h2>
-							<p className="text-xs text-surface-500 mt-0.5">
-								Fast fields first so you can log in under a minute.
-							</p>
-						</div>
-						<div className="flex items-center gap-2">
-							{logs.length > 0 && !editingLogId && (
-								<button
-									onClick={applyLastLogTemplate}
-									className="px-3 py-1.5 rounded-lg border border-surface-300 bg-surface-50 text-surface-600 text-xs font-medium hover:bg-surface-100"
-								>
-									Use Last Entry
-								</button>
-							)}
-							{editingLogId && (
-								<button
-									onClick={resetForm}
-									className="px-3 py-1.5 rounded-lg border border-surface-300 bg-white text-surface-600 text-xs font-medium hover:bg-surface-50"
-								>
-									Cancel Edit
-								</button>
-							)}
-						</div>
-					</div>
-
-					<div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
-						<div className="flex-1">
-							<label className="block text-xs font-medium text-surface-400 mb-1.5">
-								Log Date
-							</label>
-							<input
-								type="date"
-								value={date}
-								onChange={(e) => {
-									setDate(e.target.value);
-									setSaved(false);
-								}}
-								max={todayISO()}
-								className="input-field w-full sm:w-auto"
-							/>
-						</div>
-						{/* CSV Upload */}
-						<div>
-							<label className="block text-xs font-medium text-surface-400 mb-1.5">
-								Or Import CSV
-							</label>
-							<label className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-100 border border-surface-300 text-surface-600 text-xs font-medium cursor-pointer hover:border-gold-200 transition-all">
-								{csvUploading ? (
-									<Loader2 size={14} className="animate-spin" />
-								) : (
-									<FileSpreadsheet size={14} />
-								)}
-								{csvUploading ? "Importing…" : "Upload CSV"}
-								<input
-									type="file"
-									accept=".csv"
-									onChange={handleCSVUpload}
-									className="hidden"
-								/>
-							</label>
-						</div>
-					</div>
-
-					{/* Quick metrics */}
-					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-						{quickFields.map((field) => {
-							const Icon = resolveIcon(field.icon);
-							return (
-								<div key={field.key}>
-									<label className="flex items-center gap-1.5 text-xs font-medium text-surface-400 mb-1.5">
-										<Icon
-											size={12}
-											strokeWidth={1.5}
-											className="text-surface-500"
-										/>
-										{field.label}
-										{field.required && <span className="text-red-500">*</span>}
-									</label>
-									<div className="relative">
-										{field.prefix && (
-											<span className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-500 text-sm">
-												{field.prefix}
-											</span>
-										)}
-										<input
-											type="number"
-											inputMode="decimal"
-											min="0"
-											step="any"
-											placeholder={field.placeholder}
-											value={formData[field.key] ?? ""}
-											onChange={(e) =>
-												handleFieldChange(field.key, e.target.value)
-											}
-											className={`input-field w-full ${field.prefix ? "pl-7" : ""}`}
-										/>
-									</div>
+				<div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+					<div className="xl:col-span-5 space-y-5">
+						{/* Rapid Entry Form */}
+						<div className="card-elevated p-5 sm:p-6">
+							<div className="flex items-start justify-between gap-4 mb-5">
+								<div>
+									<h2 className="text-sm font-semibold text-surface-900">
+										{editingLogId ? "Edit Log Entry" : "Quick Daily Entry"}
+									</h2>
+									<p className="text-xs text-surface-500 mt-0.5">
+										Fast fields first so you can log in under a minute.
+									</p>
 								</div>
-							);
-						})}
-					</div>
+								<div className="flex items-center gap-2">
+									{logs.length > 0 && !editingLogId && (
+										<button
+											onClick={applyLastLogTemplate}
+											className="px-3 py-1.5 rounded-lg border border-surface-300 bg-surface-50 text-surface-600 text-xs font-medium hover:bg-surface-100"
+										>
+											Use Last Entry
+										</button>
+									)}
+									{editingLogId && (
+										<button
+											onClick={resetForm}
+											className="px-3 py-1.5 rounded-lg border border-surface-300 bg-white text-surface-600 text-xs font-medium hover:bg-surface-50"
+										>
+											Cancel Edit
+										</button>
+									)}
+								</div>
+							</div>
 
-					{advancedFields.length > 0 && (
-						<div className="mb-5">
-							<button
-								type="button"
-								onClick={() => setShowAdvanced((s) => !s)}
-								className="text-xs font-medium text-indigo-600 hover:underline"
-							>
-								{showAdvanced
-									? "Hide extra fields"
-									: "Add more details (optional)"}
-							</button>
-						</div>
-					)}
+							<div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
+								<div className="flex-1">
+									<label className="block text-xs font-medium text-surface-400 mb-1.5">
+										Log Date
+									</label>
+									<input
+										type="date"
+										value={date}
+										onChange={(e) => {
+											setDate(e.target.value);
+											setSaved(false);
+										}}
+										max={todayISO()}
+										className="input-field w-full sm:w-auto"
+									/>
+								</div>
+								{/* CSV Upload */}
+								<div>
+									<label className="block text-xs font-medium text-surface-400 mb-1.5">
+										Or Import CSV
+									</label>
+									<label className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-surface-100 border border-surface-300 text-surface-600 text-xs font-medium cursor-pointer hover:border-gold-200 transition-all">
+										{csvUploading ? (
+											<Loader2 size={14} className="animate-spin" />
+										) : (
+											<FileSpreadsheet size={14} />
+										)}
+										{csvUploading ? "Importing…" : "Upload CSV"}
+										<input
+											type="file"
+											accept=".csv"
+											onChange={handleCSVUpload}
+											className="hidden"
+										/>
+									</label>
+								</div>
+							</div>
 
-					{showAdvanced && advancedFields.length > 0 && (
-						<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-							{advancedFields.map((field) => {
-								const Icon = resolveIcon(field.icon);
-								return (
-									<div key={field.key}>
-										<label className="flex items-center gap-1.5 text-xs font-medium text-surface-400 mb-1.5">
-											<Icon
-												size={12}
-												strokeWidth={1.5}
-												className="text-surface-500"
-											/>
-											{field.label}
-										</label>
-										<div className="relative">
-											{field.prefix && (
-												<span className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-500 text-sm">
-													{field.prefix}
-												</span>
-											)}
-											{field.type === "text" ? (
-												<input
-													type="text"
-													placeholder={field.placeholder}
-													value={formData[field.key] ?? ""}
-													onChange={(e) =>
-														handleFieldChange(field.key, e.target.value)
-													}
-													className="input-field w-full"
+							{/* Quick metrics */}
+							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+								{quickFields.map((field) => {
+									const Icon = resolveIcon(field.icon);
+									return (
+										<div key={field.key}>
+											<label className="flex items-center gap-1.5 text-xs font-medium text-surface-400 mb-1.5">
+												<Icon
+													size={12}
+													strokeWidth={1.5}
+													className="text-surface-500"
 												/>
-											) : (
+												{field.label}
+												{field.required && (
+													<span className="text-red-500">*</span>
+												)}
+											</label>
+											<div className="relative">
+												{field.prefix && (
+													<span className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-500 text-sm">
+														{field.prefix}
+													</span>
+												)}
 												<input
 													type="number"
 													inputMode="decimal"
@@ -569,206 +571,271 @@ export default function DailyLogPage() {
 													}
 													className={`input-field w-full ${field.prefix ? "pl-7" : ""}`}
 												/>
-											)}
+											</div>
 										</div>
-									</div>
-								);
-							})}
-						</div>
-					)}
+									);
+								})}
+							</div>
 
-					{/* Notes */}
-					<div className="mb-6">
-						<label className="block text-xs font-medium text-surface-400 mb-1.5">
-							Notes (optional)
-						</label>
-						<textarea
-							rows={2}
-							placeholder="Anything notable today? Promotions, events, weather…"
-							value={notes}
-							onChange={(e) => {
-								setNotes(e.target.value);
-								setSaved(false);
-							}}
-							className="input-field w-full resize-none"
-						/>
-					</div>
-
-					{/* Error */}
-					{error && (
-						<div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm mb-4">
-							<AlertCircle size={14} />
-							{error}
-						</div>
-					)}
-
-					{/* Save button */}
-					<div className="flex items-center gap-3">
-						<button
-							onClick={handleSave}
-							disabled={saving}
-							className="btn-primary flex items-center gap-2"
-						>
-							{saving ? (
-								<Loader2 size={15} className="animate-spin" />
-							) : (
-								<Save size={15} />
-							)}
-							{saving
-								? editingLogId
-									? "Updating…"
-									: "Saving…"
-								: editingLogId
-									? "Update Entry"
-									: "Save Log Entry"}
-						</button>
-						{editingLogId && (
-							<button
-								onClick={resetForm}
-								className="btn-secondary flex items-center gap-1.5"
-							>
-								<X size={14} /> Cancel
-							</button>
-						)}
-						{saved && (
-							<span className="flex items-center gap-1.5 text-green-600 text-sm font-medium animate-fade-in-up">
-								<CheckCircle2 size={15} /> Saved successfully!
-							</span>
-						)}
-					</div>
-				</div>
-
-				{/* Month-wise complete logs with edit */}
-				<div className="card p-5">
-					<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-						<div>
-							<h2 className="text-sm font-semibold text-surface-900">
-								Monthly Log History
-							</h2>
-							<p className="text-xs text-surface-500 mt-0.5">
-								Filter by month and edit any entry quickly.
-							</p>
-						</div>
-						<div className="flex items-center gap-2">
-							<label className="text-xs text-surface-500">Month</label>
-							<select
-								value={selectedMonth || "all"}
-								onChange={(e) => setSelectedMonth(e.target.value)}
-								className="input-field text-sm py-2"
-							>
-								<option value="all">All months</option>
-								{monthOptions.map((key) => (
-									<option key={key} value={key}>
-										{monthLabel(key)}
-									</option>
-								))}
-							</select>
-						</div>
-					</div>
-
-					{loadingLogs ? (
-						<div className="flex items-center justify-center py-10">
-							<Loader2 size={20} className="text-gold-600 animate-spin" />
-						</div>
-					) : filteredLogs.length === 0 ? (
-						<div className="text-center py-10">
-							<Plus size={24} className="text-surface-600 mx-auto mb-2" />
-							<p className="text-sm text-surface-500">
-								No logs for this month.
-							</p>
-						</div>
-					) : (
-						<div className="space-y-3">
-							{filteredLogs.map((log) => (
-								<div
-									key={log.id}
-									className="rounded-xl border border-surface-300 bg-white p-4"
-								>
-									<div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-										<div className="flex items-center gap-2">
-											<span className="text-sm font-semibold text-surface-900">
-												{log.date}
-											</span>
-											{log.source && (
-												<span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-500 text-[10px] font-semibold uppercase tracking-wide">
-													via {log.source}
-												</span>
-											)}
-										</div>
-										<div className="flex items-center gap-1">
-											<button
-												onClick={() => handleEdit(log)}
-												className="p-2 rounded-lg hover:bg-indigo-50 text-surface-500 hover:text-indigo-600 transition-colors"
-												title="Edit entry"
-											>
-												<Pencil size={14} />
-											</button>
-											<button
-												onClick={() => handleDelete(log.id)}
-												className="p-2 rounded-lg hover:bg-red-50 text-surface-500 hover:text-red-500 transition-colors"
-												title="Delete entry"
-											>
-												<Trash2 size={14} />
-											</button>
-										</div>
-									</div>
-
-									<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
-										{metricFields.map((field) => {
-											const value = log[field.key];
-											if (
-												value === undefined ||
-												value === null ||
-												value === ""
-											) {
-												return null;
-											}
-											return (
-												<div
-													key={field.key}
-													className="px-2.5 py-2 rounded-lg bg-surface-50 border border-surface-200"
-												>
-													<p className="text-[10px] text-surface-400 font-medium truncate">
-														{field.label}
-													</p>
-													<p className="text-xs text-surface-700 font-semibold mt-0.5 truncate">
-														{field.prefix
-															? formatCurrency(value, currencyCode)
-															: typeof value === "number"
-																? value.toLocaleString("en-IN")
-																: String(value)}
-													</p>
-												</div>
-											);
-										})}
-									</div>
-
-									{log.notes && (
-										<p className="mt-3 text-xs text-surface-600 leading-relaxed">
-											<span className="font-medium text-surface-500">
-												Notes:
-											</span>{" "}
-											{log.notes}
-										</p>
-									)}
+							{advancedFields.length > 0 && (
+								<div className="mb-5">
+									<button
+										type="button"
+										onClick={() => setShowAdvanced((s) => !s)}
+										className="text-xs font-medium text-indigo-600 hover:underline"
+									>
+										{showAdvanced
+											? "Hide extra fields"
+											: "Add more details (optional)"}
+									</button>
 								</div>
-							))}
-						</div>
-					)}
-				</div>
+							)}
 
-				{/* CSV format hint */}
-				<div className="mt-6 card p-4">
-					<h3 className="text-xs font-medium text-surface-400 mb-2">
-						CSV Import Format
-					</h3>
-					<p className="text-[11px] text-surface-500 font-mono leading-relaxed">
-						date, {numericFields.map((f) => f.key).join(", ")}
-						, notes
-						<br />
-						2025-01-15, {numericFields.map(() => "0").join(", ")}, &quot;Notes
-						here&quot;
-					</p>
+							{showAdvanced && advancedFields.length > 0 && (
+								<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+									{advancedFields.map((field) => {
+										const Icon = resolveIcon(field.icon);
+										return (
+											<div key={field.key}>
+												<label className="flex items-center gap-1.5 text-xs font-medium text-surface-400 mb-1.5">
+													<Icon
+														size={12}
+														strokeWidth={1.5}
+														className="text-surface-500"
+													/>
+													{field.label}
+												</label>
+												<div className="relative">
+													{field.prefix && (
+														<span className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-500 text-sm">
+															{field.prefix}
+														</span>
+													)}
+													{field.type === "text" ? (
+														<input
+															type="text"
+															placeholder={field.placeholder}
+															value={formData[field.key] ?? ""}
+															onChange={(e) =>
+																handleFieldChange(field.key, e.target.value)
+															}
+															className="input-field w-full"
+														/>
+													) : (
+														<input
+															type="number"
+															inputMode="decimal"
+															min="0"
+															step="any"
+															placeholder={field.placeholder}
+															value={formData[field.key] ?? ""}
+															onChange={(e) =>
+																handleFieldChange(field.key, e.target.value)
+															}
+															className={`input-field w-full ${field.prefix ? "pl-7" : ""}`}
+														/>
+													)}
+												</div>
+											</div>
+										);
+									})}
+								</div>
+							)}
+
+							{/* Notes */}
+							<div className="mb-6">
+								<label className="block text-xs font-medium text-surface-400 mb-1.5">
+									Notes (optional)
+								</label>
+								<textarea
+									rows={2}
+									placeholder="Anything notable today? Promotions, events, weather…"
+									value={notes}
+									onChange={(e) => {
+										setNotes(e.target.value);
+										setSaved(false);
+									}}
+									className="input-field w-full resize-none"
+								/>
+							</div>
+
+							{/* Error */}
+							{error && (
+								<div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm mb-4">
+									<AlertCircle size={14} />
+									{error}
+								</div>
+							)}
+
+							{/* Save button */}
+							<div className="flex items-center gap-3">
+								<button
+									onClick={handleSave}
+									disabled={saving}
+									className="btn-primary flex items-center gap-2"
+								>
+									{saving ? (
+										<Loader2 size={15} className="animate-spin" />
+									) : (
+										<Save size={15} />
+									)}
+									{saving
+										? editingLogId
+											? "Updating…"
+											: "Saving…"
+										: editingLogId
+											? "Update Entry"
+											: "Save Log Entry"}
+								</button>
+								{editingLogId && (
+									<button
+										onClick={resetForm}
+										className="btn-secondary flex items-center gap-1.5"
+									>
+										<X size={14} /> Cancel
+									</button>
+								)}
+								{saved && (
+									<span className="flex items-center gap-1.5 text-green-600 text-sm font-medium animate-fade-in-up">
+										<CheckCircle2 size={15} /> Saved successfully!
+									</span>
+								)}
+							</div>
+						</div>
+
+						{/* CSV format hint */}
+						<div className="card p-4">
+							<h3 className="text-xs font-medium text-surface-400 mb-2">
+								CSV Import Format
+							</h3>
+							<p className="text-[11px] text-surface-500 font-mono leading-relaxed">
+								date, {numericFields.map((f) => f.key).join(", ")}
+								, notes
+								<br />
+								2025-01-15, {numericFields.map(() => "0").join(", ")},
+								&quot;Notes here&quot;
+							</p>
+						</div>
+					</div>
+
+					{/* Month-wise complete logs with edit */}
+					<div className="xl:col-span-7 card p-5">
+						<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+							<div>
+								<h2 className="text-sm font-semibold text-surface-900">
+									Monthly Log History
+								</h2>
+								<p className="text-xs text-surface-500 mt-0.5">
+									Filter by month and edit any entry quickly.
+								</p>
+							</div>
+							<div className="flex items-center gap-2">
+								<label className="text-xs text-surface-500">Month</label>
+								<select
+									value={selectedMonth || "all"}
+									onChange={(e) => setSelectedMonth(e.target.value)}
+									className="input-field text-sm py-2"
+								>
+									<option value="all">All months</option>
+									{monthOptions.map((key) => (
+										<option key={key} value={key}>
+											{monthLabel(key)}
+										</option>
+									))}
+								</select>
+							</div>
+						</div>
+
+						{loadingLogs ? (
+							<div className="flex items-center justify-center py-10">
+								<Loader2 size={20} className="text-gold-600 animate-spin" />
+							</div>
+						) : filteredLogs.length === 0 ? (
+							<div className="text-center py-10">
+								<Plus size={24} className="text-surface-600 mx-auto mb-2" />
+								<p className="text-sm text-surface-500">
+									No logs for this month.
+								</p>
+							</div>
+						) : (
+							<div className="space-y-3">
+								{filteredLogs.map((log) => (
+									<div
+										key={log.id}
+										className="rounded-xl border border-surface-300 bg-white p-4"
+									>
+										<div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+											<div className="flex items-center gap-2">
+												<span className="text-sm font-semibold text-surface-900">
+													{log.date}
+												</span>
+												{log.source && (
+													<span className="inline-flex items-center px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-500 text-[10px] font-semibold uppercase tracking-wide">
+														via {log.source}
+													</span>
+												)}
+											</div>
+											<div className="flex items-center gap-1">
+												<button
+													onClick={() => handleEdit(log)}
+													className="p-2 rounded-lg hover:bg-indigo-50 text-surface-500 hover:text-indigo-600 transition-colors"
+													title="Edit entry"
+												>
+													<Pencil size={14} />
+												</button>
+												<button
+													onClick={() => handleDelete(log.id)}
+													className="p-2 rounded-lg hover:bg-red-50 text-surface-500 hover:text-red-500 transition-colors"
+													title="Delete entry"
+												>
+													<Trash2 size={14} />
+												</button>
+											</div>
+										</div>
+
+										<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
+											{metricFields.map((field) => {
+												const value = log[field.key];
+												if (
+													value === undefined ||
+													value === null ||
+													value === ""
+												) {
+													return null;
+												}
+												return (
+													<div
+														key={field.key}
+														className="px-2.5 py-2 rounded-lg bg-surface-50 border border-surface-200"
+													>
+														<p className="text-[10px] text-surface-400 font-medium truncate">
+															{field.label}
+														</p>
+														<p className="text-xs text-surface-700 font-semibold mt-0.5 truncate">
+															{field.prefix
+																? formatCurrency(value, currencyCode)
+																: typeof value === "number"
+																	? value.toLocaleString("en-IN")
+																	: String(value)}
+														</p>
+													</div>
+												);
+											})}
+										</div>
+
+										{log.notes && (
+											<p className="mt-3 text-xs text-surface-600 leading-relaxed">
+												<span className="font-medium text-surface-500">
+													Notes:
+												</span>{" "}
+												{log.notes}
+											</p>
+										)}
+									</div>
+								))}
+							</div>
+						)}
+					</div>
 				</div>
 			</div>
 		</div>

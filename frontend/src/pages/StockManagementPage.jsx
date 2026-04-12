@@ -41,6 +41,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { scanBillImage } from "../services/api";
 import { formatCurrency, getCurrencySymbol } from "../utils/currency";
+import { useAnalysisJob } from "../contexts/AnalysisJobContext";
 
 function getCurrentMonth() {
 	const d = new Date();
@@ -49,6 +50,8 @@ function getCurrentMonth() {
 
 export default function StockManagementPage() {
 	const { user, userProfile } = useAuth();
+	const { startActivity, updateActivityProgress, completeActivity } =
+		useAnalysisJob();
 	const navigate = useNavigate();
 	const currencyCode = userProfile?.currency || "INR";
 	const currencySymbol = getCurrencySymbol(currencyCode);
@@ -157,10 +160,23 @@ export default function StockManagementPage() {
 		setScanning(true);
 		setError(null);
 		setScanResult(null);
+		const scanActivityId = startActivity({
+			type: "upload",
+			label: "Bill Upload",
+			message: "Uploading bill image and running OCR",
+			fileName: billFile.name,
+			durationMs: 40000,
+			progressCap: 93,
+		});
 
 		const role = userProfile?.role || "paid-user";
 		try {
 			const token = await user.getIdToken();
+			updateActivityProgress(
+				scanActivityId,
+				35,
+				"Bill uploaded. Extracting line items",
+			);
 			const result = await scanBillImage(billFile, token, user?.uid, role);
 
 			setScanResult(result);
@@ -181,9 +197,24 @@ export default function StockManagementPage() {
 				setEntries((prev) => [...prev, ...scannedEntries]);
 				setSaved(false);
 			}
+
+			completeActivity(scanActivityId, {
+				status: "success",
+				message:
+					result.items && result.items.length > 0
+						? `Bill scan complete with ${result.items.length} extracted items`
+						: "Bill scan complete",
+				forceProgress: 100,
+			});
 		} catch (err) {
 			const msg =
 				err?.response?.data?.detail || "Failed to scan bill. Please try again.";
+			completeActivity(scanActivityId, {
+				status: "error",
+				message: "Bill scan failed",
+				error: msg,
+				forceProgress: 100,
+			});
 			setError(msg);
 		} finally {
 			setScanning(false);

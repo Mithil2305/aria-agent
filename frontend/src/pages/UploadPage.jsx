@@ -10,16 +10,40 @@ import { useAnalysisJob } from "../contexts/AnalysisJobContext";
 export default function UploadPage() {
 	const [error, setError] = useState(null);
 	const { user, userProfile, getIdToken } = useAuth();
-	const { startAnalysisJob, isRunning } = useAnalysisJob();
+	const {
+		startAnalysisJob,
+		startActivity,
+		updateActivityProgress,
+		completeActivity,
+	} = useAnalysisJob();
 	const navigate = useNavigate();
 	const role = userProfile?.role || "paid-user";
 
 	const handleFileSelect = useCallback(
 		async (file) => {
+			let uploadActivityId = null;
 			try {
 				setError(null);
+				uploadActivityId = startActivity({
+					type: "upload",
+					label: "Upload",
+					message: "Uploading file and preparing prediction",
+					fileName: file?.name || "Dataset",
+					durationMs: 35000,
+					progressCap: 90,
+				});
 				const token = await getIdToken();
 				const result = await uploadFile(file, token, user?.uid, role);
+				updateActivityProgress(
+					uploadActivityId,
+					100,
+					"Upload complete. Starting prediction pipeline",
+				);
+				completeActivity(uploadActivityId, {
+					status: "success",
+					message: "Upload complete. Prediction started in background",
+					forceProgress: 100,
+				});
 
 				await startAnalysisJob({
 					getToken: getIdToken,
@@ -44,20 +68,59 @@ export default function UploadPage() {
 
 				navigate("/dashboard");
 			} catch (err) {
+				if (uploadActivityId) {
+					completeActivity(uploadActivityId, {
+						status: "error",
+						message: "Upload failed",
+						error:
+							err.response?.data?.detail ||
+							err.message ||
+							"Upload failed. Is the backend running?",
+						forceProgress: 100,
+					});
+				}
 				setError(
 					err.response?.data?.detail ||
 						"Upload failed. Is the backend running?",
 				);
 			}
 		},
-		[getIdToken, user, role, startAnalysisJob, navigate],
+		[
+			getIdToken,
+			user,
+			role,
+			startAnalysisJob,
+			navigate,
+			startActivity,
+			updateActivityProgress,
+			completeActivity,
+		],
 	);
 
 	const handleDemoLoad = useCallback(async () => {
+		let uploadActivityId = null;
 		try {
 			setError(null);
+			uploadActivityId = startActivity({
+				type: "upload",
+				label: "Upload",
+				message: "Loading demo dataset",
+				fileName: "Demo dataset",
+				durationMs: 15000,
+				progressCap: 90,
+			});
 			const token = await getIdToken();
 			const result = await loadDemo(token);
+			updateActivityProgress(
+				uploadActivityId,
+				100,
+				"Demo loaded. Starting prediction pipeline",
+			);
+			completeActivity(uploadActivityId, {
+				status: "success",
+				message: "Demo loaded. Prediction started in background",
+				forceProgress: 100,
+			});
 
 			await startAnalysisJob({
 				getToken: getIdToken,
@@ -82,22 +145,36 @@ export default function UploadPage() {
 
 			navigate("/dashboard");
 		} catch (err) {
+			if (uploadActivityId) {
+				completeActivity(uploadActivityId, {
+					status: "error",
+					message: "Upload failed",
+					error:
+						err.response?.data?.detail ||
+						err.message ||
+						"Failed to load demo. Is the backend running?",
+					forceProgress: 100,
+				});
+			}
 			setError(
 				err.response?.data?.detail ||
 					"Failed to load demo. Is the backend running?",
 			);
 		}
-	}, [getIdToken, startAnalysisJob, user, role, navigate]);
+	}, [
+		getIdToken,
+		startAnalysisJob,
+		user,
+		role,
+		navigate,
+		startActivity,
+		updateActivityProgress,
+		completeActivity,
+	]);
 
 	return (
 		<div className="app-page">
 			<div className="app-page-inner max-w-5xl mx-auto">
-				{isRunning && (
-					<div className="max-w-2xl mx-auto mt-4 px-4 py-3 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm text-center">
-						Analysis is running in the background. Feel free to explore other
-						pages while we process your data.
-					</div>
-				)}
 				{error && (
 					<div className="max-w-2xl mx-auto mt-4 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm text-center">
 						{error}

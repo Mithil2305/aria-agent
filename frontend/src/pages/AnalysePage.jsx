@@ -12,6 +12,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { useAnalysisJob } from "../contexts/AnalysisJobContext";
+import { formatCurrency } from "../utils/currency";
 import {
 	BarChart3,
 	Loader2,
@@ -19,20 +20,34 @@ import {
 	CheckCircle2,
 	FileSpreadsheet,
 	Upload,
-	Calendar,
 	TrendingUp,
 	ArrowRight,
 	Database,
 	Sparkles,
 } from "lucide-react";
-import { formatCurrency } from "../utils/currency";
+
+function toFirestoreErrorMessage(err, fallback) {
+	if (err?.code === "permission-denied") {
+		return "Firestore permission denied. Update your Firestore rules and ensure you are logged in.";
+	}
+	if (err?.code === "unauthenticated") {
+		return "You are not authenticated. Please sign in again.";
+	}
+	return err?.message || fallback;
+}
 
 export default function AnalysePage() {
 	const { user, userProfile, getIdToken } = useAuth();
 	const navigate = useNavigate();
 	const role = userProfile?.role || "paid-user";
 	const currencyCode = userProfile?.currency || "INR";
-	const { startAnalysisJob, isRunning } = useAnalysisJob();
+	const {
+		startAnalysisJob,
+		isRunning,
+		startActivity,
+		updateActivityProgress,
+		completeActivity,
+	} = useAnalysisJob();
 
 	const [logs, setLogs] = useState([]);
 	const [loadingLogs, setLoadingLogs] = useState(true);
@@ -54,8 +69,13 @@ export default function AnalysePage() {
 			const snapshot = await getDocs(q);
 			const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 			setLogs(data);
-		} catch {
-			// Silent fail
+		} catch (err) {
+			setError(
+				toFirestoreErrorMessage(
+					err,
+					"Could not load daily logs from Firestore.",
+				),
+			);
 		} finally {
 			setLoadingLogs(false);
 		}
@@ -83,9 +103,28 @@ export default function AnalysePage() {
 
 		if (dataSource === "csv" && csvFile) {
 			// CSV upload path
+			let uploadActivityId = null;
 			try {
+				uploadActivityId = startActivity({
+					type: "upload",
+					label: "Upload",
+					message: "Uploading file and validating schema",
+					fileName: csvFile.name,
+					durationMs: 35000,
+					progressCap: 90,
+				});
 				const token = await getIdToken();
 				const result = await uploadFile(csvFile, token, user?.uid, role);
+				updateActivityProgress(
+					uploadActivityId,
+					100,
+					"Upload complete. Starting prediction pipeline",
+				);
+				completeActivity(uploadActivityId, {
+					status: "success",
+					message: "Upload complete. Prediction started in background",
+					forceProgress: 100,
+				});
 				setFileName(result.filename);
 				setRowCount(result.row_count);
 
@@ -114,14 +153,31 @@ export default function AnalysePage() {
 								collection(db, "users", user.uid, "reports"),
 								reportData,
 							);
-						} catch {
-							// Ignore Firestore save failures
+						} catch (err) {
+							console.error("Failed to save report to Firestore:", err);
+							setError(
+								toFirestoreErrorMessage(
+									err,
+									"Analysis completed, but report could not be saved to Firestore.",
+								),
+							);
 						}
 					},
 				});
 
 				navigate("/dashboard");
 			} catch (err) {
+				if (uploadActivityId) {
+					completeActivity(uploadActivityId, {
+						status: "error",
+						message: "Upload failed",
+						error:
+							err.response?.data?.detail ||
+							err.message ||
+							"Upload failed. Is the backend running?",
+						forceProgress: 100,
+					});
+				}
 				setError(
 					err.response?.data?.detail ||
 						"Upload failed. Is the backend running?",
@@ -136,7 +192,17 @@ export default function AnalysePage() {
 				return;
 			}
 
+			let uploadActivityId = null;
 			try {
+				uploadActivityId = startActivity({
+					type: "upload",
+					label: "Upload",
+					message: "Syncing daily logs for prediction",
+					fileName: "Daily logs",
+					rowCount: logs.length,
+					durationMs: 25000,
+					progressCap: 90,
+				});
 				const token = await getIdToken();
 
 				// Build payload dynamically — include all non-null fields from each log
@@ -151,6 +217,16 @@ export default function AnalysePage() {
 				});
 
 				const result = await uploadDailyLogs(logPayload, token);
+				updateActivityProgress(
+					uploadActivityId,
+					100,
+					"Daily logs synced. Starting prediction pipeline",
+				);
+				completeActivity(uploadActivityId, {
+					status: "success",
+					message: "Logs uploaded. Prediction started in background",
+					forceProgress: 100,
+				});
 				setFileName(result.filename);
 				setRowCount(result.row_count);
 
@@ -179,14 +255,31 @@ export default function AnalysePage() {
 								collection(db, "users", user.uid, "reports"),
 								reportData,
 							);
-						} catch {
-							// Ignore Firestore save failures
+						} catch (err) {
+							console.error("Failed to save report to Firestore:", err);
+							setError(
+								toFirestoreErrorMessage(
+									err,
+									"Analysis completed, but report could not be saved to Firestore.",
+								),
+							);
 						}
 					},
 				});
 
 				navigate("/dashboard");
 			} catch (err) {
+				if (uploadActivityId) {
+					completeActivity(uploadActivityId, {
+						status: "error",
+						message: "Upload failed",
+						error:
+							err.response?.data?.detail ||
+							err.message ||
+							"Failed to send logs. Is the backend running?",
+						forceProgress: 100,
+					});
+				}
 				setError(
 					err.response?.data?.detail ||
 						"Failed to send logs. Is the backend running?",
@@ -198,323 +291,352 @@ export default function AnalysePage() {
 	// ── Prepare stage ──
 	return (
 		<div className="app-page">
-			<div className="app-page-inner max-w-3xl mx-auto">
-				{isRunning && (
-					<div className="mb-6 px-4 py-3 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm">
-						Analysis is already running in the background. You can explore other
-						pages while it completes.
-						<button
-							onClick={() => navigate("/dashboard")}
-							className="ml-2 text-indigo-700 font-medium hover:underline"
-						>
-							Go to Dashboard
-						</button>
+			<div className="app-page-inner max-w-6xl mx-auto">
+				<div className="space-y-6">
+					{/* Header */}
+					<div className="max-w-2xl animate-fade-in-up">
+						<div className="inline-flex items-center justify-center p-2.5 mb-4 bg-white shadow-sm shadow-indigo-100 rounded-xl border border-slate-100">
+							<BarChart3 className="w-6 h-6 text-indigo-600" />
+						</div>
+						<h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight mb-2">
+							Analyze & Predict
+						</h1>
+						<p className="text-sm text-slate-500 leading-relaxed">
+							Harness the power of AI to analyze your business data. Uncover
+							hidden growth strategies, predict demand, and forecast your
+							revenue.
+						</p>
 					</div>
-				)}
-				{/* Header */}
-				<div className="mb-8 animate-fade-in-up">
-					<h1 className="text-xl font-semibold text-surface-900 mb-1 flex items-center gap-3">
-						<div className="p-2 rounded-lg bg-gold-50">
-							<BarChart3 size={20} className="text-gold-600" />
-						</div>
-						Analyse & Predict
-					</h1>
-					<p className="text-sm text-surface-500 ml-12">
-						Run AI-powered analysis on your business data to get forecasts,
-						insights, and growth strategies.
-					</p>
-				</div>
 
-				{/* Data Source Selection */}
-				<div
-					className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 animate-fade-in-up"
-					style={{ animationDelay: "60ms" }}
-				>
-					{/* Daily Logs Source */}
-					<button
-						onClick={() => {
-							setDataSource("logs");
-							setCsvFile(null);
-							setError(null);
-						}}
-						className={`group text-left p-5 rounded-xl border-2 transition-all ${
-							dataSource === "logs"
-								? "border-gold-500 bg-gold-50/50 shadow-sm"
-								: "border-surface-300 bg-white hover:border-surface-400"
-						}`}
-					>
-						<div className="flex items-center gap-3 mb-3">
+					<div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+						<div className="xl:col-span-8 space-y-5">
+							{/* Data Source Selection - 12 Column Grid Structure */}
 							<div
-								className={`p-2 rounded-lg ${dataSource === "logs" ? "bg-gold-100" : "bg-surface-100"}`}
+								className="grid grid-cols-1 md:grid-cols-12 gap-4 animate-fade-in-up"
+								style={{ animationDelay: "60ms" }}
 							>
-								<Database
-									size={18}
-									className={
-										dataSource === "logs" ? "text-gold-600" : "text-surface-500"
-									}
-								/>
-							</div>
-							<div>
-								<h3 className="text-sm font-medium text-surface-900">
-									Daily Logs
-								</h3>
-								<p className="text-[11px] text-surface-400">
-									Use your recorded entries
-								</p>
-							</div>
-						</div>
-						{loadingLogs ? (
-							<div className="flex items-center gap-2 text-xs text-surface-400">
-								<Loader2 size={12} className="animate-spin" />
-								Loading entries…
-							</div>
-						) : (
-							<div className="flex items-center gap-4 text-xs">
-								<span
-									className={`font-medium ${logs.length >= 3 ? "text-green-600" : "text-amber-500"}`}
+								{/* Daily Logs Source */}
+								<button
+									onClick={() => {
+										setDataSource("logs");
+										setCsvFile(null);
+										setError(null);
+									}}
+									className={`col-span-1 md:col-span-6 relative text-left p-4 sm:p-5 rounded-2xl transition-all duration-300 ease-out flex flex-col justify-between h-full
+									${
+										dataSource === "logs"
+											? "bg-white shadow-lg shadow-indigo-500/10 ring-2 ring-indigo-600"
+											: "bg-white hover:bg-white border border-slate-200 hover:shadow-md hover:border-slate-300"
+									}`}
 								>
-									{logs.length} entries
-								</span>
-								{logs.length > 0 && (
-									<span className="text-surface-400">
-										{logs[0]?.date} → {logs[logs.length - 1]?.date}
-									</span>
+									<div>
+										<div className="flex items-center justify-between mb-3">
+											<div
+												className={`p-3 rounded-xl inline-flex ${dataSource === "logs" ? "bg-indigo-50 text-indigo-600" : "bg-slate-100 text-slate-500"}`}
+											>
+												<Database size={20} strokeWidth={1.5} />
+											</div>
+											{dataSource === "logs" && (
+												<span className="flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
+													<CheckCircle2 size={14} /> Selected
+												</span>
+											)}
+										</div>
+										<h3 className="text-base font-semibold text-slate-900 mb-1">
+											Daily Logs
+										</h3>
+										<p className="text-xs sm:text-sm text-slate-500 mb-4">
+											Analyze your recorded manual entries
+										</p>
+									</div>
+
+									<div className="mt-auto">
+										{loadingLogs ? (
+											<div className="flex items-center gap-2 text-sm text-slate-400">
+												<Loader2 size={16} className="animate-spin" />
+												Loading entries…
+											</div>
+										) : (
+											<div className="flex items-center gap-2 text-xs sm:text-sm flex-wrap">
+												<span
+													className={`px-2.5 py-1 rounded-md font-semibold ${logs.length >= 3 ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+												>
+													{logs.length} entries
+												</span>
+												{logs.length > 0 && (
+													<span className="text-slate-400 font-medium">
+														{logs[0]?.date} &rarr; {logs[logs.length - 1]?.date}
+													</span>
+												)}
+											</div>
+										)}
+									</div>
+								</button>
+
+								{/* CSV Upload Source */}
+								<div
+									onClick={() => {
+										setDataSource("csv");
+										setError(null);
+									}}
+									className={`col-span-1 md:col-span-6 relative text-left p-4 sm:p-5 rounded-2xl transition-all duration-300 ease-out cursor-pointer flex flex-col justify-between h-full
+									${
+										dataSource === "csv"
+											? "bg-white shadow-lg shadow-indigo-500/10 ring-2 ring-indigo-600"
+											: "bg-white hover:bg-white border border-slate-200 hover:shadow-md hover:border-slate-300"
+									}`}
+								>
+									<div>
+										<div className="flex items-center justify-between mb-3">
+											<div
+												className={`p-3 rounded-xl inline-flex ${dataSource === "csv" ? "bg-indigo-50 text-indigo-600" : "bg-slate-100 text-slate-500"}`}
+											>
+												<Upload size={20} strokeWidth={1.5} />
+											</div>
+											{dataSource === "csv" && csvFile && (
+												<span className="flex items-center gap-1 text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">
+													<CheckCircle2 size={14} /> Selected
+												</span>
+											)}
+										</div>
+										<h3 className="text-base font-semibold text-slate-900 mb-1">
+											Upload Data File
+										</h3>
+										<p className="text-xs sm:text-sm text-slate-500 mb-4">
+											Import historical data via CSV or Excel
+										</p>
+									</div>
+
+									<div className="mt-auto">
+										{csvFile ? (
+											<div className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-50 border border-slate-100">
+												<FileSpreadsheet
+													size={18}
+													className="text-indigo-600 shrink-0"
+												/>
+												<div className="min-w-0 flex-1">
+													<p className="text-xs sm:text-sm font-medium text-slate-700 truncate">
+														{csvFile.name}
+													</p>
+													<p className="text-xs text-slate-400">
+														{(csvFile.size / 1024).toFixed(0)} KB
+													</p>
+												</div>
+											</div>
+										) : (
+											<label
+												className={`flex items-center justify-center gap-2 w-full px-3 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition-colors cursor-pointer
+											${dataSource === "csv" ? "bg-indigo-50 text-indigo-700 hover:bg-indigo-100" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+											>
+												<FileSpreadsheet size={16} />
+												Browse Files
+												<input
+													type="file"
+													accept=".csv,.xlsx,.xls"
+													onChange={handleCsvSelect}
+													className="hidden"
+													onClick={(e) => e.stopPropagation()}
+												/>
+											</label>
+										)}
+									</div>
+								</div>
+							</div>
+
+							{/* Daily Logs Preview (when logs selected) */}
+							{dataSource === "logs" && logs.length > 0 && (
+								<div
+									className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden animate-fade-in-up"
+									style={{ animationDelay: "120ms" }}
+								>
+									<div className="px-4 py-3.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+										<h3 className="text-sm font-semibold text-slate-700">
+											Data Preview
+										</h3>
+										<span className="text-[11px] font-medium text-slate-400 bg-slate-100 px-2 py-1 rounded-md">
+											Showing latest {Math.min(logs.length, 10)} of{" "}
+											{logs.length}
+										</span>
+									</div>
+									<div className="overflow-x-auto">
+										<table className="w-full text-sm text-left">
+											<thead>
+												<tr className="bg-white border-b border-slate-100 text-slate-400">
+													<th className="px-4 py-3 font-medium whitespace-nowrap">
+														Date
+													</th>
+													<th className="px-4 py-3 font-medium text-right">
+														Revenue
+													</th>
+													<th className="px-4 py-3 font-medium text-right hidden sm:table-cell">
+														Customers
+													</th>
+													<th className="px-4 py-3 font-medium text-right hidden md:table-cell">
+														Orders
+													</th>
+													<th className="px-4 py-3 font-medium text-right hidden lg:table-cell">
+														Expenses
+													</th>
+												</tr>
+											</thead>
+											<tbody className="divide-y divide-slate-50">
+												{logs
+													.slice(-10)
+													.reverse()
+													.map((log) => (
+														<tr
+															key={log.id}
+															className="hover:bg-slate-50/50 transition-colors"
+														>
+															<td className="px-4 py-3 text-slate-700 font-medium whitespace-nowrap text-xs sm:text-sm">
+																{log.date}
+															</td>
+															<td className="px-4 py-3 text-right font-semibold text-slate-900 text-xs sm:text-sm">
+																{log.revenue != null
+																	? formatCurrency(log.revenue, currencyCode)
+																	: "—"}
+															</td>
+															<td className="px-4 py-3 text-right text-slate-500 hidden sm:table-cell text-xs sm:text-sm">
+																{log.customers ?? "—"}
+															</td>
+															<td className="px-4 py-3 text-right text-slate-500 hidden md:table-cell text-xs sm:text-sm">
+																{log.orders ?? "—"}
+															</td>
+															<td className="px-4 py-3 text-right text-slate-500 hidden lg:table-cell text-xs sm:text-sm">
+																{log.expenses != null
+																	? formatCurrency(log.expenses, currencyCode)
+																	: "—"}
+															</td>
+														</tr>
+													))}
+											</tbody>
+										</table>
+									</div>
+								</div>
+							)}
+
+							{/* Error State */}
+							{error && (
+								<div className="flex items-start gap-2.5 p-3.5 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm animate-fade-in-up">
+									<AlertCircle size={18} className="shrink-0 mt-0.5" />
+									<p className="leading-relaxed font-medium">{error}</p>
+								</div>
+							)}
+						</div>
+
+						<div
+							className="xl:col-span-4 space-y-4 animate-fade-in-up"
+							style={{ animationDelay: "180ms" }}
+						>
+							<div className="card p-4 sm:p-5">
+								<h3 className="text-sm font-semibold text-slate-800 mb-2">
+									Run Analysis
+								</h3>
+								<p className="text-xs text-slate-500 mb-4">
+									Start the model and continue using other pages while it
+									processes.
+								</p>
+								<button
+									onClick={handleStartAnalysis}
+									disabled={
+										isRunning ||
+										(dataSource === "logs" &&
+											(loadingLogs || logs.length < 3)) ||
+										(dataSource === "csv" && !csvFile)
+									}
+									className="group relative flex items-center justify-center gap-2.5 w-full px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold text-sm shadow-md shadow-slate-900/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
+								>
+									{isRunning ? (
+										<Loader2
+											size={18}
+											className="animate-spin text-indigo-300"
+										/>
+									) : (
+										<Sparkles size={18} className="text-indigo-300" />
+									)}
+									{isRunning ? "Analysis Running..." : "Start Analysis"}
+									{!isRunning && (
+										<ArrowRight
+											size={16}
+											className="opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all"
+										/>
+									)}
+								</button>
+
+								{!isRunning && (fileName || rowCount) && (
+									<p className="text-xs text-indigo-600 mt-4 font-medium flex items-center gap-2">
+										<span className="relative flex h-2.5 w-2.5">
+											<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+											<span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-500"></span>
+										</span>
+										Analysis is running in the background.
+									</p>
+								)}
+
+								{dataSource === "logs" && !loadingLogs && logs.length < 3 && (
+									<div className="mt-4 flex items-center gap-2 text-xs text-amber-600 font-medium bg-amber-50 px-3 py-2 rounded-lg border border-amber-100">
+										<AlertCircle size={16} />
+										<span>Minimum 3 entries required.</span>
+										<button
+											onClick={() => navigate("/daily-log")}
+											className="text-slate-900 underline decoration-slate-300 hover:decoration-slate-900 underline-offset-4 ml-1"
+										>
+											Add logs
+										</button>
+									</div>
 								)}
 							</div>
-						)}
-						{dataSource === "logs" && (
-							<div className="flex items-center gap-1 mt-3 text-[11px] text-gold-600 font-medium">
-								<CheckCircle2 size={12} /> Selected
-							</div>
-						)}
-					</button>
 
-					{/* CSV Upload Source */}
-					<div
-						onClick={() => {
-							setDataSource("csv");
-							setError(null);
-						}}
-						className={`group text-left p-5 rounded-xl border-2 transition-all cursor-pointer ${
-							dataSource === "csv"
-								? "border-gold-500 bg-gold-50/50 shadow-sm"
-								: "border-surface-300 bg-white hover:border-surface-400"
-						}`}
-					>
-						<div className="flex items-center gap-3 mb-3">
 							<div
-								className={`p-2 rounded-lg ${dataSource === "csv" ? "bg-gold-100" : "bg-surface-100"}`}
+								className="card p-4 sm:p-5"
+								style={{ animationDelay: "240ms" }}
 							>
-								<Upload
-									size={18}
-									className={
-										dataSource === "csv" ? "text-gold-600" : "text-surface-500"
-									}
-								/>
-							</div>
-							<div>
-								<h3 className="text-sm font-medium text-surface-900">
-									Upload CSV / Excel
+								<h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
+									Analysis Deliverables
 								</h3>
-								<p className="text-[11px] text-surface-400">
-									Import historical data file
-								</p>
+								<div className="grid grid-cols-2 xl:grid-cols-1 gap-3">
+									{[
+										{
+											icon: TrendingUp,
+											label: "Forecasts",
+											desc: "Revenue & demand predictions",
+										},
+										{
+											icon: BarChart3,
+											label: "KPIs",
+											desc: "Key performance metrics",
+										},
+										{
+											icon: AlertCircle,
+											label: "Anomalies",
+											desc: "Unusual patterns detected",
+										},
+										{
+											icon: Sparkles,
+											label: "Insights",
+											desc: "AI-powered recommendations",
+										},
+									].map((feature, idx) => (
+										<div
+											key={idx}
+											className="flex items-start gap-3 p-3 rounded-xl bg-white border border-slate-100"
+										>
+											<div className="p-2 bg-slate-50 text-indigo-600 rounded-lg">
+												<feature.icon size={16} strokeWidth={1.5} />
+											</div>
+											<div>
+												<h4 className="text-xs font-bold text-slate-900 mb-0.5">
+													{feature.label}
+												</h4>
+												<p className="text-[11px] text-slate-500 leading-relaxed">
+													{feature.desc}
+												</p>
+											</div>
+										</div>
+									))}
+								</div>
 							</div>
 						</div>
-
-						{csvFile ? (
-							<div className="flex items-center gap-2 text-xs">
-								<FileSpreadsheet size={12} className="text-gold-600" />
-								<span className="text-surface-700 font-medium truncate">
-									{csvFile.name}
-								</span>
-								<span className="text-surface-400">
-									({(csvFile.size / 1024).toFixed(0)} KB)
-								</span>
-							</div>
-						) : (
-							<label className="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-100 border border-surface-300 text-surface-500 text-xs font-medium cursor-pointer hover:border-gold-200 transition-all w-fit">
-								<FileSpreadsheet size={13} />
-								Choose file…
-								<input
-									type="file"
-									accept=".csv,.xlsx,.xls"
-									onChange={handleCsvSelect}
-									className="hidden"
-									onClick={(e) => e.stopPropagation()}
-								/>
-							</label>
-						)}
-
-						{dataSource === "csv" && csvFile && (
-							<div className="flex items-center gap-1 mt-3 text-[11px] text-gold-600 font-medium">
-								<CheckCircle2 size={12} /> Selected
-							</div>
-						)}
-					</div>
-				</div>
-
-				{/* Daily Logs Preview (when logs selected) */}
-				{dataSource === "logs" && logs.length > 0 && (
-					<div
-						className="card overflow-hidden mb-6 animate-fade-in-up"
-						style={{ animationDelay: "120ms" }}
-					>
-						<div className="px-5 py-3 border-b border-surface-300 flex items-center justify-between">
-							<h3 className="text-xs font-medium text-surface-500">
-								Data Preview
-							</h3>
-							<span className="text-[10px] text-surface-400">
-								Showing latest {Math.min(logs.length, 10)} of {logs.length}{" "}
-								entries
-							</span>
-						</div>
-						<div className="overflow-x-auto">
-							<table className="w-full text-sm">
-								<thead>
-									<tr className="border-b border-surface-300">
-										<th className="text-left px-4 py-2.5 text-[11px] font-medium text-surface-400">
-											Date
-										</th>
-										<th className="text-right px-4 py-2.5 text-[11px] font-medium text-surface-400">
-											Revenue
-										</th>
-										<th className="text-right px-4 py-2.5 text-[11px] font-medium text-surface-400 hidden sm:table-cell">
-											Customers
-										</th>
-										<th className="text-right px-4 py-2.5 text-[11px] font-medium text-surface-400 hidden md:table-cell">
-											Orders
-										</th>
-										<th className="text-right px-4 py-2.5 text-[11px] font-medium text-surface-400 hidden lg:table-cell">
-											Expenses
-										</th>
-									</tr>
-								</thead>
-								<tbody>
-									{logs
-										.slice(-10)
-										.reverse()
-										.map((log) => (
-											<tr
-												key={log.id}
-												className="border-b border-surface-200 last:border-b-0"
-											>
-												<td className="px-4 py-2 text-surface-700 text-xs whitespace-nowrap">
-													{log.date}
-												</td>
-												<td className="text-right px-4 py-2 text-gold-600 text-xs font-medium">
-													{log.revenue != null
-														? formatCurrency(log.revenue, currencyCode)
-														: "—"}
-												</td>
-												<td className="text-right px-4 py-2 text-surface-500 text-xs hidden sm:table-cell">
-													{log.customers ?? "—"}
-												</td>
-												<td className="text-right px-4 py-2 text-surface-500 text-xs hidden md:table-cell">
-													{log.orders ?? "—"}
-												</td>
-												<td className="text-right px-4 py-2 text-surface-500 text-xs hidden lg:table-cell">
-													{log.expenses != null
-														? formatCurrency(log.expenses, currencyCode)
-														: "—"}
-												</td>
-											</tr>
-										))}
-								</tbody>
-							</table>
-						</div>
-					</div>
-				)}
-
-				{/* Error */}
-				{error && (
-					<div className="flex items-center gap-2 px-4 py-3 rounded-lg bg-red-50 border border-red-200 text-red-600 text-sm mb-6 animate-fade-in-up">
-						<AlertCircle size={14} className="shrink-0" />
-						{error}
-					</div>
-				)}
-
-				{/* Analyse Button */}
-				<div className="animate-fade-in-up" style={{ animationDelay: "180ms" }}>
-					<button
-						onClick={handleStartAnalysis}
-						disabled={
-							isRunning ||
-							(dataSource === "logs" && (loadingLogs || logs.length < 3)) ||
-							(dataSource === "csv" && !csvFile)
-						}
-						className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2.5 px-8 py-3 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed"
-					>
-						<Sparkles size={16} />
-						{isRunning
-							? "Analysis Running in Background"
-							: "Start Analysis & Prediction"}
-						<ArrowRight size={15} />
-					</button>
-					{!isRunning && (fileName || rowCount) && (
-						<p className="text-xs text-indigo-600 mt-2.5">
-							Once started, analysis will continue in background while you
-							explore other pages.
-						</p>
-					)}
-
-					{dataSource === "logs" && !loadingLogs && logs.length < 3 && (
-						<p className="text-xs text-amber-500 mt-2.5 flex items-center gap-1.5">
-							<AlertCircle size={12} />
-							Need at least 3 daily log entries.{" "}
-							<button
-								onClick={() => navigate("/daily-log")}
-								className="text-gold-600 font-medium hover:underline"
-							>
-								Add logs →
-							</button>
-						</p>
-					)}
-				</div>
-
-				{/* What happens */}
-				<div
-					className="mt-12 animate-fade-in-up"
-					style={{ animationDelay: "240ms" }}
-				>
-					<h3 className="text-xs font-medium text-surface-400 uppercase tracking-wider mb-4">
-						What you'll get
-					</h3>
-					<div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-						{[
-							{
-								icon: TrendingUp,
-								label: "Forecasts",
-								desc: "Revenue & demand predictions",
-							},
-							{
-								icon: BarChart3,
-								label: "KPIs",
-								desc: "Key performance metrics",
-							},
-							{
-								icon: AlertCircle,
-								label: "Anomalies",
-								desc: "Unusual patterns detected",
-							},
-							{
-								icon: Sparkles,
-								label: "Insights",
-								desc: "AI-powered recommendations",
-							},
-						].map((f) => (
-							<div key={f.label} className="card p-3.5 text-center">
-								<f.icon
-									size={16}
-									className="text-surface-400 mx-auto mb-2"
-									strokeWidth={1.5}
-								/>
-								<p className="text-xs font-medium text-surface-700">
-									{f.label}
-								</p>
-								<p className="text-[10px] text-surface-400 mt-0.5">{f.desc}</p>
-							</div>
-						))}
 					</div>
 				</div>
 			</div>

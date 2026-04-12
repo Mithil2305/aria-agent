@@ -37,7 +37,7 @@ const NAV_ITEMS = [
 
 export default function AppLayout() {
 	const { user, userProfile, logout } = useAuth();
-	const { job } = useAnalysisJob();
+	const { activity } = useAnalysisJob();
 	const navigate = useNavigate();
 	const [mobileNavOpen, setMobileNavOpen] = useState(false);
 	const isAdminEmail =
@@ -58,6 +58,31 @@ export default function AppLayout() {
 		.toUpperCase()
 		.slice(0, 2);
 
+	const activityTone =
+		activity.status === "running"
+			? {
+					wrap: "border-[#6CC4CC] bg-[#E8F7F7]/70",
+					icon: "text-[#2A4466]",
+					text: "text-[#2A4466]",
+					subtle: "text-[#2A4466]/80",
+					bar: "bg-[#3D5EA1]",
+				}
+			: activity.status === "success"
+				? {
+						wrap: "border-[#6CC4CC] bg-[#E8F7F7]/70",
+						icon: "text-[#3D5EA1]",
+						text: "text-[#2A4466]",
+						subtle: "text-[#2A4466]/80",
+						bar: "bg-[#3D5EA1]",
+					}
+				: {
+						wrap: "border-[#6CC4CC] bg-[#E8F7F7]/70",
+						icon: "text-[#2A4466]",
+						text: "text-[#2A4466]",
+						subtle: "text-[#2A4466]/80",
+						bar: "bg-[#2A4466]",
+					};
+
 	return (
 		<div className="min-h-screen app-shell-bg flex">
 			<div className="app-shell-grid pointer-events-none" />
@@ -65,11 +90,11 @@ export default function AppLayout() {
 			<div className="app-shell-blob app-shell-blob-b pointer-events-none" />
 
 			{/* Mobile top bar */}
-			<header className="lg:hidden fixed top-0 left-0 right-0 z-50 border-b border-slate-200/70 bg-white/80 backdrop-blur-xl">
+			<header className="lg:hidden fixed top-0 left-0 right-0 z-50 border-b border-[#C7EBEE] bg-[#F7FFFA]/95 backdrop-blur-xl">
 				<div className="px-4 h-14 flex items-center justify-between">
 					<button
 						onClick={() => setMobileNavOpen((prev) => !prev)}
-						className="inline-flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 bg-white text-slate-700"
+						className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-[#C7EBEE] bg-[#F7FFFA] text-[#2A4466]"
 						aria-label="Toggle navigation"
 					>
 						{mobileNavOpen ? <X size={18} /> : <Menu size={18} />}
@@ -87,7 +112,7 @@ export default function AppLayout() {
 					</button>
 					<button
 						onClick={() => navigate("/profile")}
-						className="w-9 h-9 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-[11px] font-semibold text-slate-700"
+						className="w-9 h-9 rounded-full bg-[#E8F7F7] border border-[#C7EBEE] flex items-center justify-center text-[11px] font-semibold text-[#2A4466]"
 					>
 						{initials}
 					</button>
@@ -105,7 +130,7 @@ export default function AppLayout() {
 
 			{/* Sidebar */}
 			<aside
-				className={`fixed top-0 left-0 h-screen w-72 max-w-[85vw] bg-white/95 border-r border-slate-200 flex flex-col z-50 backdrop-blur-xl transition-transform duration-300 lg:w-64 lg:max-w-none ${
+				className={`fixed top-0 left-0 h-screen w-72 max-w-[85vw] bg-[#F7FFFA]/95 border-r border-[#C7EBEE] flex flex-col z-50 backdrop-blur-xl transition-transform duration-300 lg:w-64 lg:max-w-none ${
 					mobileNavOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
 				}`}
 			>
@@ -122,9 +147,9 @@ export default function AppLayout() {
 							size={32}
 							showText
 							subtitle="Business Intelligence"
-							markClassName="text-slate-900"
-							textClassName="text-base text-surface-900"
-							subtitleClassName="text-surface-400"
+							markClassName="text-[#2A4466]"
+							textClassName="text-base text-[#2A4466]"
+							subtitleClassName="text-[#2A4466]/55"
 						/>
 					</button>
 				</div>
@@ -133,7 +158,7 @@ export default function AppLayout() {
 
 				{/* Navigation */}
 				<nav className="flex-1 px-3 py-4 space-y-0.5">
-					<p className="px-3 pb-2 text-[10px] font-medium text-surface-400 uppercase tracking-wider">
+					<p className="px-3 pb-2 text-[10px] font-medium text-[#2A4466]/55 uppercase tracking-wider">
 						Menu
 					</p>
 					{[
@@ -153,8 +178,8 @@ export default function AppLayout() {
 							className={({ isActive }) =>
 								`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150 ${
 									isActive
-										? "bg-black text-white shadow-lg shadow-black/15"
-										: "text-surface-500 hover:text-surface-800 hover:bg-surface-100"
+										? "bg-[#E8F7F7] text-[#2A4466] border border-[#6CC4CC]"
+										: "text-[#3D5EA1] hover:text-[#2A4466] hover:bg-[#E8F7F7]/80"
 								}`
 							}
 						>
@@ -173,31 +198,31 @@ export default function AppLayout() {
 							navigate("/profile");
 							setMobileNavOpen(false);
 						}}
-						className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-surface-100 transition-all group"
+						className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-[#E8F7F7]/80 transition-all group"
 					>
-						<div className="w-8 h-8 rounded-full bg-gold-50 border border-gold-200 flex items-center justify-center">
-							<span className="text-[11px] font-semibold text-gold-600">
+						<div className="w-8 h-8 rounded-full bg-[#E8F7F7] border border-[#6CC4CC] flex items-center justify-center">
+							<span className="text-[11px] font-semibold text-[#2A4466]">
 								{initials}
 							</span>
 						</div>
 						<div className="flex-1 min-w-0">
-							<p className="text-[13px] text-surface-800 font-medium truncate">
+							<p className="text-[13px] text-[#2A4466] font-medium truncate">
 								{userProfile?.ownerName || user?.displayName || "User"}
 							</p>
-							<p className="text-[11px] text-surface-400 truncate">
+							<p className="text-[11px] text-[#2A4466]/55 truncate">
 								{userProfile?.businessName || ""}
 							</p>
 						</div>
 						<Settings
 							size={14}
-							className="text-surface-400 group-hover:text-surface-600 transition-colors shrink-0"
+							className="text-[#4394BF] group-hover:text-[#2A4466] transition-colors shrink-0"
 							strokeWidth={1.5}
 						/>
 					</button>
 
 					<button
 						onClick={handleLogout}
-						className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-[13px] font-medium text-surface-400 hover:text-red-600 hover:bg-red-50 transition-all"
+						className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-[13px] font-medium text-[#2A4466]/65 hover:text-[#2A4466] hover:bg-[#E8F7F7]/80 transition-all"
 					>
 						<LogOut size={15} className="shrink-0" strokeWidth={1.5} />
 						<span>Sign Out</span>
@@ -207,58 +232,86 @@ export default function AppLayout() {
 
 			{/* Main content */}
 			<main className="flex-1 w-full lg:ml-64 pt-14 lg:pt-0 relative z-10">
-				{job.status === "running" && (
-					<div className="mx-4 md:mx-6 mt-4 px-4 py-3 rounded-xl border border-indigo-200 bg-indigo-50/90 backdrop-blur-sm flex items-start gap-3">
-						<Loader2
-							size={16}
-							className="text-indigo-600 animate-spin mt-0.5"
-						/>
-						<div className="text-xs text-indigo-700">
+				{activity.status !== "idle" && (
+					<div
+						className={`mx-4 md:mx-6 mt-4 px-4 py-3 rounded-xl border backdrop-blur-sm flex items-start gap-3 ${activityTone.wrap}`}
+					>
+						{activity.status === "running" ? (
+							<Loader2
+								size={16}
+								className={`${activityTone.icon} animate-spin mt-0.5`}
+							/>
+						) : activity.status === "success" ? (
+							<CheckCircle2
+								size={16}
+								className={`${activityTone.icon} mt-0.5`}
+							/>
+						) : (
+							<AlertCircle
+								size={16}
+								className={`${activityTone.icon} mt-0.5`}
+							/>
+						)}
+
+						<div className={`text-xs min-w-0 flex-1 ${activityTone.text}`}>
 							<p className="font-semibold">
-								Analysis is running in the background
+								{activity.status === "running"
+									? `${activity.label || "Task"} is running in the background`
+									: activity.status === "success"
+										? `${activity.label || "Task"} completed`
+										: `${activity.label || "Task"} failed`}
 							</p>
 							<p className="mt-0.5">
-								Feel free to explore other pages while Yukti processes your
-								data.
+								{activity.status === "error"
+									? activity.error ||
+										activity.message ||
+										"Please retry from the original page."
+									: activity.message ||
+										"Feel free to explore other pages while it runs."}
 							</p>
-							<p className="mt-0.5 text-indigo-600/90">
-								{job.fileName ? `${job.fileName} · ` : ""}
-								{job.rowCount
-									? `${job.rowCount.toLocaleString()} rows`
-									: "Preparing analysis"}
+							<p className={`mt-0.5 ${activityTone.subtle}`}>
+								{activity.fileName ? `${activity.fileName} · ` : ""}
+								{activity.rowCount
+									? `${activity.rowCount.toLocaleString()} rows`
+									: activity.type === "prediction"
+										? "Prediction pipeline active"
+										: "Upload pipeline active"}
 							</p>
-						</div>
-					</div>
-				)}
 
-				{job.status === "success" && (
-					<div className="mx-4 md:mx-6 mt-4 px-4 py-3 rounded-xl border border-green-200 bg-green-50/90 backdrop-blur-sm flex items-start gap-3">
-						<CheckCircle2 size={16} className="text-green-600 mt-0.5" />
-						<div className="text-xs text-green-700">
-							<p className="font-semibold">Analysis complete</p>
-							<p className="mt-0.5">
-								Your latest insights are ready in Dashboard.
-							</p>
-						</div>
-						<button
-							onClick={() => navigate("/dashboard")}
-							className="ml-auto text-xs px-3 py-1.5 rounded-md border border-green-300 bg-white text-green-700 hover:bg-green-100"
-						>
-							<Sparkles size={12} className="inline mr-1" />
-							View Results
-						</button>
-					</div>
-				)}
+							<div className="mt-2">
+								<div className="flex items-center justify-between mb-1">
+									<span className={activityTone.subtle}>Progress</span>
+									<span className="font-mono">
+										{Math.round(activity.progress)}%
+									</span>
+								</div>
+								<div className="h-1.5 rounded-full bg-white/70 overflow-hidden">
+									<div
+										className={`h-full rounded-full transition-all duration-300 ${activityTone.bar}`}
+										style={{
+											width: `${Math.max(0, Math.min(100, activity.progress))}%`,
+										}}
+									/>
+								</div>
+							</div>
 
-				{job.status === "error" && (
-					<div className="mx-4 md:mx-6 mt-4 px-4 py-3 rounded-xl border border-red-200 bg-red-50/90 backdrop-blur-sm flex items-start gap-3">
-						<AlertCircle size={16} className="text-red-600 mt-0.5" />
-						<div className="text-xs text-red-700">
-							<p className="font-semibold">Analysis failed</p>
-							<p className="mt-0.5">
-								{job.error || "Please retry from Analyse page."}
-							</p>
+							{activity.status !== "running" && (
+								<p className={`mt-1 ${activityTone.subtle}`}>
+									This update will auto-hide in about 1 minute.
+								</p>
+							)}
 						</div>
+
+						{activity.status === "success" &&
+							activity.type === "prediction" && (
+								<button
+									onClick={() => navigate("/dashboard")}
+									className="ml-auto text-xs px-3 py-1.5 rounded-md border border-[#6CC4CC] bg-[#F7FFFA] text-[#2A4466] hover:bg-[#E8F7F7]"
+								>
+									<Sparkles size={12} className="inline mr-1" />
+									View Results
+								</button>
+							)}
 					</div>
 				)}
 				<Outlet />

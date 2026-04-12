@@ -34,6 +34,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { formatCurrency } from "../utils/currency";
+import { useAnalysisJob } from "../contexts/AnalysisJobContext";
 
 /* ── Loading animation steps ─────────────────────── */
 const PROGRESS_STEPS = [
@@ -45,6 +46,7 @@ const PROGRESS_STEPS = [
 
 const PREMIUM_JOB_KEY = "yukti_premium_job";
 const MAX_PREMIUM_HISTORY = 20;
+const PREMIUM_RELOAD_MAX_WAIT_MS = 45 * 1000;
 
 /* ── Provider badge ──────────────────────────────── */
 function ProviderBadge({ generatedBy, label }) {
@@ -70,8 +72,10 @@ function ProviderBadge({ generatedBy, label }) {
 
 export default function PremiumAnalysisPage() {
 	const { user, userProfile } = useAuth();
+	const { activity, startActivity, completeActivity } = useAnalysisJob();
 	const currencyCode = userProfile?.currency || "INR";
 	const mountedRef = useRef(true);
+	const premiumActivityRef = useRef(null);
 
 	const [status, setStatus] = useState(null); // { month, used, available }
 	const [loading, setLoading] = useState(false);
@@ -79,6 +83,7 @@ export default function PremiumAnalysisPage() {
 	const [result, setResult] = useState(null);
 	const [error, setError] = useState(null);
 	const [progressIdx, setProgressIdx] = useState(0);
+	const [progressPct, setProgressPct] = useState(0);
 	const [history, setHistory] = useState([]);
 	const [historyLoading, setHistoryLoading] = useState(false);
 
@@ -160,7 +165,7 @@ export default function PremiumAnalysisPage() {
 			const job = JSON.parse(raw);
 			if (
 				job?.status === "running" &&
-				Date.now() - Number(job?.startedAt || 0) < 15 * 60 * 1000
+				Date.now() - Number(job?.startedAt || 0) < PREMIUM_RELOAD_MAX_WAIT_MS
 			) {
 				setLoading(true);
 			} else if (job?.status === "running") {
@@ -171,10 +176,20 @@ export default function PremiumAnalysisPage() {
 		}
 	}, []);
 
+	useEffect(() => {
+		if (!loading) return;
+		const timer = setTimeout(() => {
+			setLoading(false);
+			sessionStorage.removeItem(PREMIUM_JOB_KEY);
+		}, PREMIUM_RELOAD_MAX_WAIT_MS);
+		return () => clearTimeout(timer);
+	}, [loading]);
+
 	/* ── Progress animation during loading ─────── */
 	useEffect(() => {
 		if (!loading) {
 			setProgressIdx(0);
+			setProgressPct(0);
 			return;
 		}
 		setProgressIdx(0);
@@ -188,10 +203,28 @@ export default function PremiumAnalysisPage() {
 		return () => timers.forEach(clearTimeout);
 	}, [loading]);
 
+	useEffect(() => {
+		if (!loading) return;
+		if (!premiumActivityRef.current) return;
+		if (activity.id !== premiumActivityRef.current) return;
+		setProgressPct(
+			Math.round(Math.max(0, Math.min(100, activity.progress || 0))),
+		);
+	}, [loading, activity.id, activity.progress]);
+
 	/* ── Generate premium analysis ──────────────── */
 	async function handleGenerate() {
 		setLoading(true);
 		setError(null);
+		const premiumActivityId = startActivity({
+			type: "prediction",
+			label: "Premium Prediction",
+			message: "Running premium forecasting pipeline",
+			fileName: "Premium monthly analysis",
+			durationMs: 90000,
+			progressCap: 95,
+		});
+		premiumActivityRef.current = premiumActivityId;
 		sessionStorage.setItem(
 			PREMIUM_JOB_KEY,
 			JSON.stringify({
@@ -229,6 +262,13 @@ export default function PremiumAnalysisPage() {
 			}
 
 			if (dailyLogs.length < 3) {
+				completeActivity(premiumActivityId, {
+					status: "error",
+					message: "Premium prediction failed",
+					error:
+						"You need at least 3 daily log entries for a premium analysis. Keep logging!",
+					forceProgress: 100,
+				});
 				setError(
 					"You need at least 3 daily log entries for a premium analysis. Keep logging!",
 				);
@@ -289,6 +329,12 @@ export default function PremiumAnalysisPage() {
 				);
 			}
 
+			completeActivity(premiumActivityId, {
+				status: "success",
+				message: "Premium prediction completed",
+				forceProgress: 100,
+			});
+
 			sessionStorage.setItem(
 				PREMIUM_JOB_KEY,
 				JSON.stringify({
@@ -320,6 +366,15 @@ export default function PremiumAnalysisPage() {
 							? "Could not reach backend server (connection dropped). Please confirm backend is running on port 8000 and retry."
 							: "Failed to generate analysis. Please try again."),
 			);
+			completeActivity(premiumActivityId, {
+				status: "error",
+				message: "Premium prediction failed",
+				error:
+					e?.response?.data?.detail ||
+					e?.message ||
+					"Failed to generate analysis. Please try again.",
+				forceProgress: 100,
+			});
 			sessionStorage.setItem(
 				PREMIUM_JOB_KEY,
 				JSON.stringify({
@@ -335,6 +390,7 @@ export default function PremiumAnalysisPage() {
 			if (mountedRef.current) {
 				setLoading(false);
 			}
+			premiumActivityRef.current = null;
 		}
 	}
 
@@ -366,13 +422,6 @@ export default function PremiumAnalysisPage() {
 	return (
 		<div className="app-page">
 			<div className="app-page-inner max-w-4xl mx-auto space-y-6">
-				{loading && (
-					<div className="px-4 py-3 rounded-lg border border-amber-200 bg-amber-50/80 text-xs text-amber-800">
-						Premium analysis is running in the background. You can move to other
-						pages and return when it&apos;s done.
-					</div>
-				)}
-
 				{/* ── Header ──────────────────────────────── */}
 				<div className="flex items-start justify-between">
 					<div>
@@ -495,6 +544,18 @@ export default function PremiumAnalysisPage() {
 								<p className="text-xs text-surface-400 mt-1">
 									This may take 30–60 seconds
 								</p>
+								<div className="mt-3">
+									<div className="flex items-center justify-between text-[11px] text-surface-500 mb-1">
+										<span>Progress</span>
+										<span className="font-mono">{progressPct}%</span>
+									</div>
+									<div className="h-1.5 rounded-full bg-surface-200 overflow-hidden">
+										<div
+											className="h-full rounded-full bg-amber-500 transition-all duration-300"
+											style={{ width: `${progressPct}%` }}
+										/>
+									</div>
+								</div>
 							</div>
 
 							<div className="space-y-3">
