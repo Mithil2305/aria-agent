@@ -140,6 +140,35 @@ export async function getAdminActivity(token, limit = 60) {
 	return data;
 }
 
+export async function getAdminBlogs(token, includeDrafts = true) {
+	const suffix = includeDrafts ? "?includeDrafts=true" : "?includeDrafts=false";
+	const { data } = await API.get(`/api/admin/blogs${suffix}`, {
+		headers: authHeaders(token),
+	});
+	return data;
+}
+
+export async function createAdminBlog(token, payload) {
+	const { data } = await API.post("/api/admin/blogs", payload, {
+		headers: { "Content-Type": "application/json", ...authHeaders(token) },
+	});
+	return data;
+}
+
+export async function updateAdminBlog(token, blogId, payload) {
+	const { data } = await API.put(`/api/admin/blogs/${blogId}`, payload, {
+		headers: { "Content-Type": "application/json", ...authHeaders(token) },
+	});
+	return data;
+}
+
+export async function deleteAdminBlog(token, blogId) {
+	const { data } = await API.delete(`/api/admin/blogs/${blogId}`, {
+		headers: authHeaders(token),
+	});
+	return data;
+}
+
 // ──────────────────── Upload / Demo ────────────────────
 
 export async function uploadFile(file, token, uid, role) {
@@ -266,6 +295,11 @@ export async function validateRegistrationEligibility(payload) {
 		}
 		throw error;
 	}
+}
+
+export async function getPublicBlogs(limit = 30) {
+	const { data } = await API.get(`/api/blogs?limit=${limit}`);
+	return data;
 }
 
 // ──────────────────── Strategy Advisor ────────────────────

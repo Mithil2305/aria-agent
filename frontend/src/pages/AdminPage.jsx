@@ -25,6 +25,10 @@ import {
 	patchAdminUser,
 	toggleAdminUserService,
 	getAdminActivity,
+	getAdminBlogs,
+	createAdminBlog,
+	updateAdminBlog,
+	deleteAdminBlog,
 } from "../services/api";
 
 const SERVICE_KEYS = [
@@ -51,6 +55,15 @@ const MONTH_LABELS = [
 	"Nov",
 	"Dec",
 ];
+
+const EMPTY_BLOG_FORM = {
+	title: "",
+	excerpt: "",
+	content: "",
+	tags: "",
+	coverImage: "",
+	status: "published",
+};
 
 function formatServiceLabel(key) {
 	return key.replaceAll("_", " ").replace(/\b\w/g, (ch) => ch.toUpperCase());
@@ -171,6 +184,10 @@ export default function AdminPage() {
 	const [chartMode, setChartMode] = useState("monthly");
 	const [usageTotals, setUsageTotals] = useState({});
 	const [usersPage, setUsersPage] = useState(1);
+	const [blogs, setBlogs] = useState([]);
+	const [blogForm, setBlogForm] = useState(EMPTY_BLOG_FORM);
+	const [editingBlogId, setEditingBlogId] = useState("");
+	const [blogSaving, setBlogSaving] = useState(false);
 	const USERS_PER_PAGE = 5;
 
 	const selectedUser = useMemo(
@@ -184,11 +201,12 @@ export default function AdminPage() {
 		setError("");
 		try {
 			const token = await getIdToken();
-			const [o, u, a, usage] = await Promise.all([
+			const [o, u, a, usage, blogsRes] = await Promise.all([
 				getAdminOverview(token),
 				getAdminUsers(token, 200),
 				getAdminActivity(token, 80),
 				getAdminUsage(token, selectedMonth),
+				getAdminBlogs(token, true),
 			]);
 
 			if (o?.status === "unavailable") {
@@ -205,6 +223,7 @@ export default function AdminPage() {
 			setUsers(u.users || []);
 			setActivity(a.activity || []);
 			setUsageTotals(usage?.totals || o?.usageTotals || {});
+			setBlogs(blogsRes?.blogs || []);
 			if ((u.users || []).length > 0) {
 				setSelectedUid((prev) => prev || u.users[0].uid);
 			}
@@ -217,6 +236,86 @@ export default function AdminPage() {
 			setLoading(false);
 		}
 	}, [getIdToken, isAdmin, selectedMonth]);
+
+	const resetBlogForm = () => {
+		setBlogForm(EMPTY_BLOG_FORM);
+		setEditingBlogId("");
+	};
+
+	const startEditBlog = (blog) => {
+		setEditingBlogId(blog.id);
+		setBlogForm({
+			title: blog.title || "",
+			excerpt: blog.excerpt || "",
+			content: blog.content || "",
+			tags: (blog.tags || []).join(", "),
+			coverImage: blog.coverImage || "",
+			status: blog.status || "published",
+		});
+	};
+
+	const submitBlog = async () => {
+		const title = String(blogForm.title || "").trim();
+		const content = String(blogForm.content || "").trim();
+		if (!title || !content) {
+			setError("Blog title and content are required.");
+			return;
+		}
+
+		const payload = {
+			title,
+			excerpt: String(blogForm.excerpt || "").trim(),
+			content,
+			tags: String(blogForm.tags || "")
+				.split(",")
+				.map((t) => t.trim())
+				.filter(Boolean),
+			coverImage: String(blogForm.coverImage || "").trim(),
+			status: blogForm.status || "published",
+		};
+
+		setBlogSaving(true);
+		setError("");
+		setStatusMsg("");
+		try {
+			const token = await getIdToken();
+			if (editingBlogId) {
+				const res = await updateAdminBlog(token, editingBlogId, payload);
+				const updated = res?.blog;
+				setBlogs((prev) =>
+					prev.map((item) => (item.id === editingBlogId ? updated : item)),
+				);
+				setStatusMsg("Blog updated successfully.");
+			} else {
+				const res = await createAdminBlog(token, payload);
+				const created = res?.blog;
+				setBlogs((prev) => [created, ...prev]);
+				setStatusMsg("Blog created successfully.");
+			}
+			resetBlogForm();
+		} catch (err) {
+			setError(err?.response?.data?.detail || "Failed to save blog.");
+		} finally {
+			setBlogSaving(false);
+		}
+	};
+
+	const removeBlog = async (blogId) => {
+		setBlogSaving(true);
+		setError("");
+		setStatusMsg("");
+		try {
+			const token = await getIdToken();
+			await deleteAdminBlog(token, blogId);
+			setBlogs((prev) => prev.filter((b) => b.id !== blogId));
+			if (editingBlogId === blogId) resetBlogForm();
+			setStatusMsg("Blog deleted successfully.");
+		} catch (err) {
+			setError(err?.response?.data?.detail || "Failed to delete blog.");
+		} finally {
+			setBlogSaving(false);
+		}
+	};
 
 	useEffect(() => {
 		loadAdminData();
@@ -762,6 +861,168 @@ export default function AdminPage() {
 											+
 										</button>
 									</div>
+								</div>
+							</div>
+
+							<div className="rounded-2xl border border-surface-200 bg-white p-5 space-y-4">
+								<div className="flex items-center justify-between gap-2">
+									<h3 className="text-2xl font-medium text-surface-900">
+										Blog Manager
+									</h3>
+									<span className="text-xs text-surface-500">
+										{blogs.length} total posts
+									</span>
+								</div>
+
+								<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+									<input
+										value={blogForm.title}
+										onChange={(e) =>
+											setBlogForm((prev) => ({
+												...prev,
+												title: e.target.value,
+											}))
+										}
+										placeholder="Blog title"
+										className="rounded-lg border border-surface-300 px-3 py-2 text-sm"
+									/>
+									<select
+										value={blogForm.status}
+										onChange={(e) =>
+											setBlogForm((prev) => ({
+												...prev,
+												status: e.target.value,
+											}))
+										}
+										className="rounded-lg border border-surface-300 px-3 py-2 text-sm bg-white"
+									>
+										<option value="published">Published</option>
+										<option value="draft">Draft</option>
+									</select>
+									<input
+										value={blogForm.coverImage}
+										onChange={(e) =>
+											setBlogForm((prev) => ({
+												...prev,
+												coverImage: e.target.value,
+											}))
+										}
+										placeholder="Cover image URL (optional)"
+										className="rounded-lg border border-surface-300 px-3 py-2 text-sm"
+									/>
+									<input
+										value={blogForm.tags}
+										onChange={(e) =>
+											setBlogForm((prev) => ({ ...prev, tags: e.target.value }))
+										}
+										placeholder="Tags (comma separated)"
+										className="rounded-lg border border-surface-300 px-3 py-2 text-sm"
+									/>
+								</div>
+
+								<textarea
+									value={blogForm.excerpt}
+									onChange={(e) =>
+										setBlogForm((prev) => ({
+											...prev,
+											excerpt: e.target.value,
+										}))
+									}
+									placeholder="Short excerpt"
+									rows={2}
+									className="w-full rounded-lg border border-surface-300 px-3 py-2 text-sm"
+								/>
+								<textarea
+									value={blogForm.content}
+									onChange={(e) =>
+										setBlogForm((prev) => ({
+											...prev,
+											content: e.target.value,
+										}))
+									}
+									placeholder="Blog content"
+									rows={6}
+									className="w-full rounded-lg border border-surface-300 px-3 py-2 text-sm"
+								/>
+
+								<div className="flex items-center gap-2">
+									<button
+										onClick={submitBlog}
+										disabled={blogSaving}
+										className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700"
+									>
+										{editingBlogId ? "Update Blog" : "Create Blog"}
+									</button>
+									{editingBlogId ? (
+										<button
+											onClick={resetBlogForm}
+											className="rounded-lg border border-surface-300 bg-white px-3 py-2 text-xs font-medium text-surface-700"
+										>
+											Cancel Edit
+										</button>
+									) : null}
+								</div>
+
+								<div className="rounded-xl border border-surface-200 overflow-hidden">
+									<table className="min-w-full text-xs">
+										<thead className="bg-surface-50">
+											<tr className="text-left text-surface-500 border-b border-surface-200">
+												<th className="py-2 px-3">Title</th>
+												<th className="py-2 px-3 w-24">Status</th>
+												<th className="py-2 px-3 w-34">Actions</th>
+											</tr>
+										</thead>
+										<tbody>
+											{blogs.map((blog) => (
+												<tr
+													key={blog.id}
+													className="border-b border-surface-100 align-top"
+												>
+													<td className="py-2 px-3">
+														<p className="font-semibold text-surface-800">
+															{blog.title}
+														</p>
+														<p className="text-surface-500 line-clamp-1 mt-0.5">
+															{blog.excerpt || "-"}
+														</p>
+													</td>
+													<td className="py-2 px-3">
+														<span
+															className={`inline-flex rounded-full px-2 py-0.5 border ${blog.status === "published" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-amber-200 bg-amber-50 text-amber-700"}`}
+														>
+															{blog.status || "published"}
+														</span>
+													</td>
+													<td className="py-2 px-3">
+														<div className="flex items-center gap-2">
+															<button
+																onClick={() => startEditBlog(blog)}
+																className="rounded-md border border-surface-300 bg-white px-2 py-1 text-surface-700"
+															>
+																Edit
+															</button>
+															<button
+																onClick={() => removeBlog(blog.id)}
+																className="rounded-md border border-red-200 bg-red-50 px-2 py-1 text-red-700"
+															>
+																Delete
+															</button>
+														</div>
+													</td>
+												</tr>
+											))}
+											{blogs.length === 0 && (
+												<tr>
+													<td
+														colSpan={3}
+														className="py-4 px-3 text-center text-surface-500"
+													>
+														No blogs yet.
+													</td>
+												</tr>
+											)}
+										</tbody>
+									</table>
 								</div>
 							</div>
 						</div>

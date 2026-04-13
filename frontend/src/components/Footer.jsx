@@ -70,7 +70,7 @@ export default function Footer() {
 		],
 		resources: [
 			{ label: "Documentation", to: "/documentation" },
-			{ label: "Blog", to: "/documentation" },
+			{ label: "Blog", to: "/blogs" },
 			{ label: "Case Studies", to: "/case-studies" },
 			{ label: "Help Center", to: "/help-center" },
 			{ label: "API Reference", to: "/api-reference" },

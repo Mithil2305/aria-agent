@@ -7,9 +7,9 @@ const marketingLinks = [
 	{ label: "About", to: "/about" },
 	{ label: "Pricing", to: "/pricing" },
 	{ label: "Contact", to: "/contact-us" },
-	{ label: "Docs", to: "/documentation" },
 	{ label: "Help Center", to: "/help-center" },
-	{ label: "Careers", to: "/careers" },
+	{ label: "Docs", to: "/documentation" },
+	{ label: "Blogs", to: "/blogs" },
 ];
 
 export default function Navbar() {

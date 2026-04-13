@@ -36,6 +36,7 @@ import ContactUsPage from "./pages/ContactUsPage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
 import PricingPage from "./pages/PricingPage";
+import BlogsPage from "./pages/BlogsPage";
 import { AnalysisJobProvider } from "./contexts/AnalysisJobContext";
 import Footer from "./components/Footer";
 import Navbar from "./components/Navbar";
@@ -82,6 +83,7 @@ function App() {
 							<Route path="/contact-us" element={<ContactUsPage />} />
 							<Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
 							<Route path="/pricing" element={<PricingPage />} />
+							<Route path="/blogs" element={<BlogsPage />} />
 							<Route
 								path="/terms-of-service"
 								element={<TermsOfServicePage />}

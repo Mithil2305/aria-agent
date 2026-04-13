@@ -194,6 +194,15 @@ class AdminServiceToggle(BaseModel):
     enabled: bool
 
 
+class BlogUpsertPayload(BaseModel):
+    title: str
+    excerpt: Optional[str] = None
+    content: str
+    tags: Optional[List[str]] = None
+    coverImage: Optional[str] = None
+    status: Optional[str] = "published"
+
+
 # ---------------------------------------------------------------------------
 # Firebase Admin SDK (optional – works without it for local development)
 # ---------------------------------------------------------------------------
@@ -373,6 +382,14 @@ def _normalize_phone_key(value: Optional[str]) -> str:
 
 def _normalize_gst_key(value: Optional[str]) -> str:
     return re.sub(r"[^0-9a-zA-Z]", "", str(value or "")).upper()
+
+
+def _slugify(value: Optional[str]) -> str:
+    raw = str(value or "").strip().lower()
+    if not raw:
+        return ""
+    slug = re.sub(r"[^a-z0-9]+", "-", raw).strip("-")
+    return slug[:80]
 
 
 async def require_admin(
@@ -1242,6 +1259,196 @@ async def validate_registration(payload: RegistrationValidationRequest):
         "reason": "ok",
         "message": "Registration allowed.",
     }
+
+
+@app.get("/api/blogs")
+async def list_public_blogs(limit: int = 30):
+    db = _get_firestore_client()
+    if db is None:
+        return {"status": "success", "count": 0, "blogs": []}
+
+    safe_limit = max(1, min(limit, 100))
+    try:
+        rows = []
+        for snap in db.collection("blogs").stream():
+            data = snap.to_dict() or {}
+            if str(data.get("status", "published")).lower() != "published":
+                continue
+            rows.append(
+                {
+                    "id": snap.id,
+                    "title": data.get("title", "Untitled"),
+                    "slug": data.get("slug", ""),
+                    "excerpt": data.get("excerpt", ""),
+                    "content": data.get("content", ""),
+                    "tags": data.get("tags", []),
+                    "coverImage": data.get("coverImage"),
+                    "status": data.get("status", "published"),
+                    "author": data.get("author", "Yukti Team"),
+                    "createdAt": data.get("createdAt"),
+                    "updatedAt": data.get("updatedAt"),
+                    "publishedAt": data.get("publishedAt") or data.get("createdAt"),
+                }
+            )
+
+        def _blog_sort_key(item: dict[str, Any]) -> str:
+            published = item.get("publishedAt")
+            if hasattr(published, "isoformat"):
+                return published.isoformat()
+            return str(published or "")
+
+        rows = sorted(rows, key=_blog_sort_key, reverse=True)[:safe_limit]
+        return {"status": "success", "count": len(rows), "blogs": _sanitize(rows)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load blogs: {e}")
+
+
+@app.get("/api/admin/blogs")
+async def admin_list_blogs(includeDrafts: bool = True, admin=Depends(require_admin)):
+    db = _get_firestore_client()
+    if db is None:
+        return {"status": "unavailable", "reason": "Firestore not configured", "count": 0, "blogs": []}
+
+    try:
+        rows = []
+        for snap in db.collection("blogs").stream():
+            data = snap.to_dict() or {}
+            if not includeDrafts and str(data.get("status", "published")).lower() != "published":
+                continue
+            rows.append(
+                {
+                    "id": snap.id,
+                    "title": data.get("title", "Untitled"),
+                    "slug": data.get("slug", ""),
+                    "excerpt": data.get("excerpt", ""),
+                    "content": data.get("content", ""),
+                    "tags": data.get("tags", []),
+                    "coverImage": data.get("coverImage"),
+                    "status": data.get("status", "published"),
+                    "author": data.get("author", "Yukti Team"),
+                    "createdAt": data.get("createdAt"),
+                    "updatedAt": data.get("updatedAt"),
+                    "publishedAt": data.get("publishedAt") or data.get("createdAt"),
+                }
+            )
+
+        def _admin_blog_sort_key(item: dict[str, Any]) -> str:
+            updated = item.get("updatedAt") or item.get("publishedAt")
+            if hasattr(updated, "isoformat"):
+                return updated.isoformat()
+            return str(updated or "")
+
+        rows = sorted(rows, key=_admin_blog_sort_key, reverse=True)
+        return {"status": "success", "count": len(rows), "blogs": _sanitize(rows)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to load admin blogs: {e}")
+
+
+@app.post("/api/admin/blogs")
+async def admin_create_blog(payload: BlogUpsertPayload, admin=Depends(require_admin)):
+    db = _get_firestore_client()
+    if db is None:
+        raise HTTPException(status_code=400, detail="Admin blog management requires Firestore.")
+
+    title = payload.title.strip()
+    content = payload.content.strip()
+    if not title:
+        raise HTTPException(status_code=400, detail="Blog title is required.")
+    if not content:
+        raise HTTPException(status_code=400, detail="Blog content is required.")
+
+    tags = [str(t).strip() for t in (payload.tags or []) if str(t).strip()]
+    now = datetime.utcnow()
+    status = str(payload.status or "published").strip().lower()
+    if status not in {"published", "draft"}:
+        status = "published"
+
+    doc = {
+        "title": title,
+        "slug": _slugify(title),
+        "excerpt": str(payload.excerpt or "").strip(),
+        "content": content,
+        "tags": tags,
+        "coverImage": str(payload.coverImage or "").strip() or None,
+        "status": status,
+        "author": "Yukti Team",
+        "createdAt": now,
+        "updatedAt": now,
+        "publishedAt": now if status == "published" else None,
+        "createdBy": admin.get("uid"),
+    }
+
+    try:
+        created = db.collection("blogs").add(doc)
+        blog_id = created[1].id
+        return {"status": "success", "id": blog_id, "blog": _sanitize({"id": blog_id, **doc})}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create blog: {e}")
+
+
+@app.put("/api/admin/blogs/{blog_id}")
+async def admin_update_blog(blog_id: str, payload: BlogUpsertPayload, admin=Depends(require_admin)):
+    db = _get_firestore_client()
+    if db is None:
+        raise HTTPException(status_code=400, detail="Admin blog management requires Firestore.")
+
+    title = payload.title.strip()
+    content = payload.content.strip()
+    if not title:
+        raise HTTPException(status_code=400, detail="Blog title is required.")
+    if not content:
+        raise HTTPException(status_code=400, detail="Blog content is required.")
+
+    status = str(payload.status or "published").strip().lower()
+    if status not in {"published", "draft"}:
+        status = "published"
+
+    tags = [str(t).strip() for t in (payload.tags or []) if str(t).strip()]
+    now = datetime.utcnow()
+    ref = db.collection("blogs").document(blog_id)
+    snap = ref.get()
+    if not snap.exists:
+        raise HTTPException(status_code=404, detail="Blog not found.")
+
+    existing = snap.to_dict() or {}
+    patch = {
+        "title": title,
+        "slug": _slugify(title),
+        "excerpt": str(payload.excerpt or "").strip(),
+        "content": content,
+        "tags": tags,
+        "coverImage": str(payload.coverImage or "").strip() or None,
+        "status": status,
+        "updatedAt": now,
+        "updatedBy": admin.get("uid"),
+        "publishedAt": now if status == "published" and not existing.get("publishedAt") else existing.get("publishedAt"),
+    }
+
+    try:
+        ref.set(patch, merge=True)
+        merged = {**existing, **patch, "id": blog_id}
+        return {"status": "success", "id": blog_id, "blog": _sanitize(merged)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update blog: {e}")
+
+
+@app.delete("/api/admin/blogs/{blog_id}")
+async def admin_delete_blog(blog_id: str, admin=Depends(require_admin)):
+    db = _get_firestore_client()
+    if db is None:
+        raise HTTPException(status_code=400, detail="Admin blog management requires Firestore.")
+
+    try:
+        ref = db.collection("blogs").document(blog_id)
+        snap = ref.get()
+        if not snap.exists:
+            raise HTTPException(status_code=404, detail="Blog not found.")
+        ref.delete()
+        return {"status": "success", "id": blog_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete blog: {e}")
 
 
 @app.post("/api/upload")
