@@ -246,6 +246,28 @@ export async function submitSubscriberEmail(email) {
 	return data;
 }
 
+export async function validateRegistrationEligibility(payload) {
+	try {
+		const { data } = await API.post("/api/registration/validate", payload, {
+			headers: { "Content-Type": "application/json" },
+		});
+		return data;
+	} catch (error) {
+		const status = error?.response?.status;
+		// Backward compatibility: older backend builds may not expose this route.
+		if (status === 404 || status === 405) {
+			return {
+				status: "allow",
+				allow: true,
+				reason: "legacy-backend",
+				message:
+					"Validation endpoint unavailable on backend; allowing registration.",
+			};
+		}
+		throw error;
+	}
+}
+
 // ──────────────────── Strategy Advisor ────────────────────
 
 export async function getStrategyAdvice(

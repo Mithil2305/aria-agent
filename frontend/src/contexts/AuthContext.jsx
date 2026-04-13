@@ -15,6 +15,7 @@ import {
 	updateProfile,
 	sendEmailVerification,
 	reload,
+	getAdditionalUserInfo,
 } from "firebase/auth";
 import {
 	doc,
@@ -24,7 +25,8 @@ import {
 	deleteField,
 	serverTimestamp,
 } from "firebase/firestore";
-import { auth, db } from "../firebase";
+import { auth, db, initFirebase } from "../firebase";
+import { validateRegistrationEligibility } from "../services/api";
 
 const AuthContext = createContext(null);
 const ADMIN_EMAIL = "admin@yukti.com";
@@ -63,6 +65,47 @@ function writeCachedProfile(uid, profile) {
 	}
 }
 
+function normalizeBusinessKey(value) {
+	return String(value || "")
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9]/g, "");
+}
+
+function normalizePhoneKey(value) {
+	const digits = String(value || "").replace(/\D/g, "");
+	if (digits.length >= 10) return digits.slice(-10);
+	return digits;
+}
+
+function normalizeGstKey(value) {
+	return String(value || "")
+		.toUpperCase()
+		.replace(/[^0-9A-Z]/g, "");
+}
+
+async function assertRegistrationAllowed(profileData) {
+	const payload = {
+		email: String(profileData.email || "")
+			.trim()
+			.toLowerCase(),
+		businessName: String(profileData.businessName || "").trim(),
+		phone: String(profileData.phone || "").trim(),
+		gst: String(profileData.gst || "").trim() || null,
+	};
+
+	const result = await validateRegistrationEligibility(payload);
+	if (!result?.allow) {
+		const err = new Error(
+			result?.message ||
+				"An account already exists for this business. Please sign in.",
+		);
+		err.code = "auth/business-already-registered";
+		err.reason = result?.reason || "duplicate";
+		throw err;
+	}
+}
+
 // eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
 	const ctx = useContext(AuthContext);
@@ -73,9 +116,16 @@ export function useAuth() {
 export function AuthProvider({ children }) {
 	const [user, setUser] = useState(null);
 	const [userProfile, setUserProfile] = useState(null);
-	const [loading, setLoading] = useState(true);
+	const [loading, setLoading] = useState(false);
+	const [authInitialized, setAuthInitialized] = useState(false);
+	const [authBootRequested, setAuthBootRequested] = useState(false);
 	const googleProvider = new GoogleAuthProvider();
 	googleProvider.setCustomParameters({ prompt: "select_account" });
+
+	const initAuthIfNeeded = useCallback(async () => {
+		setAuthBootRequested(true);
+		await initFirebase();
+	}, []);
 
 	const ensureUserProfileDoc = async (firebaseUser, profileData = {}) => {
 		if (!firebaseUser) return null;
@@ -85,16 +135,25 @@ export function AuthProvider({ children }) {
 		const snap = await getDoc(ref);
 
 		if (!snap.exists()) {
+			const email = firebaseUser.email || profileData.email || "";
+			const businessName = profileData.businessName || "";
+			const phone = profileData.phone || firebaseUser.phoneNumber || "";
+			const gst = profileData.gst || "";
 			const profile = {
-				email: firebaseUser.email || "",
+				email,
 				ownerName:
 					profileData.ownerName ||
 					firebaseUser.displayName ||
 					firebaseUser.email?.split("@")[0] ||
 					"",
-				businessName: profileData.businessName || "",
+				businessName,
 				businessType: profileData.businessType || "",
-				phone: profileData.phone || firebaseUser.phoneNumber || "",
+				phone,
+				gst,
+				emailKey: String(email).trim().toLowerCase(),
+				businessNameKey: normalizeBusinessKey(businessName),
+				phoneKey: normalizePhoneKey(phone),
+				gstKey: normalizeGstKey(gst),
 				address: profileData.address || "",
 				currency: profileData.currency || "INR",
 				createdAt: serverTimestamp(),
@@ -118,6 +177,9 @@ export function AuthProvider({ children }) {
 		if (!existing.phone && (profileData.phone || firebaseUser.phoneNumber)) {
 			patch.phone = profileData.phone || firebaseUser.phoneNumber;
 		}
+		if (!existing.gst && profileData.gst) {
+			patch.gst = profileData.gst;
+		}
 		if (!existing.businessName && profileData.businessName) {
 			patch.businessName = profileData.businessName;
 		}
@@ -129,6 +191,28 @@ export function AuthProvider({ children }) {
 		}
 		if (!existing.currency && profileData.currency) {
 			patch.currency = profileData.currency;
+		}
+		if (!existing.emailKey && firebaseUser.email) {
+			patch.emailKey = String(firebaseUser.email).trim().toLowerCase();
+		}
+		if (
+			!existing.businessNameKey &&
+			(existing.businessName || profileData.businessName)
+		) {
+			patch.businessNameKey = normalizeBusinessKey(
+				existing.businessName || profileData.businessName,
+			);
+		}
+		if (
+			!existing.phoneKey &&
+			(existing.phone || profileData.phone || firebaseUser.phoneNumber)
+		) {
+			patch.phoneKey = normalizePhoneKey(
+				existing.phone || profileData.phone || firebaseUser.phoneNumber,
+			);
+		}
+		if (!existing.gstKey && (existing.gst || profileData.gst)) {
+			patch.gstKey = normalizeGstKey(existing.gst || profileData.gst);
 		}
 		if (adminUser && existing.role !== "admin") {
 			patch.role = "admin";
@@ -151,48 +235,96 @@ export function AuthProvider({ children }) {
 	};
 
 	useEffect(() => {
-		const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-			setUser(firebaseUser);
-			let loadingSettled = false;
-			const settleLoading = () => {
-				if (loadingSettled) return;
-				loadingSettled = true;
-				setLoading(false);
-			};
-			const maxWaitTimer = setTimeout(settleLoading, AUTH_MAX_WAIT_MS);
+		if (!authBootRequested) return;
 
-			if (firebaseUser) {
-				const cached = readCachedProfile(firebaseUser.uid);
-				if (cached) {
-					setUserProfile(cached);
-					settleLoading();
+		let unsub = null;
+		let cancelled = false;
+		setLoading(true);
+
+		(async () => {
+			try {
+				await initFirebase();
+			} catch {
+				if (!cancelled) {
+					setUser(null);
+					setUserProfile(null);
+					setAuthInitialized(true);
+					setLoading(false);
 				}
-				try {
-					await ensureUserProfileDoc(firebaseUser);
-				} catch {
-					if (!cached) setUserProfile(null);
-				}
-			} else {
-				setUserProfile(null);
+				return;
 			}
 
-			clearTimeout(maxWaitTimer);
-			settleLoading();
-		});
-		return unsub;
-	}, []);
+			if (!auth) {
+				if (!cancelled) {
+					setAuthInitialized(true);
+					setLoading(false);
+				}
+				return;
+			}
+
+			unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+				setUser(firebaseUser);
+				let loadingSettled = false;
+				const settleLoading = () => {
+					if (loadingSettled) return;
+					loadingSettled = true;
+					setLoading(false);
+				};
+				const maxWaitTimer = setTimeout(settleLoading, AUTH_MAX_WAIT_MS);
+
+				if (firebaseUser) {
+					const cached = readCachedProfile(firebaseUser.uid);
+					if (cached) {
+						setUserProfile(cached);
+						settleLoading();
+					}
+					try {
+						await ensureUserProfileDoc(firebaseUser);
+					} catch {
+						if (!cached) setUserProfile(null);
+					}
+				} else {
+					setUserProfile(null);
+				}
+
+				clearTimeout(maxWaitTimer);
+				if (!authInitialized) {
+					setAuthInitialized(true);
+				}
+				settleLoading();
+			});
+		})();
+
+		return () => {
+			cancelled = true;
+			if (typeof unsub === "function") unsub();
+		};
+	}, [authBootRequested, authInitialized]);
 
 	const register = async (email, password, profileData = {}) => {
+		await initAuthIfNeeded();
+		await assertRegistrationAllowed({ ...profileData, email });
+
 		const cred = await createUserWithEmailAndPassword(auth, email, password);
 		const ownerName = profileData.ownerName || "";
+		const businessName = profileData.businessName || "";
+		const phone = profileData.phone || "";
+		const gst = profileData.gst || "";
 		await updateProfile(cred.user, { displayName: ownerName });
 		await sendEmailVerification(cred.user);
 		const profile = {
 			email,
 			ownerName,
-			businessName: profileData.businessName || "",
+			businessName,
 			businessType: profileData.businessType || "",
-			phone: profileData.phone || "",
+			phone,
+			gst,
+			emailKey: String(email || "")
+				.trim()
+				.toLowerCase(),
+			businessNameKey: normalizeBusinessKey(businessName),
+			phoneKey: normalizePhoneKey(phone),
+			gstKey: normalizeGstKey(gst),
 			address: profileData.address || "",
 			currency: profileData.currency || "INR",
 			createdAt: serverTimestamp(),
@@ -201,24 +333,20 @@ export function AuthProvider({ children }) {
 		};
 		await setDoc(doc(db, "users", cred.user.uid), profile);
 		setUserProfile(profile);
-		await signOut(auth);
+		await reload(cred.user);
+		setUser({ ...cred.user });
 		return cred.user;
 	};
 
 	const login = async (email, password) => {
+		await initAuthIfNeeded();
 		const cred = await signInWithEmailAndPassword(auth, email, password);
 		await reload(cred.user);
-		const adminUser = isAdminEmail(cred.user.email);
-		if (!cred.user.emailVerified && !adminUser) {
-			await signOut(auth);
-			const err = new Error("Email not verified");
-			err.code = "auth/email-not-verified";
-			throw err;
-		}
 		return cred.user;
 	};
 
 	const resendVerificationEmail = async (email, password) => {
+		await initAuthIfNeeded();
 		const cred = await signInWithEmailAndPassword(auth, email, password);
 		await reload(cred.user);
 		if (cred.user.emailVerified) {
@@ -230,27 +358,70 @@ export function AuthProvider({ children }) {
 		return { alreadyVerified: false };
 	};
 
-	const continueWithGoogle = async (profileData = {}) => {
+	const continueWithGoogle = async (profileData = {}, intent = "login") => {
+		await initAuthIfNeeded();
 		const cred = await signInWithPopup(auth, googleProvider);
-		await ensureUserProfileDoc(cred.user, profileData);
+		const isNewUser = getAdditionalUserInfo(cred)?.isNewUser === true;
+		const email = cred.user.email || "";
+		try {
+			if (intent === "register") {
+				if (!isNewUser) {
+					const err = new Error(
+						"An account already exists for this business. Please sign in to your existing account.",
+					);
+					err.code = "auth/business-already-registered";
+					throw err;
+				}
+				await assertRegistrationAllowed({ ...profileData, email });
+			}
+			await ensureUserProfileDoc(cred.user, { ...profileData, email });
+		} catch (error) {
+			try {
+				if (error?.code === "auth/business-already-registered" && isNewUser) {
+					await cred.user.delete();
+				}
+			} catch {
+				// Ignore cleanup failures and proceed with sign-out.
+			}
+			await signOut(auth).catch(() => {});
+			throw error;
+		}
 		return cred.user;
 	};
 
-	const loginWithGoogle = async () => continueWithGoogle();
+	const loginWithGoogle = async () => continueWithGoogle({}, "login");
 
 	const registerWithGoogle = async (profileData = {}) =>
-		continueWithGoogle(profileData);
+		continueWithGoogle(profileData, "register");
 
 	const logout = async () => {
+		await initAuthIfNeeded();
 		await signOut(auth);
 		setUser(null);
 		setUserProfile(null);
 	};
 
 	const getIdToken = useCallback(async () => {
+		await initAuthIfNeeded();
 		if (!user) return null;
 		return user.getIdToken();
-	}, [user]);
+	}, [initAuthIfNeeded, user]);
+
+	const resendVerificationForCurrentUser = async () => {
+		await initAuthIfNeeded();
+		if (!auth.currentUser) {
+			throw new Error("No signed-in user found.");
+		}
+		await sendEmailVerification(auth.currentUser);
+	};
+
+	const refreshEmailVerification = async () => {
+		await initAuthIfNeeded();
+		if (!auth.currentUser) return false;
+		await reload(auth.currentUser);
+		setUser({ ...auth.currentUser });
+		return !!auth.currentUser.emailVerified;
+	};
 
 	const updateUserProfile = async (updates) => {
 		if (!user) return;
@@ -315,13 +486,17 @@ export function AuthProvider({ children }) {
 				user,
 				userProfile,
 				loading,
+				authInitialized,
 				register,
 				login,
 				loginWithGoogle,
 				resendVerificationEmail,
 				registerWithGoogle,
 				logout,
+				initAuthIfNeeded,
 				getIdToken,
+				resendVerificationForCurrentUser,
+				refreshEmailVerification,
 				updateUserProfile,
 				getTrialStatus,
 			}}

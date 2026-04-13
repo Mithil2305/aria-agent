@@ -3,9 +3,9 @@ import { AlertCircle, CheckCircle2, Info, X } from "lucide-react";
 const TOAST_THEME = {
 	error: {
 		icon: AlertCircle,
-		container: "border-red-300/40 bg-red-300/15 text-red-100",
-		title: "text-red-100",
-		body: "text-red-100/90",
+		container: "border-red-300/60 bg-red-100/80 text-slate-900",
+		title: "text-slate-900",
+		body: "text-slate-800",
 	},
 	success: {
 		icon: CheckCircle2,

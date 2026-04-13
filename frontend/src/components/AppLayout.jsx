@@ -36,19 +36,59 @@ const NAV_ITEMS = [
 ];
 
 export default function AppLayout() {
-	const { user, userProfile, logout } = useAuth();
+	const {
+		user,
+		userProfile,
+		logout,
+		resendVerificationForCurrentUser,
+		refreshEmailVerification,
+	} = useAuth();
 	const { activity } = useAnalysisJob();
 	const navigate = useNavigate();
 	const [mobileNavOpen, setMobileNavOpen] = useState(false);
+	const [verifyBusy, setVerifyBusy] = useState(false);
+	const [verifyMessage, setVerifyMessage] = useState("");
 	const isAdminEmail =
 		String(user?.email || "")
 			.trim()
 			.toLowerCase() === "admin@yukti.com";
 	const isAdmin = userProfile?.role === "admin" || isAdminEmail;
+	const isEmailVerified = isAdmin || !!user?.emailVerified;
+	const isVerificationLocked = !isEmailVerified;
 
 	const handleLogout = async () => {
 		await logout();
 		navigate("/login");
+	};
+
+	const handleResendVerification = async () => {
+		setVerifyMessage("");
+		setVerifyBusy(true);
+		try {
+			await resendVerificationForCurrentUser();
+			setVerifyMessage("Verification email sent. Check your inbox.");
+		} catch {
+			setVerifyMessage("Could not resend email right now. Please try again.");
+		} finally {
+			setVerifyBusy(false);
+		}
+	};
+
+	const handleRefreshVerification = async () => {
+		setVerifyMessage("");
+		setVerifyBusy(true);
+		try {
+			const verified = await refreshEmailVerification();
+			setVerifyMessage(
+				verified
+					? "Email verified successfully. Features are now enabled."
+					: "Email is still unverified. Verify from your inbox and try again.",
+			);
+		} catch {
+			setVerifyMessage("Unable to refresh verification right now.");
+		} finally {
+			setVerifyBusy(false);
+		}
 	};
 
 	const initials = (userProfile?.ownerName || user?.displayName || "U")
@@ -112,6 +152,7 @@ export default function AppLayout() {
 					</button>
 					<button
 						onClick={() => navigate("/profile")}
+						disabled={isVerificationLocked}
 						className="w-9 h-9 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-[11px] font-semibold text-slate-800"
 					>
 						{initials}
@@ -157,7 +198,9 @@ export default function AppLayout() {
 				<div className="divider mx-4" />
 
 				{/* Navigation */}
-				<nav className="flex-1 px-3 py-4 space-y-0.5">
+				<nav
+					className={`flex-1 px-3 py-4 space-y-0.5 ${isVerificationLocked ? "opacity-55 pointer-events-none" : ""}`}
+				>
 					<p className="px-3 pb-2 text-[10px] font-medium text-slate-500 uppercase tracking-wider">
 						Menu
 					</p>
@@ -198,6 +241,7 @@ export default function AppLayout() {
 							navigate("/profile");
 							setMobileNavOpen(false);
 						}}
+						disabled={isVerificationLocked}
 						className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-slate-100 transition-all group"
 					>
 						<div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center">
@@ -232,6 +276,38 @@ export default function AppLayout() {
 
 			{/* Main content */}
 			<main className="flex-1 w-full lg:ml-64 pt-14 lg:pt-0 relative z-10">
+				{isVerificationLocked && (
+					<div className="mx-4 md:mx-6 mt-4 px-4 py-3 rounded-xl border border-amber-300 bg-amber-50 text-slate-900 flex flex-col gap-2">
+						<div className="text-xs sm:text-sm font-semibold">
+							Please verify your email to unlock all features.
+						</div>
+						<div className="text-xs text-slate-700">
+							Signed in as {user?.email || "your account"}. Until verification,
+							actions and navigation are disabled.
+						</div>
+						<div className="flex items-center gap-2">
+							<button
+								type="button"
+								onClick={handleResendVerification}
+								disabled={verifyBusy}
+								className="text-xs px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-60"
+							>
+								Resend verification email
+							</button>
+							<button
+								type="button"
+								onClick={handleRefreshVerification}
+								disabled={verifyBusy}
+								className="text-xs px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-60"
+							>
+								I have verified
+							</button>
+						</div>
+						{verifyMessage ? (
+							<div className="text-xs text-slate-700">{verifyMessage}</div>
+						) : null}
+					</div>
+				)}
 				{activity.status !== "idle" && (
 					<div
 						className={`mx-4 md:mx-6 mt-4 px-4 py-3 rounded-xl border backdrop-blur-sm flex items-start gap-3 ${activityTone.wrap}`}
@@ -314,7 +390,13 @@ export default function AppLayout() {
 							)}
 					</div>
 				)}
-				<Outlet />
+				<div
+					className={
+						isVerificationLocked ? "pointer-events-none opacity-55" : ""
+					}
+				>
+					<Outlet />
+				</div>
 			</main>
 		</div>
 	);

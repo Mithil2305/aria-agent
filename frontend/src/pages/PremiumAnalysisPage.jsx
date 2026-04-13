@@ -18,6 +18,7 @@ import {
 	Gauge,
 	ListChecks,
 	Lightbulb,
+	Calendar,
 } from "lucide-react";
 import { getPremiumAnalysis, getPremiumAnalysisStatus } from "../services/api";
 import {
@@ -433,33 +434,10 @@ export default function PremiumAnalysisPage() {
 					</div>
 
 					<div className="flex flex-col items-end gap-2">
-						{/* Monthly status badge */}
-						<div
-							className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
-								isPremiumLimitReached
-									? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-									: "bg-amber-50 text-amber-700 border border-amber-200"
-							}`}
-						>
-							{isPremiumLimitReached ? (
-								<>
-									<CheckCircle2 size={12} />
-									Used for this month
-								</>
-							) : (
-								<>
-									<Zap size={12} />
-									{isQuotaKnown && Number.isFinite(premiumQuota.limit)
-										? `${premiumQuota.remaining} analysis${premiumQuota.remaining === 1 ? "" : "es"} available`
-										: "New analysis available"}
-								</>
-							)}
-						</div>
-
 						<button
 							onClick={handleGenerate}
 							disabled={loading || isPremiumLimitReached}
-							className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+							className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
 							style={{
 								background: "linear-gradient(90deg, #f59e0b 0%, #ea580c 100%)",
 							}}
@@ -467,7 +445,7 @@ export default function PremiumAnalysisPage() {
 							{loading ? (
 								<Loader2 size={14} className="animate-spin" />
 							) : (
-								<Sparkles size={14} />
+								<Sparkles size={14} className="text-white" />
 							)}
 							{isPremiumLimitReached
 								? "Used This Month"
@@ -487,7 +465,7 @@ export default function PremiumAnalysisPage() {
 										"linear-gradient(135deg, #fbbf24 0%, #f97316 100%)",
 								}}
 							>
-								<Sparkles size={22} className="text-white" />
+								<Calendar size={22} className="text-white" />
 							</div>
 							<div className="space-y-3">
 								<div>
@@ -539,15 +517,15 @@ export default function PremiumAnalysisPage() {
 									<button
 										onClick={handleGenerate}
 										disabled={loading}
-										className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all"
+										className="cursor-pointer hover:scale-101 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all"
 										style={{
 											background:
 												"linear-gradient(90deg, #f59e0b 0%, #ea580c 100%)",
 										}}
 									>
-										<Crown size={15} />
+										<Crown size={15} className="text-white" />
 										Generate Premium Report
-										<ChevronRight size={14} />
+										<ChevronRight size={14} className="text-white" />
 									</button>
 								)}
 							</div>

@@ -83,6 +83,7 @@ export default function RegisterPage() {
 		businessName: "",
 		businessType: "",
 		phone: "",
+		gst: "",
 		address: "",
 		currency: "INR",
 	});
@@ -176,6 +177,18 @@ export default function RegisterPage() {
 			}
 		}
 
+		if (step === 2) {
+			const digits = form.phone.replace(/\D/g, "");
+			if (!digits || digits.length < 10) {
+				pushToast(
+					"error",
+					"Phone number required",
+					"Please enter a valid phone number (minimum 10 digits).",
+				);
+				return false;
+			}
+		}
+
 		return true;
 	};
 
@@ -200,35 +213,30 @@ export default function RegisterPage() {
 				businessName: form.businessName.trim(),
 				businessType: form.businessType,
 				phone: form.phone.trim(),
+				gst: form.gst.trim(),
 				address: form.address.trim(),
 				currency: form.currency,
 			});
 
-			setSuccessState("Account created. Redirecting you to sign in...");
+			setSuccessState("Account created. Redirecting to your dashboard...");
 			pushToast(
 				"success",
 				"Account created",
-				"We sent a verification email. Verify it before your first sign in.",
+				"We sent a verification email. Please verify to unlock all features.",
 			);
 
-			window.setTimeout(
-				() =>
-					navigate("/login", {
-						replace: true,
-						state: {
-							verificationEmail: form.email.trim(),
-							verificationSent: true,
-						},
-					}),
-				420,
-			);
+			window.setTimeout(() => navigate("/dashboard", { replace: true }), 420);
 		} catch (err) {
 			const code = err?.code || "";
-			if (code.includes("email-already-in-use")) {
+			if (
+				code.includes("email-already-in-use") ||
+				code.includes("business-already-registered")
+			) {
 				pushToast(
 					"error",
-					"Email already registered",
-					"An account with this email already exists. Try signing in instead.",
+					"Account already exists",
+					err?.message ||
+						"This business already has an account. Please sign in with your existing account.",
 				);
 				setStep(0);
 			} else if (code.includes("weak-password")) {
@@ -254,11 +262,32 @@ export default function RegisterPage() {
 		setSuccessState("");
 		setGoogleLoading(true);
 		try {
+			if (!form.businessName.trim()) {
+				setStep(1);
+				throw new Error(
+					"Please enter your business name before continuing with Google.",
+				);
+			}
+			if (!form.businessType) {
+				setStep(1);
+				throw new Error(
+					"Please select your business type before continuing with Google.",
+				);
+			}
+			const phoneDigits = form.phone.replace(/\D/g, "");
+			if (!phoneDigits || phoneDigits.length < 10) {
+				setStep(2);
+				throw new Error(
+					"Please provide a valid phone number before continuing with Google.",
+				);
+			}
+
 			await registerWithGoogle({
 				ownerName: form.ownerName.trim(),
 				businessName: form.businessName.trim(),
 				businessType: form.businessType,
 				phone: form.phone.trim(),
+				gst: form.gst.trim(),
 				address: form.address.trim(),
 				currency: form.currency,
 			});
@@ -277,11 +306,20 @@ export default function RegisterPage() {
 					"Google sign-up cancelled",
 					"No account changes were made.",
 				);
+			} else if (code.includes("business-already-registered")) {
+				pushToast(
+					"error",
+					"Account already exists",
+					err?.message ||
+						"This business already has an account. Please sign in with your existing account.",
+				);
+				setStep(0);
 			} else {
 				pushToast(
 					"error",
 					"Google sign-up failed",
-					"Please try again, or continue with email registration.",
+					err?.message ||
+						"Please try again, or continue with email registration.",
 				);
 			}
 		} finally {
@@ -513,7 +551,7 @@ export default function RegisterPage() {
 							<>
 								<div>
 									<label className={labelClass}>
-										<Phone size={12} /> Phone Number (optional)
+										<Phone size={12} /> Phone Number
 									</label>
 									<input
 										type="tel"
@@ -522,6 +560,20 @@ export default function RegisterPage() {
 										className={inputClass}
 										placeholder="+91 98765 43210"
 										autoFocus
+										required
+									/>
+									<p className="mt-1 text-xs text-slate-500">
+										Used to verify and prevent duplicate trial misuse.
+									</p>
+								</div>
+								<div>
+									<label className={labelClass}>GST Number (optional)</label>
+									<input
+										type="text"
+										value={form.gst}
+										onChange={update("gst")}
+										className={inputClass}
+										placeholder="22AAAAA0000A1Z5"
 									/>
 								</div>
 								<div>

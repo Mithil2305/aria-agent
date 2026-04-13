@@ -4,7 +4,15 @@ import { useAuth } from "../contexts/AuthContext";
 import { Loader } from "lucide-react";
 
 export default function ProtectedRoute({ children }) {
-	const { user, userProfile, loading, getTrialStatus, logout } = useAuth();
+	const {
+		user,
+		userProfile,
+		loading,
+		authInitialized,
+		getTrialStatus,
+		logout,
+		initAuthIfNeeded,
+	} = useAuth();
 	const location = useLocation();
 	const [signingOut, setSigningOut] = useState(false);
 	const isAdminEmail =
@@ -13,6 +21,12 @@ export default function ProtectedRoute({ children }) {
 			.toLowerCase() === "admin@yukti.com";
 	const isAdmin = userProfile?.role === "admin" || isAdminEmail;
 	const isSuspended = !!userProfile?.managed?.suspended;
+
+	useEffect(() => {
+		initAuthIfNeeded().catch(() => {
+			// Guard handles missing auth state through redirect fallback.
+		});
+	}, [initAuthIfNeeded]);
 
 	useEffect(() => {
 		let cancelled = false;
@@ -31,7 +45,7 @@ export default function ProtectedRoute({ children }) {
 		};
 	}, [loading, user, isAdmin, isSuspended, logout]);
 
-	if (loading || signingOut) {
+	if (!authInitialized || loading || signingOut) {
 		return (
 			<div className="min-h-screen bg-surface-100 flex items-center justify-center">
 				<Loader size={24} className="text-gold-600 animate-spin" />
@@ -40,11 +54,6 @@ export default function ProtectedRoute({ children }) {
 	}
 
 	if (!user) return <Navigate to="/login" replace />;
-	if (!user.emailVerified && !isAdminEmail) {
-		return (
-			<Navigate to="/login" replace state={{ unverifiedAccessBlocked: true }} />
-		);
-	}
 
 	// Check if free-tier trial has expired
 	const { isFreeTier, isTrialExpired } = getTrialStatus();

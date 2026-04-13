@@ -2,8 +2,8 @@
  * Firebase Configuration
  *
  * Firebase configuration is loaded from backend endpoint `/api/public/firebase-config`.
- * `initFirebase()` is called from main.jsx BEFORE the React tree renders,
- * so every component that imports `auth` / `db` gets working instances.
+ * Firebase is initialized lazily (on demand), so public pages render immediately
+ * even when backend is down.
  *
  * We use a plain object (`firebase`) as the export container so that
  * all importers always get the same live references — even across
@@ -22,6 +22,7 @@ export let auth = null;
 /** @type {import("firebase/firestore").Firestore} */
 export let db = null;
 let app = null;
+let initPromise = null;
 
 function hasRequiredFirebaseKeys(config) {
 	return Boolean(config?.apiKey) && Boolean(config?.projectId);
@@ -98,11 +99,10 @@ async function getBackendFirebaseConfig() {
 }
 
 /**
- * Initialize Firebase using backend-provided config.
- * Must be called (and awaited) once at app startup before rendering.
+ * Initialize Firebase using backend-provided config (lazy / on-demand).
  */
 export async function initFirebase() {
-	// Already initialised (e.g. Vite HMR re-run)
+	// Already initialized (e.g. Vite HMR re-run)
 	if (getApps().length > 0) {
 		app = getApps()[0];
 		auth = getAuth(app);
@@ -110,13 +110,21 @@ export async function initFirebase() {
 		return app;
 	}
 
-	const config = await getBackendFirebaseConfig();
+	if (initPromise) return initPromise;
 
-	app = initializeApp(config);
-	auth = getAuth(app);
-	db = getFirestore(app);
+	initPromise = (async () => {
+		const config = await getBackendFirebaseConfig();
+		app = initializeApp(config);
+		auth = getAuth(app);
+		db = getFirestore(app);
+		return app;
+	})();
 
-	return app;
+	try {
+		return await initPromise;
+	} finally {
+		initPromise = null;
+	}
 }
 
 export default app;

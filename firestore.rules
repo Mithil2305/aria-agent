@@ -14,9 +14,29 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    function isValidUserCreatePayload() {
+      return request.resource.data.email is string
+        && request.resource.data.email.size() > 3
+        && request.resource.data.businessName is string
+        && request.resource.data.businessName.size() > 1
+        && request.resource.data.businessType is string
+        && request.resource.data.businessType.size() > 0
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() >= 10
+        && request.resource.data.emailKey is string
+        && request.resource.data.emailKey.size() > 3
+        && request.resource.data.businessNameKey is string
+        && request.resource.data.businessNameKey.size() > 1
+        && request.resource.data.phoneKey is string
+        && request.resource.data.phoneKey.size() >= 10
+        && (!('gstKey' in request.resource.data) || request.resource.data.gstKey is string);
+    }
+
     // User profile + user-scoped app data.
     match /users/{uid} {
-      allow read, write: if isOwner(uid) || isAdmin();
+      allow read: if isOwner(uid) || isAdmin();
+      allow create: if (isOwner(uid) || isAdmin()) && isValidUserCreatePayload();
+      allow update, delete: if isOwner(uid) || isAdmin();
 
       // Covers: dailyLogs, reports, generatedReports, stockEntries,
       // analyses, premiumReports, premiumAnalyses, strategyReports, integrations, etc.

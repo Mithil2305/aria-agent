@@ -36,6 +36,7 @@ import base64
 import hashlib
 import pickle
 import os
+import re
 import logging
 import numpy as np
 import pandas as pd
@@ -155,6 +156,13 @@ class ContactInquiryRequest(BaseModel):
 
 class SubscriberRequest(BaseModel):
     email: str
+
+
+class RegistrationValidationRequest(BaseModel):
+    email: str
+    businessName: str
+    phone: str
+    gst: Optional[str] = None
 
 
 class StrategyRequest(BaseModel):
@@ -342,6 +350,29 @@ def _assert_service_allowed(uid: Optional[str], service_key: str) -> None:
         raise
     except Exception:
         return
+
+
+def _normalize_email_key(value: Optional[str]) -> str:
+    return str(value or "").strip().lower()
+
+
+def _normalize_business_key(value: Optional[str]) -> str:
+    raw = str(value or "").strip().lower()
+    if not raw:
+        return ""
+    # Collapse punctuation/noise so "A.B.C Store" and "ABC Store" map together.
+    return re.sub(r"[^a-z0-9]", "", raw)
+
+
+def _normalize_phone_key(value: Optional[str]) -> str:
+    raw = re.sub(r"\D", "", str(value or ""))
+    if len(raw) >= 10:
+        return raw[-10:]
+    return raw
+
+
+def _normalize_gst_key(value: Optional[str]) -> str:
+    return re.sub(r"[^0-9a-zA-Z]", "", str(value or "")).upper()
 
 
 async def require_admin(
@@ -1124,6 +1155,92 @@ async def subscribe_newsletter(payload: SubscriberRequest):
     return {
         "status": "success",
         "message": "Subscribed successfully.",
+    }
+
+
+@app.post("/api/registration/validate")
+async def validate_registration(payload: RegistrationValidationRequest):
+    email_key = _normalize_email_key(payload.email)
+    business_key = _normalize_business_key(payload.businessName)
+    phone_key = _normalize_phone_key(payload.phone)
+    gst_key = _normalize_gst_key(payload.gst)
+
+    if not email_key:
+        raise HTTPException(status_code=400, detail="Email is required.")
+    if not business_key:
+        raise HTTPException(status_code=400, detail="Business name is required.")
+    if not phone_key or len(phone_key) < 10:
+        raise HTTPException(
+            status_code=400,
+            detail="A valid phone number is required (at least 10 digits).",
+        )
+
+    db = _get_firestore_client()
+    if db is None:
+        return {
+            "status": "allow",
+            "allow": True,
+            "reason": "validation-unavailable",
+            "message": "Registration validation service unavailable; allowing registration.",
+        }
+
+    duplicate_reason = None
+
+    # Fast path for users created after identity-key rollout.
+    lookup_checks = [
+        ("emailKey", email_key, "email"),
+        ("businessNameKey", business_key, "business"),
+        ("phoneKey", phone_key, "phone"),
+    ]
+    if gst_key:
+        lookup_checks.append(("gstKey", gst_key, "gst"))
+
+    for field, value, reason in lookup_checks:
+        try:
+            if value and next(db.collection("users").where(field, "==", value).limit(1).stream(), None):
+                duplicate_reason = reason
+                break
+        except Exception:
+            # Fall back to full scan if indexes/queries are unavailable.
+            pass
+
+    if duplicate_reason is None:
+        try:
+            for doc in db.collection("users").stream():
+                data = doc.to_dict() or {}
+                existing_email = _normalize_email_key(data.get("email"))
+                existing_business = _normalize_business_key(data.get("businessName"))
+                existing_phone = _normalize_phone_key(data.get("phone"))
+                existing_gst = _normalize_gst_key(data.get("gst"))
+
+                if existing_email and existing_email == email_key:
+                    duplicate_reason = "email"
+                    break
+                if existing_business and existing_business == business_key:
+                    duplicate_reason = "business"
+                    break
+                if existing_phone and existing_phone == phone_key:
+                    duplicate_reason = "phone"
+                    break
+                if gst_key and existing_gst and existing_gst == gst_key:
+                    duplicate_reason = "gst"
+                    break
+        except Exception as exc:
+            raise HTTPException(status_code=500, detail=f"Failed to validate registration: {exc}")
+
+    if duplicate_reason:
+        return {
+            "status": "blocked",
+            "allow": False,
+            "reason": duplicate_reason,
+            "message": "An account already exists for this business. Please sign in to your existing account.",
+        }
+
+    return {
+        "status": "allow",
+        "allow": True,
+        "reason": "ok",
+        "message": "Registration allowed.",
     }
 
 

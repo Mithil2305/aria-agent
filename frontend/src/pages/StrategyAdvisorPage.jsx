@@ -357,7 +357,7 @@ export default function StrategyAdvisorPage() {
 				{!strategy && !loading && !error && (
 					<div className="mb-6 bg-white rounded-xl border border-slate-200 p-6">
 						<div className="flex items-start gap-4">
-							<div className="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center shrink-0">
+							<div className="w-12 h-12 rounded-xl bg-[#3b82f6] flex items-center justify-center shrink-0">
 								<Lightbulb size={22} className="text-white" />
 							</div>
 							<div className="space-y-3 flex-1">
@@ -397,11 +397,11 @@ export default function StrategyAdvisorPage() {
 								<button
 									onClick={generateStrategy}
 									disabled={loading}
-									className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 shadow-sm transition-all"
+									className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-[#3b82f6] hover:bg-[#2563eb] shadow-sm transition-all"
 								>
-									<Sparkles size={15} />
+									<Sparkles size={15} className="text-white" />
 									Analyse
-									<ChevronRight size={14} />
+									<ChevronRight size={14} className="text-white" />
 								</button>
 							</div>
 						</div>

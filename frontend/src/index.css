@@ -1240,6 +1240,10 @@ svg.lucide.text-surface-500 {
 	color: #3b82f6 !important;
 }
 
+svg.lucide.text-white {
+	color: #ffffff !important;
+}
+
 svg.lucide.text-red-900,
 svg.lucide.text-red-800,
 svg.lucide.text-red-700,
