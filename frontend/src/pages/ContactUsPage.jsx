@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
 	Mail,
 	Phone,
@@ -7,6 +7,8 @@ import {
 	Send,
 	CheckCircle2,
 	AlertCircle,
+	ChevronDown,
+	Check,
 } from "lucide-react";
 import { submitContactInquiry } from "../services/api";
 
@@ -45,6 +47,117 @@ const PURPOSES = [
 	"Partnership",
 	"Investor / Media",
 ];
+
+function StyledSelect({
+	label,
+	name,
+	value,
+	placeholder,
+	options,
+	onChange,
+	error,
+	required,
+}) {
+	const [open, setOpen] = useState(false);
+	const containerRef = useRef(null);
+
+	useEffect(() => {
+		const handleOutsideClick = (event) => {
+			if (!containerRef.current?.contains(event.target)) {
+				setOpen(false);
+			}
+		};
+
+		document.addEventListener("mousedown", handleOutsideClick);
+		return () => document.removeEventListener("mousedown", handleOutsideClick);
+	}, []);
+
+	useEffect(() => {
+		const handleEscape = (event) => {
+			if (event.key === "Escape") setOpen(false);
+		};
+
+		document.addEventListener("keydown", handleEscape);
+		return () => document.removeEventListener("keydown", handleEscape);
+	}, []);
+
+	const selectedLabel = value || placeholder;
+
+	return (
+		<div className="relative" ref={containerRef}>
+			<label className="mb-1 block text-xs font-semibold text-slate-600">
+				{label} {required ? "*" : ""}
+			</label>
+			<button
+				type="button"
+				onClick={() => setOpen((prev) => !prev)}
+				className={`w-full rounded-lg border px-3 py-2 text-left text-sm outline-none transition-colors ${
+					error
+						? "border-red-300 bg-red-50"
+						: "border-slate-300 bg-white hover:border-slate-400"
+				}`}
+				aria-haspopup="listbox"
+				aria-expanded={open}
+			>
+				<div className="flex items-center justify-between gap-2">
+					<span className={value ? "text-slate-900" : "text-slate-400"}>
+						{selectedLabel}
+					</span>
+					<ChevronDown
+						size={16}
+						className={`shrink-0 text-slate-500 transition-transform ${open ? "rotate-180" : ""}`}
+					/>
+				</div>
+			</button>
+
+			{open ? (
+				<div
+					className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-slate-200 bg-white p-1 shadow-lg"
+					role="listbox"
+				>
+					<button
+						type="button"
+						onClick={() => {
+							onChange(name, "");
+							setOpen(false);
+						}}
+						className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+							value === ""
+								? "bg-slate-900 text-white"
+								: "text-slate-500 hover:bg-slate-100"
+						}`}
+					>
+						<span>{placeholder}</span>
+						{value === "" ? <Check size={14} className="shrink-0" /> : null}
+					</button>
+					{options.map((option) => {
+						const selected = value === option;
+						return (
+							<button
+								type="button"
+								key={option}
+								onClick={() => {
+									onChange(name, option);
+									setOpen(false);
+								}}
+								className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+									selected
+										? "bg-slate-900 text-white"
+										: "text-slate-700 hover:bg-slate-100"
+								}`}
+							>
+								<span>{option}</span>
+								{selected ? <Check size={14} className="shrink-0" /> : null}
+							</button>
+						);
+					})}
+				</div>
+			) : null}
+
+			{error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+		</div>
+	);
+}
 
 export default function ContactUsPage() {
 	const [formData, setFormData] = useState({
@@ -92,6 +205,13 @@ export default function ContactUsPage() {
 			...prev,
 			[name]: type === "checkbox" ? checked : value,
 		}));
+		if (errors[name]) {
+			setErrors((prev) => ({ ...prev, [name]: undefined }));
+		}
+	};
+
+	const handleSelectChange = (name, value) => {
+		setFormData((prev) => ({ ...prev, [name]: value }));
 		if (errors[name]) {
 			setErrors((prev) => ({ ...prev, [name]: undefined }));
 		}
@@ -263,53 +383,27 @@ export default function ContactUsPage() {
 								)}
 							</div>
 
-							<div>
-								<label className="mb-1 block text-xs font-semibold text-slate-600">
-									Business Type *
-								</label>
-								<select
-									name="businessType"
-									value={formData.businessType}
-									onChange={handleChange}
-									className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
-								>
-									<option value="">Select business type</option>
-									{BUSINESS_TYPES.map((option) => (
-										<option key={option} value={option}>
-											{option}
-										</option>
-									))}
-								</select>
-								{errors.businessType && (
-									<p className="mt-1 text-xs text-red-600">
-										{errors.businessType}
-									</p>
-								)}
-							</div>
+							<StyledSelect
+								label="Business Type"
+								name="businessType"
+								value={formData.businessType}
+								placeholder="Select business type"
+								options={BUSINESS_TYPES}
+								onChange={handleSelectChange}
+								error={errors.businessType}
+								required
+							/>
 
-							<div>
-								<label className="mb-1 block text-xs font-semibold text-slate-600">
-									Revenue Scale *
-								</label>
-								<select
-									name="revenueScale"
-									value={formData.revenueScale}
-									onChange={handleChange}
-									className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
-								>
-									<option value="">Select revenue scale</option>
-									{REVENUE_SCALES.map((option) => (
-										<option key={option} value={option}>
-											{option}
-										</option>
-									))}
-								</select>
-								{errors.revenueScale && (
-									<p className="mt-1 text-xs text-red-600">
-										{errors.revenueScale}
-									</p>
-								)}
-							</div>
+							<StyledSelect
+								label="Revenue Scale"
+								name="revenueScale"
+								value={formData.revenueScale}
+								placeholder="Select revenue scale"
+								options={REVENUE_SCALES}
+								onChange={handleSelectChange}
+								error={errors.revenueScale}
+								required
+							/>
 
 							<div>
 								<label className="mb-1 block text-xs font-semibold text-slate-600">
@@ -324,27 +418,16 @@ export default function ContactUsPage() {
 								/>
 							</div>
 
-							<div>
-								<label className="mb-1 block text-xs font-semibold text-slate-600">
-									Purpose of Inquiry *
-								</label>
-								<select
-									name="purpose"
-									value={formData.purpose}
-									onChange={handleChange}
-									className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
-								>
-									<option value="">Select purpose</option>
-									{PURPOSES.map((option) => (
-										<option key={option} value={option}>
-											{option}
-										</option>
-									))}
-								</select>
-								{errors.purpose && (
-									<p className="mt-1 text-xs text-red-600">{errors.purpose}</p>
-								)}
-							</div>
+							<StyledSelect
+								label="Purpose of Inquiry"
+								name="purpose"
+								value={formData.purpose}
+								placeholder="Select purpose"
+								options={PURPOSES}
+								onChange={handleSelectChange}
+								error={errors.purpose}
+								required
+							/>
 
 							<div className="sm:col-span-2">
 								<label className="mb-1 block text-xs font-semibold text-slate-600">

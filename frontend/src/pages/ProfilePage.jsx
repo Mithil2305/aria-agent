@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import {
 	User,
@@ -12,6 +12,8 @@ import {
 	Loader2,
 	Store,
 	DollarSign,
+	ChevronDown,
+	Check,
 } from "lucide-react";
 
 const BUSINESS_TYPES = [
@@ -37,6 +39,116 @@ const CURRENCIES = [
 	{ code: "AUD", label: "Australian Dollar (A$)" },
 ];
 
+function StyledSelect({
+	label,
+	icon: Icon,
+	value,
+	placeholder,
+	options,
+	onChange,
+	getOptionLabel,
+}) {
+	const [open, setOpen] = useState(false);
+	const containerRef = useRef(null);
+
+	useEffect(() => {
+		const handleOutsideClick = (event) => {
+			if (!containerRef.current?.contains(event.target)) {
+				setOpen(false);
+			}
+		};
+
+		document.addEventListener("mousedown", handleOutsideClick);
+		return () => document.removeEventListener("mousedown", handleOutsideClick);
+	}, []);
+
+	useEffect(() => {
+		const handleEscape = (event) => {
+			if (event.key === "Escape") setOpen(false);
+		};
+
+		document.addEventListener("keydown", handleEscape);
+		return () => document.removeEventListener("keydown", handleEscape);
+	}, []);
+
+	const selectedOption = options.find((option) => option.value === value);
+	const selectedLabel = selectedOption
+		? getOptionLabel(selectedOption)
+		: placeholder;
+
+	return (
+		<div className="relative" ref={containerRef}>
+			<label className="flex items-center gap-1.5 text-xs font-medium text-surface-500 mb-1.5">
+				<Icon size={12} strokeWidth={1.5} />
+				{label}
+			</label>
+			<button
+				type="button"
+				onClick={() => setOpen((prev) => !prev)}
+				className="input-field w-full text-left"
+				aria-haspopup="listbox"
+				aria-expanded={open}
+			>
+				<div className="flex items-center justify-between gap-2">
+					<span className={value ? "text-surface-900" : "text-surface-400"}>
+						{selectedLabel}
+					</span>
+					<ChevronDown
+						size={16}
+						className={`shrink-0 text-surface-500 transition-transform ${open ? "rotate-180" : ""}`}
+					/>
+				</div>
+			</button>
+
+			{open ? (
+				<div
+					className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-xl border border-surface-200 bg-white p-1 shadow-lg"
+					role="listbox"
+				>
+					{placeholder ? (
+						<button
+							type="button"
+							onClick={() => {
+								onChange("");
+								setOpen(false);
+							}}
+							className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+								value === ""
+									? "bg-surface-900 text-white"
+									: "text-surface-500 hover:bg-surface-100"
+							}`}
+						>
+							<span>{placeholder}</span>
+							{value === "" ? <Check size={14} className="shrink-0" /> : null}
+						</button>
+					) : null}
+					{options.map((option) => {
+						const selected = value === option.value;
+						return (
+							<button
+								type="button"
+								key={option.value}
+								onClick={() => {
+									onChange(option.value);
+									setOpen(false);
+								}}
+								className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+									selected
+										? "bg-surface-900 text-white"
+										: "text-surface-700 hover:bg-surface-100"
+								}`}
+							>
+								<span>{getOptionLabel(option)}</span>
+								{selected ? <Check size={14} className="shrink-0" /> : null}
+							</button>
+						);
+					})}
+				</div>
+			) : null}
+		</div>
+	);
+}
+
 export default function ProfilePage() {
 	const { user, userProfile, updateUserProfile } = useAuth();
 	const [saving, setSaving] = useState(false);
@@ -54,6 +166,11 @@ export default function ProfilePage() {
 
 	const update = (key) => (e) => {
 		setForm((prev) => ({ ...prev, [key]: e.target.value }));
+		setSaved(false);
+	};
+
+	const updateSelect = (key) => (value) => {
+		setForm((prev) => ({ ...prev, [key]: value }));
 		setSaved(false);
 	};
 
@@ -167,43 +284,28 @@ export default function ProfilePage() {
 						</div>
 
 						{/* Business Type */}
-						<div>
-							<label className="flex items-center gap-1.5 text-xs font-medium text-surface-500 mb-1.5">
-								<Store size={12} strokeWidth={1.5} />
-								Business Type
-							</label>
-							<select
-								value={form.businessType}
-								onChange={update("businessType")}
-								className="input-field w-full appearance-none"
-							>
-								<option value="">Select type…</option>
-								{BUSINESS_TYPES.map((t) => (
-									<option key={t} value={t}>
-										{t}
-									</option>
-								))}
-							</select>
-						</div>
+						<StyledSelect
+							label="Business Type"
+							icon={Store}
+							value={form.businessType}
+							placeholder="Select type..."
+							options={BUSINESS_TYPES.map((t) => ({ value: t, label: t }))}
+							onChange={updateSelect("businessType")}
+							getOptionLabel={(option) => option.label}
+						/>
 
 						{/* Currency */}
-						<div>
-							<label className="flex items-center gap-1.5 text-xs font-medium text-surface-500 mb-1.5">
-								<DollarSign size={12} strokeWidth={1.5} />
-								Currency
-							</label>
-							<select
-								value={form.currency}
-								onChange={update("currency")}
-								className="input-field w-full appearance-none"
-							>
-								{CURRENCIES.map((c) => (
-									<option key={c.code} value={c.code}>
-										{c.label}
-									</option>
-								))}
-							</select>
-						</div>
+						<StyledSelect
+							label="Currency"
+							icon={DollarSign}
+							value={form.currency}
+							options={CURRENCIES.map((c) => ({
+								value: c.code,
+								label: c.label,
+							}))}
+							onChange={updateSelect("currency")}
+							getOptionLabel={(option) => option.label}
+						/>
 
 						{/* Phone */}
 						<div>

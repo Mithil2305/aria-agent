@@ -1,10 +1,64 @@
-import React from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Twitter, Linkedin, Github, Mail, ArrowRight } from "lucide-react";
 import BrandLogo from "./BrandLogo";
+import { submitSubscriberEmail } from "../services/api";
 
 export default function Footer() {
 	const currentYear = new Date().getFullYear();
+	const [email, setEmail] = useState("");
+	const [subscribeState, setSubscribeState] = useState({
+		type: "",
+		message: "",
+	});
+	const [submitting, setSubmitting] = useState(false);
+
+	const isValidEmail = (value) => /^\S+@\S+\.\S+$/.test(value);
+
+	const handleSubscribe = async (event) => {
+		event.preventDefault();
+		const normalizedEmail = email.trim().toLowerCase();
+
+		if (!normalizedEmail) {
+			setSubscribeState({
+				type: "error",
+				message: "Please enter your email.",
+			});
+			return;
+		}
+
+		if (!isValidEmail(normalizedEmail)) {
+			setSubscribeState({
+				type: "error",
+				message: "Please enter a valid email address.",
+			});
+			return;
+		}
+
+		setSubmitting(true);
+		setSubscribeState({ type: "", message: "" });
+
+		try {
+			const response = await submitSubscriberEmail(normalizedEmail);
+			setSubscribeState({
+				type: response?.status === "exists" ? "info" : "success",
+				message:
+					response?.message ||
+					(response?.status === "exists"
+						? "You're already subscribed."
+						: "Subscribed successfully."),
+			});
+			setEmail("");
+		} catch (error) {
+			const serverMessage = error?.response?.data?.detail;
+			setSubscribeState({
+				type: "error",
+				message: serverMessage || "Subscription failed. Please try again.",
+			});
+		} finally {
+			setSubmitting(false);
+		}
+	};
 
 	const footerLinks = {
 		product: [
@@ -31,9 +85,9 @@ export default function Footer() {
 	};
 
 	return (
-		<footer className="bg-white border-t border-slate-200 pt-20 pb-10 px-6 lg:px-8 relative z-10">
+		<footer className="bg-white border-t border-slate-200 pt-10 pb-10 px-6 lg:px-8 relative z-10">
 			<div className="max-w-7xl mx-auto">
-				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-8 mb-16">
+				<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-8 mb-5">
 					{/* Brand Section */}
 					<div className="lg:col-span-4 flex flex-col items-start">
 						<div className="flex items-center gap-3 mb-6 cursor-pointer group">
@@ -54,24 +108,53 @@ export default function Footer() {
 							<p className="text-sm font-semibold text-slate-900 mb-3">
 								Subscribe to our newsletter
 							</p>
-							<div className="flex gap-2">
-								<input
-									type="email"
-									placeholder="Enter your email"
-									className="flex-1 px-4 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all"
-								/>
-								<button className="px-4 py-2.5 bg-black text-white rounded-lg hover:bg-slate-800 transition-colors flex items-center justify-center">
-									<ArrowRight size={18} />
-								</button>
-							</div>
+							<form className="space-y-2" onSubmit={handleSubscribe}>
+								<div className="flex gap-2">
+									<input
+										type="email"
+										placeholder="Enter your email"
+										value={email}
+										onChange={(event) => setEmail(event.target.value)}
+										className="flex-1 px-4 py-2.5 rounded-lg border border-slate-200 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all"
+									/>
+									<button
+										type="submit"
+										disabled={submitting}
+										className="px-4 py-2.5 bg-black text-white rounded-lg hover:bg-slate-800 transition-colors flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+									>
+										<ArrowRight size={18} />
+									</button>
+								</div>
+								{subscribeState.message ? (
+									<p
+										className={`text-xs ${
+											subscribeState.type === "success"
+												? "text-emerald-600"
+												: subscribeState.type === "info"
+													? "text-slate-600"
+													: "text-red-600"
+										}`}
+									>
+										{subscribeState.message}
+									</p>
+								) : null}
+							</form>
 						</div>
 
 						{/* Social Links */}
 						<div className="flex items-center gap-4">
 							{[
 								{ icon: Twitter, href: "#", label: "Twitter" },
-								{ icon: Linkedin, href: "#", label: "LinkedIn" },
-								{ icon: Github, href: "#", label: "GitHub" },
+								{
+									icon: Linkedin,
+									href: "https://www.linkedin.com/in/mithilesh-es/",
+									label: "LinkedIn",
+								},
+								{
+									icon: Github,
+									href: "https://github.com/Mithil2305",
+									label: "GitHub",
+								},
 								{
 									icon: Mail,
 									href: "mailto:hello@mudmedia.in",

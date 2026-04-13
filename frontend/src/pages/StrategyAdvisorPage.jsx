@@ -309,7 +309,7 @@ export default function StrategyAdvisorPage() {
 		<div className="app-page">
 			<div className="app-page-inner max-w-5xl mx-auto">
 				{loading && (
-					<div className="mb-6 px-4 py-3 rounded-lg border border-indigo-200 bg-indigo-50/70 text-xs text-indigo-700">
+					<div className="mb-6 px-4 py-3 rounded-lg border border-slate-200 bg-slate-50 text-xs text-slate-700">
 						Strategy generation is running in the background. You can keep
 						exploring other pages while Yukti prepares your recommendations.
 					</div>
@@ -319,19 +319,19 @@ export default function StrategyAdvisorPage() {
 				<div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
 					<div>
 						<h1 className="text-xl font-semibold text-surface-900 mb-1 flex items-center gap-3">
-							<div className="p-2 rounded-lg bg-linear-to-br from-indigo-50 to-purple-50">
-								<Lightbulb size={20} className="text-indigo-600" />
+							<div className="p-2 rounded-lg bg-slate-100">
+								<Lightbulb size={20} className="text-slate-700" />
 							</div>
 							Strategy Advisor
 						</h1>
 						<p className="text-sm text-surface-500 ml-12">
 							AI-powered tips to boost sales, attract customers, and optimise
 							stock — tailored for{" "}
-							<span className="font-medium text-indigo-500">
+							<span className="font-medium text-slate-700">
 								{categoryLabel}
 							</span>{" "}
 							in{" "}
-							<span className="font-medium text-indigo-500 inline-flex items-center gap-1">
+							<span className="font-medium text-slate-700 inline-flex items-center gap-1">
 								<MapPin size={11} />
 								Tamil Nadu, India
 							</span>
@@ -341,7 +341,7 @@ export default function StrategyAdvisorPage() {
 						<button
 							onClick={generateStrategy}
 							disabled={loading}
-							className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-600 text-xs font-medium hover:bg-indigo-100 transition-all disabled:opacity-50 shrink-0"
+							className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-slate-100 border border-slate-300 text-slate-700 text-xs font-medium hover:bg-slate-200 transition-all disabled:opacity-50 shrink-0"
 						>
 							{loading ? (
 								<Loader2 size={13} className="animate-spin" />
@@ -355,9 +355,9 @@ export default function StrategyAdvisorPage() {
 
 				{/* Intro card with Analyse button — shown before first run */}
 				{!strategy && !loading && !error && (
-					<div className="mb-6 bg-linear-to-br from-indigo-50/80 via-purple-50/50 to-white rounded-xl border border-indigo-200/60 p-6">
+					<div className="mb-6 bg-white rounded-xl border border-slate-200 p-6">
 						<div className="flex items-start gap-4">
-							<div className="w-12 h-12 rounded-xl bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0">
+							<div className="w-12 h-12 rounded-xl bg-slate-900 flex items-center justify-center shrink-0">
 								<Lightbulb size={22} className="text-white" />
 							</div>
 							<div className="space-y-3 flex-1">
@@ -370,7 +370,7 @@ export default function StrategyAdvisorPage() {
 										stock data to generate personalised strategies — including
 										sales tips, customer acquisition ideas, stock optimisation,
 										and a monthly roadmap tailored for your{" "}
-										<span className="font-medium text-indigo-500">
+										<span className="font-medium text-slate-700">
 											{categoryLabel}
 										</span>{" "}
 										business.
@@ -388,7 +388,7 @@ export default function StrategyAdvisorPage() {
 											key={item.label}
 											className="flex items-center gap-2 text-xs text-surface-600"
 										>
-											<item.icon size={14} className="text-indigo-500" />
+											<item.icon size={14} className="text-slate-600" />
 											{item.label}
 										</div>
 									))}
@@ -397,7 +397,7 @@ export default function StrategyAdvisorPage() {
 								<button
 									onClick={generateStrategy}
 									disabled={loading}
-									className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-linear-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-sm transition-all"
+									className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 shadow-sm transition-all"
 								>
 									<Sparkles size={15} />
 									Analyse
@@ -434,28 +434,6 @@ export default function StrategyAdvisorPage() {
 					</div>
 				)}
 
-				{/* AI provider badge */}
-				{strategy &&
-					strategy.generated_by &&
-					strategy.generated_by !== "rule_based" && (
-						<div className="mb-6 flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-50 border border-green-200 text-green-700 text-xs">
-							<Sparkles size={13} className="shrink-0" />
-							<span>
-								Powered by{" "}
-								<strong>
-									{strategy.generated_by === "gemini_ai"
-										? "Google Gemini"
-										: strategy.generated_by === "groq_ai"
-											? "Groq (Kimi K2)"
-											: strategy.generated_by === "claude_ai"
-												? "Claude (Anthropic)"
-												: "AI"}
-								</strong>{" "}
-								— personalised for your business data.
-							</span>
-						</div>
-					)}
-
 				{/* Loading state */}
 				{loading && !strategy && (
 					<div className="card-elevated p-12 text-center">
@@ -477,7 +455,7 @@ export default function StrategyAdvisorPage() {
 										key={step.label}
 										className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border transition-all duration-500 ${
 											isActive
-												? "bg-indigo-50 border-indigo-200"
+												? "bg-slate-100 border-slate-300"
 												: isDone
 													? "bg-green-50/60 border-green-200"
 													: "bg-white border-surface-200 opacity-60"
@@ -488,7 +466,7 @@ export default function StrategyAdvisorPage() {
 										) : isActive ? (
 											<Loader2
 												size={15}
-												className="text-indigo-600 animate-spin"
+												className="text-slate-700 animate-spin"
 											/>
 										) : (
 											<step.icon size={15} className="text-surface-400" />
@@ -496,7 +474,7 @@ export default function StrategyAdvisorPage() {
 										<span
 											className={`text-xs font-medium ${
 												isActive
-													? "text-indigo-700"
+													? "text-slate-800"
 													: isDone
 														? "text-green-700"
 														: "text-surface-500"
@@ -515,7 +493,7 @@ export default function StrategyAdvisorPage() {
 				{strategy && (
 					<>
 						{loading && (
-							<div className="mb-5 px-4 py-3 rounded-lg border border-indigo-200 bg-indigo-50 text-xs text-indigo-700 flex items-center gap-2">
+							<div className="mb-5 px-4 py-3 rounded-lg border border-slate-200 bg-slate-50 text-xs text-slate-700 flex items-center gap-2">
 								<Loader2 size={14} className="animate-spin" />
 								Generating refreshed strategy in background...
 							</div>
@@ -570,17 +548,11 @@ export default function StrategyAdvisorPage() {
 							</div>
 						)}
 
-						{/* AI badge */}
+						{/* Analysis badge */}
 						<div className="flex items-center gap-2 mb-5">
-							<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-linear-to-r from-indigo-50 to-purple-50 border border-indigo-200 text-indigo-600 text-[10px] font-semibold uppercase tracking-wider">
+							<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-300 text-slate-700 text-[10px] font-semibold uppercase tracking-wider">
 								<Sparkles size={10} />
-								{strategy.generated_by === "gemini_ai"
-									? "Powered by Gemini AI"
-									: strategy.generated_by === "groq_ai"
-										? "Powered by Groq AI"
-										: strategy.generated_by === "claude_ai"
-											? "Powered by Claude AI"
-											: "Data-Driven Analysis"}
+								Data-Driven Analysis
 							</span>
 						</div>
 
@@ -592,7 +564,7 @@ export default function StrategyAdvisorPage() {
 									onClick={() => setActiveTab(tab.key)}
 									className={`flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
 										activeTab === tab.key
-											? "bg-white shadow-sm text-indigo-600"
+											? "bg-white shadow-sm text-slate-800"
 											: "text-surface-500 hover:text-surface-700"
 									}`}
 								>
@@ -772,7 +744,7 @@ export default function StrategyAdvisorPage() {
 								</h2>
 								<div className="relative">
 									{/* Vertical timeline line */}
-									<div className="absolute left-4.5 top-6 bottom-6 w-0.5 bg-indigo-100" />
+									<div className="absolute left-4.5 top-6 bottom-6 w-0.5 bg-slate-200" />
 
 									{(strategy.roadmap || []).map((week, wi) => (
 										<div
@@ -780,8 +752,8 @@ export default function StrategyAdvisorPage() {
 											className="relative flex items-start gap-5 mb-6 last:mb-0"
 										>
 											{/* Timeline dot */}
-											<div className="w-9 h-9 rounded-full bg-indigo-100 border-2 border-indigo-300 flex items-center justify-center shrink-0 z-10">
-												<span className="text-[10px] font-bold text-indigo-600">
+											<div className="w-9 h-9 rounded-full bg-slate-100 border-2 border-slate-300 flex items-center justify-center shrink-0 z-10">
+												<span className="text-[10px] font-bold text-slate-700">
 													W{wi + 1}
 												</span>
 											</div>
@@ -796,7 +768,7 @@ export default function StrategyAdvisorPage() {
 														<div key={ai} className="flex items-start gap-2.5">
 															<ArrowRight
 																size={12}
-																className="text-indigo-400 shrink-0 mt-0.5"
+																className="text-slate-500 shrink-0 mt-0.5"
 															/>
 															<p className="text-xs text-surface-600 leading-relaxed">
 																{action}
@@ -828,7 +800,7 @@ export default function StrategyAdvisorPage() {
 								<button
 									key={item.id}
 									onClick={() => loadHistoryItem(item)}
-									className="w-full text-left rounded-lg border border-surface-200 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all px-3 py-2.5"
+									className="w-full text-left rounded-lg border border-surface-200 hover:border-slate-300 hover:bg-slate-50 transition-all px-3 py-2.5"
 								>
 									<div className="flex items-center justify-between gap-3">
 										<div>
@@ -850,7 +822,7 @@ export default function StrategyAdvisorPage() {
 													},
 												)}
 											</p>
-											<p className="text-[10px] text-indigo-600 font-medium">
+											<p className="text-[10px] text-slate-700 font-medium">
 												Load report
 											</p>
 										</div>

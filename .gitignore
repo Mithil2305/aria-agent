@@ -4,23 +4,29 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyo
+*.pyd
 *.so
 *.egg
 *.egg-info/
 *.whl
-*.pyo
-*.pyd
 .Python
-pip-log.txt
-pip-delete-this-directory.txt
 
-# Virtual environments
-backend/venv/
-backend/.venv/
+# Python envs
 venv/
 .venv/
+backend/venv/
+backend/.venv/
 
-# Backend generated build artifacts
+# Python tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Backend build artifacts
 backend/build/
 backend/build_debug/
 backend/build_fresh/
@@ -32,27 +38,35 @@ backend/dist_fresh2/
 backend/*.spec
 backend/*.exit
 
-# Generic build outputs
-dist/
-build/
-
-# Environment variables & secrets (NEVER commit)
-.env
-*.env.local
-*.env.*.local
-service-account.json
-**/service-account*.json
-
 # ========================
-# Node.js / Frontend
+# Frontend / Node
 # ========================
 node_modules/
+frontend/node_modules/
+dist/
+build/
 frontend/dist/
 frontend/dist-ssr/
+*.tsbuildinfo
+
+# ========================
+# Environment / Secrets
+# ========================
+.env
+.env.*
+!.env.example
+!.env.sample
+
+service-account.json
+**/service-account.json
+**/service-account*.json
+*.pem
+*.key
 
 # ========================
 # Logs
 # ========================
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -72,8 +86,6 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
-*.swp
-*.swo
 *~
 
 # ========================
@@ -94,30 +106,18 @@ Desktop.ini
 backend/_sft_fields.txt
 
 # ========================
-# ML — Large / Generated Files
+# ML — large/generated
 # ========================
-
-# Raw datasets (large — download separately, see datasets/README.md)
 backend/datasets/
-
-# Processed training data (regenerate via: python -m ml.prepare_dataset)
 backend/ml/data/
-
-# Model checkpoints & weights (regenerate via: python -m ml.train)
 backend/ml/checkpoints/
-
-# Hugging Face cache
 .cache/
 huggingface/
 
-# Model weight files (wherever they appear)
 *.safetensors
-*.bin
 *.pt
 *.pth
 *.gguf
-
-# Large data files
 *.parquet
 *.arrow
 *.csv.gz

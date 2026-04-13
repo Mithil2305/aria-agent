@@ -67,6 +67,7 @@ from engine.report_generator import generate_pdf_report
 
 from pydantic import BaseModel
 from typing import Any, List, Optional
+from email_validator import validate_email, EmailNotValidError
 
 try:
     from cryptography.fernet import Fernet, InvalidToken
@@ -150,6 +151,10 @@ class ContactInquiryRequest(BaseModel):
     purpose: str
     message: str
     consent: bool
+
+
+class SubscriberRequest(BaseModel):
+    email: str
 
 
 class StrategyRequest(BaseModel):
@@ -1068,6 +1073,57 @@ async def submit_contact_inquiry(
     return {
         "status": "success",
         "message": "Thanks for reaching out. Our team will get back to you soon.",
+    }
+
+
+@app.post("/api/subscribers")
+async def subscribe_newsletter(payload: SubscriberRequest):
+    raw_email = (payload.email or "").strip().lower()
+    if not raw_email:
+        raise HTTPException(status_code=400, detail="Email is required.")
+
+    try:
+        validated = validate_email(raw_email, check_deliverability=True)
+        normalized_email = validated.normalized
+    except EmailNotValidError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Please enter a valid, reachable email address. {str(exc)}",
+        )
+
+    doc_id = normalized_email.lower()
+
+    db = _get_firestore_client()
+    if db is None:
+        logging.getLogger("yukti.subscribers").info(
+            "subscriber capture (no firestore): %s", doc_id
+        )
+        return {
+            "status": "success",
+            "message": "Subscribed successfully.",
+        }
+
+    doc_ref = db.collection("subscribers").document(doc_id)
+    existing = doc_ref.get()
+    if existing.exists:
+        return {
+            "status": "exists",
+            "message": "You're already subscribed.",
+        }
+
+    doc_ref.set(
+        _sanitize(
+            {
+                "email": doc_id,
+                "source": "footer_newsletter",
+                "createdAt": datetime.utcnow(),
+            }
+        )
+    )
+
+    return {
+        "status": "success",
+        "message": "Subscribed successfully.",
     }
 
 

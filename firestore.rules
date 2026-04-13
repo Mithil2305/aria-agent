@@ -34,6 +34,11 @@ service cloud.firestore {
       }
     }
 
+    // Subscriber records are managed by backend validation flow.
+    match /subscribers/{emailId} {
+      allow read, write: if isAdmin();
+    }
+
     // Deny everything else by default.
     match /{document=**} {
       allow read, write: if false;

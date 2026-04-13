@@ -92,6 +92,16 @@ function monthLabel(key) {
 	});
 }
 
+function toFirestoreErrorMessage(err, fallback) {
+	if (err?.code === "permission-denied") {
+		return "Firestore permission denied. Update your Firestore rules and ensure you are logged in.";
+	}
+	if (err?.code === "unauthenticated") {
+		return "You are not authenticated. Please sign in again.";
+	}
+	return err?.message || fallback;
+}
+
 export default function DailyLogPage() {
 	const { user, userProfile } = useAuth();
 	const { startActivity, updateActivityProgress, completeActivity } =
@@ -414,9 +424,9 @@ export default function DailyLogPage() {
 
 	return (
 		<div className="app-page">
-			<div className="app-page-inner max-w-5xl mx-auto">
+			<div className="app-page-inner max-w-6xl mx-auto">
 				{/* Page header */}
-				<div className="mb-8">
+				<div className="mb-6">
 					<h1 className="text-xl font-semibold text-surface-900 mb-1 flex items-center gap-3">
 						<div className="p-2 rounded-lg bg-gold-50">
 							<Calendar size={20} className="text-gold-600" />
@@ -455,8 +465,8 @@ export default function DailyLogPage() {
 					</div>
 				)}
 
-				<div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-					<div className="xl:col-span-5 space-y-5">
+				<div className="grid grid-cols-1 gap-6">
+					<div className="space-y-5">
 						{/* Rapid Entry Form */}
 						<div className="card-elevated p-5 sm:p-6">
 							<div className="flex items-start justify-between gap-4 mb-5">
@@ -488,8 +498,8 @@ export default function DailyLogPage() {
 								</div>
 							</div>
 
-							<div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
-								<div className="flex-1">
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+								<div>
 									<label className="block text-xs font-medium text-surface-400 mb-1.5">
 										Log Date
 									</label>
@@ -501,7 +511,7 @@ export default function DailyLogPage() {
 											setSaved(false);
 										}}
 										max={todayISO()}
-										className="input-field w-full sm:w-auto"
+										className="input-field w-full"
 									/>
 								</div>
 								{/* CSV Upload */}
@@ -527,9 +537,12 @@ export default function DailyLogPage() {
 							</div>
 
 							{/* Quick metrics */}
-							<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+							<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
 								{quickFields.map((field) => {
 									const Icon = resolveIcon(field.icon);
+									const inputPlaceholder = field.prefix
+										? `${field.prefix} ${field.placeholder || ""}`.trim()
+										: field.placeholder;
 									return (
 										<div key={field.key}>
 											<label className="flex items-center gap-1.5 text-xs font-medium text-surface-400 mb-1.5">
@@ -543,25 +556,18 @@ export default function DailyLogPage() {
 													<span className="text-red-500">*</span>
 												)}
 											</label>
-											<div className="relative">
-												{field.prefix && (
-													<span className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-500 text-sm">
-														{field.prefix}
-													</span>
-												)}
-												<input
-													type="number"
-													inputMode="decimal"
-													min="0"
-													step="any"
-													placeholder={field.placeholder}
-													value={formData[field.key] ?? ""}
-													onChange={(e) =>
-														handleFieldChange(field.key, e.target.value)
-													}
-													className={`input-field w-full ${field.prefix ? "pl-7" : ""}`}
-												/>
-											</div>
+											<input
+												type="number"
+												inputMode="decimal"
+												min="0"
+												step="any"
+												placeholder={inputPlaceholder}
+												value={formData[field.key] ?? ""}
+												onChange={(e) =>
+													handleFieldChange(field.key, e.target.value)
+												}
+												className="input-field w-full"
+											/>
 										</div>
 									);
 								})}
@@ -582,9 +588,12 @@ export default function DailyLogPage() {
 							)}
 
 							{showAdvanced && advancedFields.length > 0 && (
-								<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+								<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
 									{advancedFields.map((field) => {
 										const Icon = resolveIcon(field.icon);
+										const inputPlaceholder = field.prefix
+											? `${field.prefix} ${field.placeholder || ""}`.trim()
+											: field.placeholder;
 										return (
 											<div key={field.key}>
 												<label className="flex items-center gap-1.5 text-xs font-medium text-surface-400 mb-1.5">
@@ -617,12 +626,12 @@ export default function DailyLogPage() {
 															inputMode="decimal"
 															min="0"
 															step="any"
-															placeholder={field.placeholder}
+															placeholder={inputPlaceholder}
 															value={formData[field.key] ?? ""}
 															onChange={(e) =>
 																handleFieldChange(field.key, e.target.value)
 															}
-															className={`input-field w-full ${field.prefix ? "pl-7" : ""}`}
+															className="input-field w-full"
 														/>
 													)}
 												</div>
@@ -709,7 +718,7 @@ export default function DailyLogPage() {
 					</div>
 
 					{/* Month-wise complete logs with edit */}
-					<div className="xl:col-span-7 card p-5">
+					<div className="card p-5">
 						<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
 							<div>
 								<h2 className="text-sm font-semibold text-surface-900">
@@ -783,7 +792,7 @@ export default function DailyLogPage() {
 											</div>
 										</div>
 
-										<div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5">
+										<div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
 											{metricFields.map((field) => {
 												const value = log[field.key];
 												if (

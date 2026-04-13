@@ -1,4 +1,5 @@
 import { useMemo, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
 	motion,
 	useScroll,
@@ -223,7 +224,7 @@ function PipelineSection({
 						<div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center mb-8 border border-white/10 backdrop-blur-md">
 							<Layers size={32} className="text-slate-100" />
 						</div>
-						<h2 className="text-4xl lg:text-5xl font-extrabold tracking-tight mb-6">
+						<h2 className="text-4xl lg:text-5xl font-extrabold tracking-tight mb-6 whitecol">
 							Six layers between raw data and real decisions
 						</h2>
 						<p className="text-slate-400 text-xl leading-relaxed mb-10">
@@ -235,7 +236,7 @@ function PipelineSection({
 							<div className="flex items-start gap-4 bg-white/5 border border-white/5 p-5 rounded-2xl backdrop-blur-sm">
 								<CheckCircle2 className="text-slate-300 shrink-0 mt-0.5" />
 								<div>
-									<h4 className="font-semibold text-lg">
+									<h4 className="font-semibold text-lg whitecol">
 										Four AI Providers. Zero Downtime.
 									</h4>
 									<p className="text-sm text-slate-400 mt-2">
@@ -248,7 +249,7 @@ function PipelineSection({
 							<div className="flex items-start gap-4 p-5">
 								<CheckCircle2 className="text-slate-300 shrink-0 mt-0.5" />
 								<div>
-									<h4 className="font-semibold text-lg">
+									<h4 className="font-semibold text-lg whitecol">
 										This model thinks Indian
 									</h4>
 									<p className="text-sm text-slate-400 mt-2">
@@ -500,6 +501,7 @@ function buildPath(values, width = 420, height = 210, padding = 22) {
 }
 
 export default function HomePage() {
+	const navigate = useNavigate();
 	const { scrollYProgress } = useScroll();
 
 	const smoothProgress = useSpring(scrollYProgress, {
@@ -660,7 +662,7 @@ export default function HomePage() {
 						<button
 							onClick={() => {
 								trackCta("demo", "hero_secondary", activeVariant.heroSecondary);
-								window.location.href = "https://mudmedia.vercel.app/book";
+								navigate("/contact-us");
 							}}
 							className="px-8 py-4 bg-white/50 backdrop-blur-md text-black border border-slate-200 rounded-full font-semibold text-lg hover:bg-white transition-all hover:-translate-y-1 hover:shadow-xl shadow-sm"
 						>
@@ -1314,10 +1316,10 @@ export default function HomePage() {
 					<div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-700/50 via-transparent to-transparent opacity-60" />
 					<div className="absolute inset-0 opacity-[0.1] bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMCAwbDQwIDQwbTAtNDBMMCA0MCIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjEiIGZpbGw9Im5vbmUiLz48L3N2Zz4=')]" />
 					<div className="relative z-10">
-						<h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight mb-8">
+						<h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight mb-8 whitecol">
 							{activeVariant.finalTitle}
 						</h2>
-						<p className="text-slate-400 text-xl lg:text-2xl mb-12 max-w-3xl mx-auto leading-relaxed">
+						<p className="text-xl lg:text-2xl mb-12 max-w-3xl mx-auto leading-relaxed whitecol">
 							{activeVariant.finalBody}
 						</p>
 						<div className="flex flex-col sm:flex-row gap-5 justify-center">

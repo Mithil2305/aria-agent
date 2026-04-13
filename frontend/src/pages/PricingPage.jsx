@@ -23,20 +23,22 @@ const plans = [
 	},
 	{
 		name: "Paid",
-		upfrontPrice: "Rs.3499 upfront",
+		upfrontPrice: "Rs.3499 onboarding",
 		price: "Rs.999/month",
 		// subtitle: "+ GST",
-		description:
-			"Full monthly access with limits that reset every month. One-time onboarding fee applies at activation.",
+		description: "Full monthly access with limits that reset every month.",
 		features: [
-			"Initial onboarding/setup fee: Rs.3499 (one-time upfront)",
 			"Data Uploads: 30/month",
 			"Analysis Runs: 30/month",
 			"Strategy Advisor: 15/month",
 			"Premium Analysis: 2/month",
 			"Bill Scanner: 20/month",
 			"PDF Reports: 15/month",
-			"Weekly Digest + Market Compare + Pricing Tips",
+			"Yukti dedicated Chat Support",
+			"Pricing Tips",
+			"Market Compare",
+			"Weekly Digest",
+			"Billing Software Integrations",
 			"Includes all dashboard modules",
 		],
 		cta: "Get started",
@@ -57,10 +59,9 @@ const plans = [
 			"Priority support and SLA",
 			"Custom service limits per feature",
 			"Optional unlimited-style usage setup",
-			"Admin controls for suspensions and feature access",
 		],
 		cta: "Contact sales",
-		ctaHref: "mailto:chat.mudmedia@gmail.com",
+		ctaHref: "/contact",
 		cardClass: "bg-slate-50 border-slate-200",
 	},
 ];
@@ -75,25 +76,18 @@ export default function PricingPage() {
 
 			<div className="relative z-10 px-6 py-16 lg:px-8">
 				<div className="mx-auto max-w-6xl">
-					<section className="rounded-4xl border border-slate-200 bg-white/90 backdrop-blur-xl p-8 md:p-10 shadow-[0_25px_55px_-35px_rgba(15,23,42,0.35)]">
+					<section className="rounded-4xl  p-8 md:p-10 ">
 						<div className="text-center">
 							<p className="inline-flex rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600">
-								Our pricing
+								Yukti's Pricing
 							</p>
 							<h1 className="mt-4 text-4xl md:text-5xl font-extrabold tracking-tight text-black">
 								Choose the plan that fits your team
 							</h1>
-							<p className="mt-3 text-slate-600 text-base">
-								Same Yukti product, different limits and support levels.
-							</p>
-							<p className="mt-2 text-sm font-semibold text-slate-700">
-								Paid activation includes a one-time Rs.3499 upfront onboarding
-								fee.
-							</p>
 						</div>
 					</section>
 
-					<section className="mt-8 grid gap-6 lg:grid-cols-3">
+					<section className="mt-8 grid gap-6 lg:grid-cols-3 items-start">
 						{plans.map((plan) => (
 							<div
 								key={plan.name}
@@ -115,11 +109,35 @@ export default function PricingPage() {
 									{plan.upfrontPrice ? (
 										<>
 											<span className="block text-3xl leading-tight">
-												{plan.upfrontPrice}
+												{plan.upfrontPrice.includes("onboarding") ? (
+													<>
+														{plan.upfrontPrice.replace(" onboarding", "")}{" "}
+														<span className="text-[16px] align-middle">
+															onboarding
+														</span>
+													</>
+												) : (
+													plan.upfrontPrice
+												)}
 											</span>
 											<span className="mt-1 block text-2xl font-semibold leading-tight">
-												+ {plan.price}
+												+{" "}
+												{plan.price.includes("/month") ? (
+													<>
+														{plan.price.replace("/month", "")}
+														<span className="text-[16px] align-middle">
+															/month
+														</span>
+													</>
+												) : (
+													plan.price
+												)}
 											</span>
+										</>
+									) : plan.price.includes("/month") ? (
+										<>
+											{plan.price.replace("/month", "")}
+											<span className="text-[18px] align-middle">/month</span>
 										</>
 									) : (
 										plan.price

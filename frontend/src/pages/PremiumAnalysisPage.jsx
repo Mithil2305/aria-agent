@@ -35,6 +35,7 @@ import {
 import { db } from "../firebase";
 import { formatCurrency } from "../utils/currency";
 import { useAnalysisJob } from "../contexts/AnalysisJobContext";
+import { getLimitsDashboard } from "../services/usageLimits";
 
 /* ── Loading animation steps ─────────────────────── */
 const PROGRESS_STEPS = [
@@ -48,42 +49,21 @@ const PREMIUM_JOB_KEY = "yukti_premium_job";
 const MAX_PREMIUM_HISTORY = 20;
 const PREMIUM_RELOAD_MAX_WAIT_MS = 45 * 1000;
 
-/* ── Provider badge ──────────────────────────────── */
-function ProviderBadge({ generatedBy, label }) {
-	const isModel = generatedBy === "yukti_model";
-	// yukti_rule_based = Yukti's own data-driven engine (no external API)
-	const isRuleBased = generatedBy === "yukti_rule_based";
-
-	return (
-		<span
-			className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${
-				isModel
-					? "bg-purple-50 text-purple-700 border border-purple-200"
-					: isRuleBased
-						? "bg-amber-50 text-amber-700 border border-amber-200"
-						: "bg-surface-100 text-surface-600 border border-surface-200"
-			}`}
-		>
-			{isModel ? <Crown size={12} /> : <BarChart3 size={12} />}
-			{label || "Yukti Custom Model"}
-		</span>
-	);
-}
-
 export default function PremiumAnalysisPage() {
 	const { user, userProfile } = useAuth();
-	const { activity, startActivity, completeActivity } = useAnalysisJob();
+	const { startActivity, completeActivity } = useAnalysisJob();
 	const currencyCode = userProfile?.currency || "INR";
+	const role = userProfile?.role || "paid-user";
 	const mountedRef = useRef(true);
 	const premiumActivityRef = useRef(null);
 
 	const [status, setStatus] = useState(null); // { month, used, available }
+	const [premiumQuota, setPremiumQuota] = useState(null);
 	const [loading, setLoading] = useState(false);
 	const [checking, setChecking] = useState(true);
 	const [result, setResult] = useState(null);
 	const [error, setError] = useState(null);
 	const [progressIdx, setProgressIdx] = useState(0);
-	const [progressPct, setProgressPct] = useState(0);
 	const [history, setHistory] = useState([]);
 	const [historyLoading, setHistoryLoading] = useState(false);
 
@@ -129,8 +109,12 @@ export default function PremiumAnalysisPage() {
 			setChecking(true);
 			try {
 				const token = user ? await user.getIdToken() : null;
-				const s = await getPremiumAnalysisStatus(token);
+				const [s, limits] = await Promise.all([
+					getPremiumAnalysisStatus(token),
+					user ? getLimitsDashboard(user.uid, role) : Promise.resolve(null),
+				]);
 				setStatus(s);
+				setPremiumQuota(limits?.usage?.ai_premium || null);
 
 				if (s.used && s.generated_at) {
 					try {
@@ -156,7 +140,7 @@ export default function PremiumAnalysisPage() {
 			}
 		}
 		init();
-	}, [user]);
+	}, [user, role]);
 
 	useEffect(() => {
 		try {
@@ -189,7 +173,6 @@ export default function PremiumAnalysisPage() {
 	useEffect(() => {
 		if (!loading) {
 			setProgressIdx(0);
-			setProgressPct(0);
 			return;
 		}
 		setProgressIdx(0);
@@ -202,15 +185,6 @@ export default function PremiumAnalysisPage() {
 		});
 		return () => timers.forEach(clearTimeout);
 	}, [loading]);
-
-	useEffect(() => {
-		if (!loading) return;
-		if (!premiumActivityRef.current) return;
-		if (activity.id !== premiumActivityRef.current) return;
-		setProgressPct(
-			Math.round(Math.max(0, Math.min(100, activity.progress || 0))),
-		);
-	}, [loading, activity.id, activity.progress]);
 
 	/* ── Generate premium analysis ──────────────── */
 	async function handleGenerate() {
@@ -276,7 +250,6 @@ export default function PremiumAnalysisPage() {
 				return;
 			}
 
-			const role = userProfile?.role || "paid-user";
 			const data = await getPremiumAnalysis(
 				dailyLogs,
 				stockEntries,
@@ -321,6 +294,14 @@ export default function PremiumAnalysisPage() {
 			if (mountedRef.current) {
 				setResult(data);
 				setStatus((prev) => ({ ...prev, used: true, available: false }));
+				try {
+					const limits = await getLimitsDashboard(user.uid, role);
+					if (mountedRef.current) {
+						setPremiumQuota(limits?.usage?.ai_premium || null);
+					}
+				} catch {
+					// Ignore limits refresh errors and keep current quota state.
+				}
 				setHistory((prev) =>
 					[{ id: reportRef.id, ...reportPayload }, ...prev].slice(
 						0,
@@ -399,6 +380,11 @@ export default function PremiumAnalysisPage() {
 		month: "long",
 		year: "numeric",
 	});
+	const isQuotaKnown = premiumQuota != null;
+	const hasRemainingPremium = isQuotaKnown
+		? !Number.isFinite(premiumQuota.limit) || premiumQuota.remaining > 0
+		: !status?.used;
+	const isPremiumLimitReached = !hasRemainingPremium;
 
 	const loadHistoryItem = (item) => {
 		if (!item?.resultData) return;
@@ -426,46 +412,81 @@ export default function PremiumAnalysisPage() {
 				<div className="flex items-start justify-between">
 					<div>
 						<div className="flex items-center gap-2">
-							<div className="w-9 h-9 rounded-lg bg-linear-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+							<div
+								className="w-9 h-9 rounded-lg flex items-center justify-center"
+								style={{
+									background:
+										"linear-gradient(135deg, #fbbf24 0%, #f97316 100%)",
+								}}
+							>
 								<Crown size={18} className="text-white" />
 							</div>
 							<div>
 								<h1 className="text-lg font-semibold text-surface-900">
 									Premium Analysis
 								</h1>
-								<p className="text-xs text-surface-400">
+								<p className="text-xs text-surface-500">
 									Deep AI-powered month-end business report
 								</p>
 							</div>
 						</div>
 					</div>
 
-					{/* Monthly status badge */}
-					<div
-						className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
-							status?.used
-								? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-								: "bg-amber-50 text-amber-700 border border-amber-200"
-						}`}
-					>
-						{status?.used ? (
-							<>
-								<CheckCircle2 size={12} />
-								Used for {currentMonth}
-							</>
-						) : (
-							<>
-								<Zap size={12} />1 analysis available
-							</>
-						)}
+					<div className="flex flex-col items-end gap-2">
+						{/* Monthly status badge */}
+						<div
+							className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
+								isPremiumLimitReached
+									? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+									: "bg-amber-50 text-amber-700 border border-amber-200"
+							}`}
+						>
+							{isPremiumLimitReached ? (
+								<>
+									<CheckCircle2 size={12} />
+									Used for this month
+								</>
+							) : (
+								<>
+									<Zap size={12} />
+									{isQuotaKnown && Number.isFinite(premiumQuota.limit)
+										? `${premiumQuota.remaining} analysis${premiumQuota.remaining === 1 ? "" : "es"} available`
+										: "New analysis available"}
+								</>
+							)}
+						</div>
+
+						<button
+							onClick={handleGenerate}
+							disabled={loading || isPremiumLimitReached}
+							className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold text-white shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+							style={{
+								background: "linear-gradient(90deg, #f59e0b 0%, #ea580c 100%)",
+							}}
+						>
+							{loading ? (
+								<Loader2 size={14} className="animate-spin" />
+							) : (
+								<Sparkles size={14} />
+							)}
+							{isPremiumLimitReached
+								? "Used This Month"
+								: "New Premium Analysis"}
+						</button>
 					</div>
 				</div>
 
 				{/* ── Explainer Card ──────────────────────── */}
 				{!result && !loading && (
-					<div className="bg-linear-to-br from-amber-50/80 via-orange-50/50 to-white rounded-xl border border-amber-200/60 p-6">
+					<div className="bg-white rounded-xl border border-amber-200/70 p-6">
 						<div className="flex items-start gap-4">
-							<div className="w-12 h-12 rounded-xl bg-linear-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0">
+							<div
+								className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0"
+								style={{
+									background:
+										"linear-gradient(135deg, #fbbf24 0%, #f97316 100%)",
+								}}
+							>
 								<Sparkles size={22} className="text-white" />
 							</div>
 							<div className="space-y-3">
@@ -508,7 +529,7 @@ export default function PremiumAnalysisPage() {
 									))}
 								</div>
 
-								{status?.used ? (
+								{isPremiumLimitReached ? (
 									<div className="flex items-center gap-2 text-xs text-surface-400 bg-white rounded-lg px-3 py-2 border border-surface-200">
 										<Lock size={12} />
 										You&apos;ve used your {currentMonth} analysis. Next one
@@ -518,7 +539,11 @@ export default function PremiumAnalysisPage() {
 									<button
 										onClick={handleGenerate}
 										disabled={loading}
-										className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white bg-linear-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 shadow-sm transition-all"
+										className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-all"
+										style={{
+											background:
+												"linear-gradient(90deg, #f59e0b 0%, #ea580c 100%)",
+										}}
 									>
 										<Crown size={15} />
 										Generate Premium Report
@@ -535,7 +560,13 @@ export default function PremiumAnalysisPage() {
 					<div className="bg-white rounded-xl border border-surface-200 p-8">
 						<div className="max-w-sm mx-auto space-y-6">
 							<div className="text-center">
-								<div className="w-14 h-14 rounded-2xl bg-linear-to-br from-amber-400 to-orange-500 flex items-center justify-center mx-auto mb-4">
+								<div
+									className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+									style={{
+										background:
+											"linear-gradient(135deg, #fbbf24 0%, #f97316 100%)",
+									}}
+								>
 									<Crown size={26} className="text-white animate-pulse" />
 								</div>
 								<h3 className="text-sm font-semibold text-surface-900">
@@ -544,18 +575,9 @@ export default function PremiumAnalysisPage() {
 								<p className="text-xs text-surface-400 mt-1">
 									This may take 30–60 seconds
 								</p>
-								<div className="mt-3">
-									<div className="flex items-center justify-between text-[11px] text-surface-500 mb-1">
-										<span>Progress</span>
-										<span className="font-mono">{progressPct}%</span>
-									</div>
-									<div className="h-1.5 rounded-full bg-surface-200 overflow-hidden">
-										<div
-											className="h-full rounded-full bg-amber-500 transition-all duration-300"
-											style={{ width: `${progressPct}%` }}
-										/>
-									</div>
-								</div>
+								<p className="text-[11px] text-surface-500 mt-3">
+									Track progress from the single background progress bar above.
+								</p>
 							</div>
 
 							<div className="space-y-3">
@@ -621,10 +643,6 @@ export default function PremiumAnalysisPage() {
 						{/* Meta bar */}
 						<div className="flex items-center justify-between bg-white rounded-xl border border-surface-200 px-5 py-3">
 							<div className="flex items-center gap-3">
-								<ProviderBadge
-									generatedBy={result.generated_by}
-									label={result.provider_label}
-								/>
 								{result.cached && (
 									<span className="inline-flex items-center gap-1 text-xs text-surface-400">
 										<Clock size={11} />
@@ -652,7 +670,7 @@ export default function PremiumAnalysisPage() {
 
 						{/* Report content */}
 						<div className="bg-white rounded-xl border border-surface-200 overflow-hidden">
-							<div className="px-6 py-4 border-b border-surface-100 bg-linear-to-r from-amber-50/50 to-white">
+							<div className="px-6 py-4 border-b border-surface-100 bg-amber-50/60">
 								<div className="flex items-center gap-2">
 									<Crown size={16} className="text-amber-500" />
 									<h2 className="text-sm font-semibold text-surface-900">

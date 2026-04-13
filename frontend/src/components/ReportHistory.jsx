@@ -17,7 +17,7 @@ import { useAuth } from "../contexts/AuthContext";
 
 /**
  * ReportHistory — Shows a list of previously generated analysis reports.
- * Each card displays date, filename, AI provider, narrative preview.
+ * Each card displays date, filename, and narrative preview.
  * Clicking loads the full report into the Dashboard.
  */
 export default function ReportHistory({
@@ -69,24 +69,6 @@ export default function ReportHistory({
 		}
 	};
 
-	const getProviderInfo = (provider) => {
-		switch (provider) {
-			case "gemini":
-				return { label: "Gemini", color: "text-blue-600 bg-blue-50" };
-			case "groq":
-				return { label: "Groq", color: "text-orange-600 bg-orange-50" };
-			case "claude":
-				return { label: "Claude", color: "text-purple-600 bg-purple-50" };
-			case "rule_based":
-				return {
-					label: "Rule-based",
-					color: "text-surface-500 bg-surface-100",
-				};
-			default:
-				return { label: "AI", color: "text-gold-600 bg-gold-50" };
-		}
-	};
-
 	if (loading) {
 		return (
 			<div className="card p-8 text-center">
@@ -117,7 +99,6 @@ export default function ReportHistory({
 
 			<div className="space-y-2.5">
 				{reports.map((report) => {
-					const provider = getProviderInfo(report.ai_provider);
 					return (
 						<div
 							key={report.id}
@@ -150,11 +131,6 @@ export default function ReportHistory({
 											<span className="text-surface-400">
 												{formatTime(report.date)}
 											</span>
-										</span>
-										<span
-											className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${provider.color}`}
-										>
-											{provider.label}
 										</span>
 									</div>
 

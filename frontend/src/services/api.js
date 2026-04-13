@@ -237,6 +237,15 @@ export async function submitContactInquiry(payload) {
 	return data;
 }
 
+export async function submitSubscriberEmail(email) {
+	const { data } = await API.post(
+		"/api/subscribers",
+		{ email },
+		{ headers: { "Content-Type": "application/json" } },
+	);
+	return data;
+}
+
 // ──────────────────── Strategy Advisor ────────────────────
 
 export async function getStrategyAdvice(

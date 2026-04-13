@@ -17,13 +17,13 @@ const values = [
 		icon: BarChart3,
 	},
 	{
-		title: "Action Over Dashboards",
+		title: "Action Over Aesthetics",
 		description:
-			"We care less about vanity charts and more about recommendations owners can execute this week.",
+			"From agency campaigns to Yukti recommendations, output must be useful in the real world, not just visually impressive.",
 		icon: Rocket,
 	},
 	{
-		title: "Built for Bharat",
+		title: "Built for Indian Reality",
 		description:
 			"Yukti is tuned for Indian business realities: tight margins, local seasonality, and high operational complexity.",
 		icon: Building2,
@@ -36,25 +36,140 @@ const values = [
 	},
 ];
 
+const yuktiProblems = [
+	{
+		title: "The Problem",
+		description:
+			"Most SMB owners collect data daily but decide weekly or monthly. By the time patterns are visible in spreadsheets, margin loss is already locked in.",
+		icon: Target,
+	},
+	{
+		title: "The Yukti Solution",
+		description:
+			"Yukti converts raw sales and operations data into a weekly action plan using a 6-layer pipeline: ingestion, schema intelligence, analytics, prediction, decision scoring, and AI strategy guidance.",
+		icon: Rocket,
+	},
+];
+
+const storyChapters = [
+	{
+		step: "01",
+		title: "Field Reality",
+		body: "Mud Media worked with growth-stage businesses across branding, websites, and performance execution. The same issue surfaced repeatedly: teams had activity, but no decision clarity.",
+	},
+	{
+		step: "02",
+		title: "Pattern Discovery",
+		body: "Across 35,800+ business failure and breakdown scenarios, we identified recurring causes: inventory mismatch, delayed diagnosis, promo burn, and pricing drift.",
+	},
+	{
+		step: "03",
+		title: "Productized Intelligence",
+		body: "We turned those learnings into Yukti, a product under Mud Media, so decision intelligence could scale beyond consulting hours and reach every serious SMB operator.",
+	},
+];
+
 export default function AboutMudMediaPage() {
 	return (
 		<div className="min-h-screen bg-slate-50 px-6 py-16 lg:px-8">
 			<div className="mx-auto max-w-6xl">
 				<div className="rounded-3xl border border-slate-200 bg-white p-8 md:p-12 shadow-sm">
 					<p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
+						About Yukti
+					</p>
+					<h1 className="mt-3 text-2xl font-black tracking-tight text-slate-900 md:text-4xl">
+						Yukti turns everyday business data into clear weekly decisions.
+					</h1>
+					<p className="mt-5 max-w-5xl text-base leading-relaxed text-slate-600 md:text-md">
+						Built for Indian SMB operators, Yukti analyzes sales, inventory, and
+						operational data through a 6-layer intelligence pipeline to answer
+						the only question that matters: what should I do next? From demand
+						forecasting and anomaly alerts to risk scoring and action-ready
+						recommendations, Yukti helps teams reduce guesswork, protect margin,
+						and make faster, higher-confidence decisions every week.
+					</p>
+				</div>
+
+				<div className="mt-8 grid gap-5 md:grid-cols-2">
+					{yuktiProblems.map((item) => {
+						const Icon = item.icon;
+						return (
+							<div
+								key={item.title}
+								className="rounded-2xl border border-slate-200 bg-white p-6"
+							>
+								<div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+									<Icon size={18} />
+								</div>
+								<h2 className="text-2xl font-bold text-slate-900">
+									{item.title}
+								</h2>
+								<p className="mt-3 text-sm leading-relaxed text-slate-600">
+									{item.description}
+								</p>
+							</div>
+						);
+					})}
+				</div>
+
+				<div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 md:p-8">
+					<h2 className="text-2xl font-bold text-slate-900">
+						The Story Behind Yukti
+					</h2>
+					<div className="mt-5 grid gap-4 md:grid-cols-3">
+						{storyChapters.map((chapter) => (
+							<div
+								key={chapter.step}
+								className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+							>
+								<p className="text-xs font-bold tracking-wider text-slate-500">
+									{chapter.step}
+								</p>
+								<h3 className="mt-2 text-base font-bold text-slate-900">
+									{chapter.title}
+								</h3>
+								<p className="mt-2 text-sm leading-relaxed text-slate-600">
+									{chapter.body}
+								</p>
+							</div>
+						))}
+					</div>
+				</div>
+
+				<div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 md:p-8">
+					<p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
 						About Mud Media
 					</p>
-					<h1 className="mt-3 text-4xl font-black tracking-tight text-slate-900 md:text-5xl">
-						We built Yukti so Indian SMB owners can decide with confidence.
-					</h1>
-					<p className="mt-5 max-w-4xl text-base leading-relaxed text-slate-600 md:text-lg">
-						Indian retail, F&B, and e-commerce businesses generate data every
-						day, but most still rely on delayed reports and intuition for
-						critical business decisions. Hiring analysts is expensive.
-						Enterprise BI tools are overbuilt for SMB realities. Yukti exists to
-						close that gap with fast, affordable, and practical decision
-						intelligence.
+					<h2 className="mt-2 text-2xl font-bold text-slate-900">
+						The parent company building brands, products, and growth systems.
+					</h2>
+					<p className="mt-3 text-sm leading-relaxed text-slate-600 md:text-base">
+						Mud Media is a creative and growth company based in Coimbatore. We
+						work across web development, branding, digital marketing, and
+						content systems to help businesses launch faster and grow with
+						clarity. Yukti is one of our core products, built from our direct
+						experience with operational bottlenecks in Indian SMBs.
 					</p>
+					<div className="mt-5 grid gap-4 sm:grid-cols-3">
+						<div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+							<h3 className="text-sm font-bold text-slate-900">Strategy</h3>
+							<p className="mt-1 text-xs text-slate-600">
+								Brand positioning, growth roadmaps, and campaign architecture.
+							</p>
+						</div>
+						<div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+							<h3 className="text-sm font-bold text-slate-900">Execution</h3>
+							<p className="mt-1 text-xs text-slate-600">
+								Web experiences, content systems, and conversion-led design.
+							</p>
+						</div>
+						<div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+							<h3 className="text-sm font-bold text-slate-900">Intelligence</h3>
+							<p className="mt-1 text-xs text-slate-600">
+								AI products like Yukti that turn data into weekly decisions.
+							</p>
+						</div>
+					</div>
 				</div>
 
 				<div className="mt-8 grid gap-5 md:grid-cols-2">
@@ -64,8 +179,9 @@ export default function AboutMudMediaPage() {
 						</div>
 						<h2 className="text-2xl font-bold text-slate-900">Our Mission</h2>
 						<p className="mt-3 text-sm leading-relaxed text-slate-600">
-							To make high-quality, AI-driven decision support accessible to
-							every Indian SMB team, regardless of analytics maturity.
+							Help Indian businesses move from reactive reporting to proactive,
+							weekly decision execution through accessible AI and practical
+							creative-growth systems.
 						</p>
 					</div>
 					<div className="rounded-2xl border border-slate-200 bg-white p-6">
@@ -74,46 +190,9 @@ export default function AboutMudMediaPage() {
 						</div>
 						<h2 className="text-2xl font-bold text-slate-900">Our Vision</h2>
 						<p className="mt-3 text-sm leading-relaxed text-slate-600">
-							A future where weekly, data-backed business decisions become the
-							default operating model for SMBs across India.
-						</p>
-					</div>
-				</div>
-
-				<div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 md:p-8">
-					<h2 className="text-2xl font-bold text-amber-900">
-						The Problem We Studied
-					</h2>
-					<p className="mt-3 text-sm leading-relaxed text-amber-900/90">
-						Before productizing Yukti, we studied patterns across 35,800+ Indian
-						business disasters and operational breakdowns. We repeatedly saw the
-						same root causes: stock mismatch, delayed diagnostics, pricing
-						drift, promo burn, and missed demand signals. This research directly
-						shaped Yukti's predictive pipeline and anomaly intelligence.
-					</p>
-				</div>
-
-				<div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 md:p-8">
-					<h2 className="text-2xl font-bold text-slate-900">Our Story</h2>
-					<div className="mt-4 space-y-4 text-sm leading-relaxed text-slate-600">
-						<p>
-							Mud Media started as a data-led growth and operations agency
-							working directly with Indian SMB operators. We built custom
-							analyses, recovery playbooks, and tactical recommendation systems
-							for every client. The outcomes were strong, but the model was too
-							manual to scale.
-						</p>
-						<p>
-							We realized the core challenge was not data availability. It was
-							actionability at speed. So we transformed years of field learnings
-							into Yukti, a SaaS platform built on a 6-layer data pipeline,
-							forecasting and anomaly models, and an AI strategy layer that
-							prioritizes practical weekly execution.
-						</p>
-						<p>
-							Today, Yukti helps business owners and operators spend less time
-							interpreting spreadsheets and more time improving margin,
-							inventory, and growth outcomes.
+							Build an ecosystem where every ambitious SMB can access the same
+							quality of intelligence, strategy, and execution that large
+							enterprises rely on.
 						</p>
 					</div>
 				</div>
@@ -144,7 +223,7 @@ export default function AboutMudMediaPage() {
 				</div>
 
 				<div className="mt-10 rounded-2xl border border-slate-200 bg-slate-900 p-6 text-white md:p-8">
-					<h2 className="text-2xl font-bold">Build with us</h2>
+					<h2 className="text-2xl font-bold whitecol">Build with us</h2>
 					<p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-300">
 						If you believe AI should improve real business outcomes, not just
 						reporting aesthetics, we'd love to connect.

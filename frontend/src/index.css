@@ -7,191 +7,191 @@
 		sans-serif;
 
 	/* Core design guide palette */
-	--color-primary-deep: #2a4466;
-	--color-accent-vibrant: #3d5ea1;
-	--color-accent-soft: #4394bf;
-	--color-pastel-base: #6cc4cc;
+	--color-primary-deep: #0f172a;
+	--color-accent-vibrant: #1e293b;
+	--color-accent-soft: #334155;
+	--color-pastel-base: #64748b;
 
 	/* Surface + semantic palette mapped to guide */
-	--color-surface-50: #f7fffa;
-	--color-surface-100: #eef8f5;
-	--color-surface-200: #dceff0;
-	--color-surface-300: #c8dfe3;
-	--color-surface-400: #9bc2cf;
-	--color-surface-500: #6f9bb1;
-	--color-surface-600: #4394bf;
-	--color-surface-700: #3d5ea1;
-	--color-surface-800: #2a4466;
-	--color-surface-900: #2a4466;
-	--color-surface-950: #1f3552;
+	--color-surface-50: #ffffff;
+	--color-surface-100: #f8fafc;
+	--color-surface-200: #e2e8f0;
+	--color-surface-300: #cbd5e1;
+	--color-surface-400: #94a3b8;
+	--color-surface-500: #64748b;
+	--color-surface-600: #475569;
+	--color-surface-700: #334155;
+	--color-surface-800: #1e293b;
+	--color-surface-900: #0f172a;
+	--color-surface-950: #020617;
 
 	/* Keep existing gold token references mapped to new accent family */
-	--color-gold-50: #f7fffa;
-	--color-gold-100: #e8f7f7;
-	--color-gold-200: #c7ebee;
-	--color-gold-300: #9ad9df;
-	--color-gold-400: #6cc4cc;
-	--color-gold-500: #4394bf;
-	--color-gold-600: #3d5ea1;
-	--color-gold-700: #2a4466;
-	--color-gold-800: #233a59;
-	--color-gold-900: #1e3049;
+	--color-gold-50: #ffffff;
+	--color-gold-100: #f8fafc;
+	--color-gold-200: #e2e8f0;
+	--color-gold-300: #cbd5e1;
+	--color-gold-400: #94a3b8;
+	--color-gold-500: #64748b;
+	--color-gold-600: #475569;
+	--color-gold-700: #334155;
+	--color-gold-800: #1e293b;
+	--color-gold-900: #0f172a;
 
-	--color-brand-50: #f7fffa;
-	--color-brand-100: #edf8fb;
-	--color-brand-200: #d4edf6;
-	--color-brand-300: #a9d8ea;
-	--color-brand-400: #6cc4cc;
-	--color-brand-500: #4394bf;
-	--color-brand-600: #3d5ea1;
-	--color-brand-700: #2a4466;
-	--color-brand-800: #223b5a;
-	--color-brand-900: #1c2f4a;
-	--color-brand-950: #16263d;
+	--color-brand-50: #ffffff;
+	--color-brand-100: #f8fafc;
+	--color-brand-200: #e2e8f0;
+	--color-brand-300: #cbd5e1;
+	--color-brand-400: #94a3b8;
+	--color-brand-500: #64748b;
+	--color-brand-600: #475569;
+	--color-brand-700: #334155;
+	--color-brand-800: #1e293b;
+	--color-brand-900: #0f172a;
+	--color-brand-950: #020617;
 
 	/* Override commonly used Tailwind utility families app-wide */
-	--color-indigo-50: #f7fffa;
-	--color-indigo-100: #e8f7f7;
-	--color-indigo-200: #c7ebee;
-	--color-indigo-300: #9ad9df;
-	--color-indigo-400: #6cc4cc;
-	--color-indigo-500: #4394bf;
-	--color-indigo-600: #3d5ea1;
-	--color-indigo-700: #2a4466;
-	--color-indigo-800: #233a59;
-	--color-indigo-900: #1e3049;
+	--color-indigo-50: #ffffff;
+	--color-indigo-100: #f8fafc;
+	--color-indigo-200: #e2e8f0;
+	--color-indigo-300: #cbd5e1;
+	--color-indigo-400: #94a3b8;
+	--color-indigo-500: #64748b;
+	--color-indigo-600: #475569;
+	--color-indigo-700: #334155;
+	--color-indigo-800: #1e293b;
+	--color-indigo-900: #0f172a;
 
-	--color-slate-50: #f7fffa;
-	--color-slate-100: #eef8f5;
-	--color-slate-200: #dceff0;
-	--color-slate-300: #c8dfe3;
-	--color-slate-400: #8aa9b8;
-	--color-slate-500: #5e8197;
-	--color-slate-600: #3d5ea1;
-	--color-slate-700: #2a4466;
-	--color-slate-800: #233a59;
-	--color-slate-900: #1e3049;
+	--color-slate-50: #ffffff;
+	--color-slate-100: #f8fafc;
+	--color-slate-200: #e2e8f0;
+	--color-slate-300: #cbd5e1;
+	--color-slate-400: #94a3b8;
+	--color-slate-500: #64748b;
+	--color-slate-600: #475569;
+	--color-slate-700: #334155;
+	--color-slate-800: #1e293b;
+	--color-slate-900: #0f172a;
 
-	--color-blue-50: #f7fffa;
-	--color-blue-100: #edf8fb;
-	--color-blue-200: #d4edf6;
-	--color-blue-300: #a9d8ea;
-	--color-blue-400: #6cc4cc;
-	--color-blue-500: #4394bf;
-	--color-blue-600: #3d5ea1;
-	--color-blue-700: #2a4466;
-	--color-blue-800: #233a59;
-	--color-blue-900: #1e3049;
+	--color-blue-50: #ffffff;
+	--color-blue-100: #f8fafc;
+	--color-blue-200: #e2e8f0;
+	--color-blue-300: #cbd5e1;
+	--color-blue-400: #94a3b8;
+	--color-blue-500: #64748b;
+	--color-blue-600: #475569;
+	--color-blue-700: #334155;
+	--color-blue-800: #1e293b;
+	--color-blue-900: #0f172a;
 
-	--color-cyan-50: #f7fffa;
-	--color-cyan-100: #e8f7f7;
-	--color-cyan-200: #c7ebee;
-	--color-cyan-300: #9ad9df;
-	--color-cyan-400: #6cc4cc;
-	--color-cyan-500: #4394bf;
-	--color-cyan-600: #3d5ea1;
-	--color-cyan-700: #2a4466;
-	--color-cyan-800: #233a59;
-	--color-cyan-900: #1e3049;
+	--color-cyan-50: #ffffff;
+	--color-cyan-100: #f8fafc;
+	--color-cyan-200: #e2e8f0;
+	--color-cyan-300: #cbd5e1;
+	--color-cyan-400: #94a3b8;
+	--color-cyan-500: #64748b;
+	--color-cyan-600: #475569;
+	--color-cyan-700: #334155;
+	--color-cyan-800: #1e293b;
+	--color-cyan-900: #0f172a;
 
-	--color-teal-50: #f7fffa;
-	--color-teal-100: #e8f7f7;
-	--color-teal-200: #c7ebee;
-	--color-teal-300: #9ad9df;
-	--color-teal-400: #6cc4cc;
-	--color-teal-500: #4394bf;
-	--color-teal-600: #3d5ea1;
-	--color-teal-700: #2a4466;
-	--color-teal-800: #233a59;
-	--color-teal-900: #1e3049;
+	--color-teal-50: #ffffff;
+	--color-teal-100: #f8fafc;
+	--color-teal-200: #e2e8f0;
+	--color-teal-300: #cbd5e1;
+	--color-teal-400: #94a3b8;
+	--color-teal-500: #64748b;
+	--color-teal-600: #475569;
+	--color-teal-700: #334155;
+	--color-teal-800: #1e293b;
+	--color-teal-900: #0f172a;
 
-	--color-purple-50: #f7fffa;
-	--color-purple-100: #edf8fb;
-	--color-purple-200: #d4edf6;
-	--color-purple-300: #a9d8ea;
-	--color-purple-400: #6cc4cc;
-	--color-purple-500: #4394bf;
-	--color-purple-600: #3d5ea1;
-	--color-purple-700: #2a4466;
-	--color-purple-800: #233a59;
-	--color-purple-900: #1e3049;
+	--color-purple-50: #ffffff;
+	--color-purple-100: #f8fafc;
+	--color-purple-200: #e2e8f0;
+	--color-purple-300: #cbd5e1;
+	--color-purple-400: #94a3b8;
+	--color-purple-500: #64748b;
+	--color-purple-600: #475569;
+	--color-purple-700: #334155;
+	--color-purple-800: #1e293b;
+	--color-purple-900: #0f172a;
 
-	--color-pink-50: #f7fffa;
-	--color-pink-100: #edf8fb;
-	--color-pink-200: #d4edf6;
-	--color-pink-300: #a9d8ea;
-	--color-pink-400: #6cc4cc;
-	--color-pink-500: #4394bf;
-	--color-pink-600: #3d5ea1;
-	--color-pink-700: #2a4466;
-	--color-pink-800: #233a59;
-	--color-pink-900: #1e3049;
+	--color-pink-50: #ffffff;
+	--color-pink-100: #f8fafc;
+	--color-pink-200: #e2e8f0;
+	--color-pink-300: #cbd5e1;
+	--color-pink-400: #94a3b8;
+	--color-pink-500: #64748b;
+	--color-pink-600: #475569;
+	--color-pink-700: #334155;
+	--color-pink-800: #1e293b;
+	--color-pink-900: #0f172a;
 
-	--color-red-50: #f7fffa;
-	--color-red-100: #edf8fb;
-	--color-red-200: #d4edf6;
-	--color-red-300: #a9d8ea;
-	--color-red-400: #6cc4cc;
-	--color-red-500: #4394bf;
-	--color-red-600: #3d5ea1;
-	--color-red-700: #2a4466;
-	--color-red-800: #233a59;
-	--color-red-900: #1e3049;
+	--color-red-50: #ffffff;
+	--color-red-100: #f8fafc;
+	--color-red-200: #e2e8f0;
+	--color-red-300: #cbd5e1;
+	--color-red-400: #94a3b8;
+	--color-red-500: #64748b;
+	--color-red-600: #475569;
+	--color-red-700: #334155;
+	--color-red-800: #1e293b;
+	--color-red-900: #0f172a;
 
-	--color-amber-50: #f7fffa;
-	--color-amber-100: #e8f7f7;
-	--color-amber-200: #c7ebee;
-	--color-amber-300: #9ad9df;
-	--color-amber-400: #6cc4cc;
-	--color-amber-500: #4394bf;
-	--color-amber-600: #3d5ea1;
-	--color-amber-700: #2a4466;
-	--color-amber-800: #233a59;
-	--color-amber-900: #1e3049;
+	--color-amber-50: #ffffff;
+	--color-amber-100: #f8fafc;
+	--color-amber-200: #e2e8f0;
+	--color-amber-300: #cbd5e1;
+	--color-amber-400: #94a3b8;
+	--color-amber-500: #64748b;
+	--color-amber-600: #475569;
+	--color-amber-700: #334155;
+	--color-amber-800: #1e293b;
+	--color-amber-900: #0f172a;
 
-	--color-yellow-50: #f7fffa;
-	--color-yellow-100: #e8f7f7;
-	--color-yellow-200: #c7ebee;
-	--color-yellow-300: #9ad9df;
-	--color-yellow-400: #6cc4cc;
-	--color-yellow-500: #4394bf;
-	--color-yellow-600: #3d5ea1;
-	--color-yellow-700: #2a4466;
-	--color-yellow-800: #233a59;
-	--color-yellow-900: #1e3049;
+	--color-yellow-50: #ffffff;
+	--color-yellow-100: #f8fafc;
+	--color-yellow-200: #e2e8f0;
+	--color-yellow-300: #cbd5e1;
+	--color-yellow-400: #94a3b8;
+	--color-yellow-500: #64748b;
+	--color-yellow-600: #475569;
+	--color-yellow-700: #334155;
+	--color-yellow-800: #1e293b;
+	--color-yellow-900: #0f172a;
 
-	--color-orange-50: #f7fffa;
-	--color-orange-100: #e8f7f7;
-	--color-orange-200: #c7ebee;
-	--color-orange-300: #9ad9df;
-	--color-orange-400: #6cc4cc;
-	--color-orange-500: #4394bf;
-	--color-orange-600: #3d5ea1;
-	--color-orange-700: #2a4466;
-	--color-orange-800: #233a59;
-	--color-orange-900: #1e3049;
+	--color-orange-50: #ffffff;
+	--color-orange-100: #f8fafc;
+	--color-orange-200: #e2e8f0;
+	--color-orange-300: #cbd5e1;
+	--color-orange-400: #94a3b8;
+	--color-orange-500: #64748b;
+	--color-orange-600: #475569;
+	--color-orange-700: #334155;
+	--color-orange-800: #1e293b;
+	--color-orange-900: #0f172a;
 
-	--color-green-50: #f7fffa;
-	--color-green-100: #e8f7f7;
-	--color-green-200: #c7ebee;
-	--color-green-300: #9ad9df;
-	--color-green-400: #6cc4cc;
-	--color-green-500: #4394bf;
-	--color-green-600: #3d5ea1;
-	--color-green-700: #2a4466;
-	--color-green-800: #233a59;
-	--color-green-900: #1e3049;
+	--color-green-50: #ffffff;
+	--color-green-100: #f8fafc;
+	--color-green-200: #e2e8f0;
+	--color-green-300: #cbd5e1;
+	--color-green-400: #94a3b8;
+	--color-green-500: #64748b;
+	--color-green-600: #475569;
+	--color-green-700: #334155;
+	--color-green-800: #1e293b;
+	--color-green-900: #0f172a;
 
-	--color-emerald-50: #f7fffa;
-	--color-emerald-100: #e8f7f7;
-	--color-emerald-200: #c7ebee;
-	--color-emerald-300: #9ad9df;
-	--color-emerald-400: #6cc4cc;
-	--color-emerald-500: #4394bf;
-	--color-emerald-600: #3d5ea1;
-	--color-emerald-700: #2a4466;
-	--color-emerald-800: #233a59;
-	--color-emerald-900: #1e3049;
+	--color-emerald-50: #ffffff;
+	--color-emerald-100: #f8fafc;
+	--color-emerald-200: #e2e8f0;
+	--color-emerald-300: #cbd5e1;
+	--color-emerald-400: #94a3b8;
+	--color-emerald-500: #64748b;
+	--color-emerald-600: #475569;
+	--color-emerald-700: #334155;
+	--color-emerald-800: #1e293b;
+	--color-emerald-900: #0f172a;
 }
 
 /* ── Base ── */
@@ -201,8 +201,8 @@ html {
 }
 
 body {
-	background: #f7fffa;
-	color: #2a4466;
+	background: #ffffff;
+	color: #0f172a;
 }
 
 h1,
@@ -211,13 +211,13 @@ h3,
 h4 {
 	font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 	letter-spacing: -0.02em;
-	color: #2a4466;
+	color: #0f172a;
 }
 
 .app-shell-bg {
 	position: relative;
 	overflow-x: hidden;
-	background: #f7fffa;
+	background: #ffffff;
 }
 
 .app-shell-grid {
@@ -231,13 +231,13 @@ h4 {
 .app-shell-blob-a {
 	left: -8rem;
 	top: -4rem;
-	background: #6cc4cc;
+	background: #cbd5e1;
 }
 
 .app-shell-blob-b {
 	right: -10rem;
 	top: 22vh;
-	background: #4394bf;
+	background: #94a3b8;
 	animation-delay: 1.5s;
 }
 
@@ -252,11 +252,11 @@ h4 {
 	width: 100%;
 	max-width: 72rem;
 	margin: 0 auto;
-	border: 1px solid #dceff0;
+	border: 1px solid #e2e8f0;
 	border-radius: 1.5rem;
 	padding: 1.25rem;
-	background: #f7fffa;
-	box-shadow: 0 8px 24px rgba(42, 68, 102, 0.08);
+	background: #ffffff;
+	box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
 @media (min-width: 768px) {
@@ -294,53 +294,53 @@ h4 {
 
 /* ── Surfaces ── */
 .card {
-	background: #f7fffa;
-	border: 1px solid #dceff0;
+	background: #ffffff;
+	border: 1px solid #e2e8f0;
 	border-radius: 16px;
-	box-shadow: 0 8px 24px rgba(42, 68, 102, 0.08);
+	box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
 .card-elevated {
-	background: #f7fffa;
-	border: 1px solid #dceff0;
+	background: #ffffff;
+	border: 1px solid #e2e8f0;
 	border-radius: 16px;
-	box-shadow: 0 8px 24px rgba(42, 68, 102, 0.08);
+	box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
 }
 
 .card-hover {
-	background: #f7fffa;
-	border: 1px solid #dceff0;
+	background: #ffffff;
+	border: 1px solid #e2e8f0;
 	border-radius: 16px;
 	transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .card-hover:hover {
-	border-color: #6cc4cc;
-	box-shadow: 0 12px 32px rgba(42, 68, 102, 0.14);
+	border-color: #94a3b8;
+	box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
 	transform: translateY(-2px);
 }
 
 /* ── Input styling ── */
 .input-field {
-	background: #f7fffa;
-	border: 1px solid #c7ebee;
-	color: #2a4466;
+	background: #ffffff;
+	border: 1px solid #cbd5e1;
+	color: #0f172a;
 	border-radius: 8px;
 	font-size: 14px;
 	padding: 10px 14px;
 	transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .input-field::placeholder {
-	color: #5e8197;
+	color: #64748b;
 }
 .input-field:focus {
 	outline: none;
-	border-color: #4394bf;
-	box-shadow: 0 0 0 3px rgba(67, 148, 191, 0.2);
+	border-color: #334155;
+	box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.2);
 }
 
 /* ── Primary button ── */
 .btn-primary {
-	background: #2a4466;
+	background: #0f172a;
 	color: #ffffff;
 	font-weight: 600;
 	font-size: 14px;
@@ -350,8 +350,8 @@ h4 {
 	border: none;
 }
 .btn-primary:hover {
-	background: #3d5ea1;
-	box-shadow: 0 12px 32px rgba(42, 68, 102, 0.2);
+	background: #1e293b;
+	box-shadow: 0 12px 32px rgba(15, 23, 42, 0.2);
 	transform: translateY(-1px);
 }
 .btn-primary:disabled {
@@ -361,20 +361,23 @@ h4 {
 }
 
 .btn-secondary {
-	background: #f7fffa;
-	color: #2a4466;
+	background: #ffffff;
+	color: #0f172a;
 	font-weight: 500;
 	font-size: 14px;
 	padding: 10px 20px;
 	border-radius: 8px;
-	border: 1px solid #c7ebee;
+	border: 1px solid #cbd5e1;
 	transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .btn-secondary:hover {
-	background: rgba(108, 196, 204, 0.14);
-	border-color: #6cc4cc;
+	background: rgba(203, 213, 225, 0.32);
+	border-color: #94a3b8;
 }
 
+.whitecol {
+	color: #ffffff;
+}
 /* ── Animations ── */
 @keyframes fade-in-up {
 	from {
@@ -409,18 +412,18 @@ h4 {
 /* ── Charts ── */
 .recharts-cartesian-grid-horizontal line,
 .recharts-cartesian-grid-vertical line {
-	stroke: rgba(108, 196, 204, 0.4) !important;
+	stroke: rgba(148, 163, 184, 0.4) !important;
 }
 
 .recharts-text {
-	fill: rgba(42, 68, 102, 0.7) !important;
+	fill: rgba(15, 23, 42, 0.7) !important;
 	font-size: 11px !important;
 }
 
 /* ── Divider ── */
 .divider {
 	height: 1px;
-	background: #dceff0;
+	background: #e2e8f0;
 }
 
 /* ── Date picker ── */
@@ -434,32 +437,32 @@ tbody tr {
 }
 
 tbody tr:hover {
-	background: rgba(108, 196, 204, 0.12);
+	background: rgba(203, 213, 225, 0.24);
 }
 
 /* ── Status indicators ── */
 .status-positive {
-	color: #3d5ea1;
+	color: #334155;
 }
 .status-negative {
-	color: #2a4466;
+	color: #0f172a;
 }
 .status-warning {
-	color: #4394bf;
+	color: #475569;
 }
 .status-neutral {
-	color: rgba(42, 68, 102, 0.7);
+	color: rgba(15, 23, 42, 0.7);
 }
 
 /* ── Legacy class alias ── */
 .glass {
-	background: #f7fffa;
-	border: 1px solid #dceff0;
+	background: #ffffff;
+	border: 1px solid #e2e8f0;
 	border-radius: 12px;
 }
 
 .neural-bg {
-	background: #2a4466;
+	background: #0f172a;
 }
 
 /* ── Marketing + Auth visuals ── */
@@ -1128,4 +1131,192 @@ tbody tr:hover {
 		transform: none;
 		transition: none;
 	}
+}
+
+/* ── Global Monochrome Hard Override ── */
+.landing-shell,
+.auth-shell {
+	background: linear-gradient(
+		165deg,
+		#ffffff 0%,
+		#f8fafc 50%,
+		#f1f5f9 100%
+	) !important;
+}
+
+.landing-aurora-a,
+.landing-aurora-b,
+.auth-bg-glow-a,
+.auth-bg-glow-b {
+	background: #cbd5e1 !important;
+}
+
+.landing-nav,
+.landing-glass,
+.landing-feature-card,
+.landing-step-card,
+.landing-stat-card,
+.landing-cta,
+.auth-hero-card,
+.auth-form-card,
+.auth-float-card,
+.auth-v2-story,
+.auth-v2-metric-card,
+.auth-v2-rail-card,
+.auth-v2-panel,
+.landing-scene-core,
+.landing-orbit {
+	background: #ffffff !important;
+	border-color: #cbd5e1 !important;
+	color: #0f172a !important;
+	box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08) !important;
+}
+
+.landing-btn-solid,
+.auth-submit-btn {
+	background: #0f172a !important;
+	color: #ffffff !important;
+}
+
+.landing-btn-solid:hover,
+.auth-submit-btn:hover {
+	background: #1e293b !important;
+}
+
+.landing-btn-ghost,
+.auth-back-btn,
+.auth-google-btn,
+.auth-input,
+.auth-v2-chip,
+.auth-v2-badge,
+.auth-v2-mobile-chip {
+	background: #ffffff !important;
+	border-color: #cbd5e1 !important;
+	color: #0f172a !important;
+}
+
+.auth-divider,
+.auth-v2-mobile-story {
+	border-color: #cbd5e1 !important;
+	background: #e2e8f0 !important;
+}
+
+.landing-shell .text-cyan-100,
+.landing-shell .text-cyan-100\/85,
+.landing-shell .text-cyan-200,
+.landing-shell .text-cyan-200\/70,
+.auth-shell .text-cyan-100,
+.auth-shell .text-cyan-200,
+.auth-shell .text-cyan-300,
+.landing-shell .text-slate-200,
+.landing-shell .text-slate-200\/90,
+.landing-shell .text-slate-300,
+.auth-shell .text-slate-200,
+.auth-shell .text-slate-300,
+.auth-shell .text-slate-400,
+.landing-shell .text-slate-900,
+.auth-shell .text-slate-900,
+.landing-shell .text-white,
+.auth-shell .text-white {
+	color: #0f172a !important;
+}
+
+/* ── Icons Only: Colorful ── */
+svg.lucide {
+	color: #3b82f6 !important;
+	stroke: currentColor;
+}
+
+svg.lucide.text-slate-900,
+svg.lucide.text-slate-800,
+svg.lucide.text-slate-700,
+svg.lucide.text-slate-600,
+svg.lucide.text-slate-500,
+svg.lucide.text-surface-900,
+svg.lucide.text-surface-800,
+svg.lucide.text-surface-700,
+svg.lucide.text-surface-600,
+svg.lucide.text-surface-500 {
+	color: #3b82f6 !important;
+}
+
+svg.lucide.text-red-900,
+svg.lucide.text-red-800,
+svg.lucide.text-red-700,
+svg.lucide.text-red-600,
+svg.lucide.text-red-500,
+svg.lucide.text-red-400 {
+	color: #ef4444 !important;
+}
+
+svg.lucide.text-amber-900,
+svg.lucide.text-amber-800,
+svg.lucide.text-amber-700,
+svg.lucide.text-amber-600,
+svg.lucide.text-amber-500,
+svg.lucide.text-amber-400,
+svg.lucide.text-yellow-700,
+svg.lucide.text-yellow-600,
+svg.lucide.text-yellow-500 {
+	color: #f59e0b !important;
+}
+
+svg.lucide.text-green-900,
+svg.lucide.text-green-800,
+svg.lucide.text-green-700,
+svg.lucide.text-green-600,
+svg.lucide.text-green-500,
+svg.lucide.text-green-400,
+svg.lucide.text-emerald-900,
+svg.lucide.text-emerald-800,
+svg.lucide.text-emerald-700,
+svg.lucide.text-emerald-600,
+svg.lucide.text-emerald-500,
+svg.lucide.text-emerald-400 {
+	color: #22c55e !important;
+}
+
+svg.lucide.text-cyan-900,
+svg.lucide.text-cyan-800,
+svg.lucide.text-cyan-700,
+svg.lucide.text-cyan-600,
+svg.lucide.text-cyan-500,
+svg.lucide.text-cyan-400,
+svg.lucide.text-teal-900,
+svg.lucide.text-teal-800,
+svg.lucide.text-teal-700,
+svg.lucide.text-teal-600,
+svg.lucide.text-teal-500,
+svg.lucide.text-teal-400 {
+	color: #06b6d4 !important;
+}
+
+svg.lucide.text-blue-900,
+svg.lucide.text-blue-800,
+svg.lucide.text-blue-700,
+svg.lucide.text-blue-600,
+svg.lucide.text-blue-500,
+svg.lucide.text-blue-400,
+svg.lucide.text-indigo-900,
+svg.lucide.text-indigo-800,
+svg.lucide.text-indigo-700,
+svg.lucide.text-indigo-600,
+svg.lucide.text-indigo-500,
+svg.lucide.text-indigo-400 {
+	color: #3b82f6 !important;
+}
+
+svg.lucide.text-purple-900,
+svg.lucide.text-purple-800,
+svg.lucide.text-purple-700,
+svg.lucide.text-purple-600,
+svg.lucide.text-purple-500,
+svg.lucide.text-purple-400,
+svg.lucide.text-pink-900,
+svg.lucide.text-pink-800,
+svg.lucide.text-pink-700,
+svg.lucide.text-pink-600,
+svg.lucide.text-pink-500,
+svg.lucide.text-pink-400 {
+	color: #a855f7 !important;
 }

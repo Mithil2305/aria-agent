@@ -61,26 +61,26 @@ export default function AppLayout() {
 	const activityTone =
 		activity.status === "running"
 			? {
-					wrap: "border-[#6CC4CC] bg-[#E8F7F7]/70",
-					icon: "text-[#2A4466]",
-					text: "text-[#2A4466]",
-					subtle: "text-[#2A4466]/80",
-					bar: "bg-[#3D5EA1]",
+					wrap: "border-slate-300 bg-slate-50",
+					icon: "text-slate-800",
+					text: "text-slate-800",
+					subtle: "text-slate-600",
+					bar: "bg-slate-800",
 				}
 			: activity.status === "success"
 				? {
-						wrap: "border-[#6CC4CC] bg-[#E8F7F7]/70",
-						icon: "text-[#3D5EA1]",
-						text: "text-[#2A4466]",
-						subtle: "text-[#2A4466]/80",
-						bar: "bg-[#3D5EA1]",
+						wrap: "border-slate-300 bg-slate-50",
+						icon: "text-slate-700",
+						text: "text-slate-800",
+						subtle: "text-slate-600",
+						bar: "bg-slate-700",
 					}
 				: {
-						wrap: "border-[#6CC4CC] bg-[#E8F7F7]/70",
-						icon: "text-[#2A4466]",
-						text: "text-[#2A4466]",
-						subtle: "text-[#2A4466]/80",
-						bar: "bg-[#2A4466]",
+						wrap: "border-slate-300 bg-slate-50",
+						icon: "text-slate-800",
+						text: "text-slate-800",
+						subtle: "text-slate-600",
+						bar: "bg-slate-800",
 					};
 
 	return (
@@ -90,11 +90,11 @@ export default function AppLayout() {
 			<div className="app-shell-blob app-shell-blob-b pointer-events-none" />
 
 			{/* Mobile top bar */}
-			<header className="lg:hidden fixed top-0 left-0 right-0 z-50 border-b border-[#C7EBEE] bg-[#F7FFFA]/95 backdrop-blur-xl">
+			<header className="lg:hidden fixed top-0 left-0 right-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
 				<div className="px-4 h-14 flex items-center justify-between">
 					<button
 						onClick={() => setMobileNavOpen((prev) => !prev)}
-						className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-[#C7EBEE] bg-[#F7FFFA] text-[#2A4466]"
+						className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-slate-300 bg-white text-slate-800"
 						aria-label="Toggle navigation"
 					>
 						{mobileNavOpen ? <X size={18} /> : <Menu size={18} />}
@@ -112,7 +112,7 @@ export default function AppLayout() {
 					</button>
 					<button
 						onClick={() => navigate("/profile")}
-						className="w-9 h-9 rounded-full bg-[#E8F7F7] border border-[#C7EBEE] flex items-center justify-center text-[11px] font-semibold text-[#2A4466]"
+						className="w-9 h-9 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-[11px] font-semibold text-slate-800"
 					>
 						{initials}
 					</button>
@@ -130,7 +130,7 @@ export default function AppLayout() {
 
 			{/* Sidebar */}
 			<aside
-				className={`fixed top-0 left-0 h-screen w-72 max-w-[85vw] bg-[#F7FFFA]/95 border-r border-[#C7EBEE] flex flex-col z-50 backdrop-blur-xl transition-transform duration-300 lg:w-64 lg:max-w-none ${
+				className={`fixed top-0 left-0 h-screen w-72 max-w-[85vw] bg-white/95 border-r border-slate-200 flex flex-col z-50 backdrop-blur-xl transition-transform duration-300 lg:w-64 lg:max-w-none ${
 					mobileNavOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
 				}`}
 			>
@@ -147,9 +147,9 @@ export default function AppLayout() {
 							size={32}
 							showText
 							subtitle="Business Intelligence"
-							markClassName="text-[#2A4466]"
-							textClassName="text-base text-[#2A4466]"
-							subtitleClassName="text-[#2A4466]/55"
+							markClassName="text-slate-900"
+							textClassName="text-base text-slate-900"
+							subtitleClassName="text-slate-500"
 						/>
 					</button>
 				</div>
@@ -158,7 +158,7 @@ export default function AppLayout() {
 
 				{/* Navigation */}
 				<nav className="flex-1 px-3 py-4 space-y-0.5">
-					<p className="px-3 pb-2 text-[10px] font-medium text-[#2A4466]/55 uppercase tracking-wider">
+					<p className="px-3 pb-2 text-[10px] font-medium text-slate-500 uppercase tracking-wider">
 						Menu
 					</p>
 					{[
@@ -178,8 +178,8 @@ export default function AppLayout() {
 							className={({ isActive }) =>
 								`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150 ${
 									isActive
-										? "bg-[#E8F7F7] text-[#2A4466] border border-[#6CC4CC]"
-										: "text-[#3D5EA1] hover:text-[#2A4466] hover:bg-[#E8F7F7]/80"
+										? "bg-slate-100 text-slate-900 border border-slate-300"
+										: "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
 								}`
 							}
 						>
@@ -198,31 +198,31 @@ export default function AppLayout() {
 							navigate("/profile");
 							setMobileNavOpen(false);
 						}}
-						className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-[#E8F7F7]/80 transition-all group"
+						className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-left hover:bg-slate-100 transition-all group"
 					>
-						<div className="w-8 h-8 rounded-full bg-[#E8F7F7] border border-[#6CC4CC] flex items-center justify-center">
-							<span className="text-[11px] font-semibold text-[#2A4466]">
+						<div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center">
+							<span className="text-[11px] font-semibold text-slate-800">
 								{initials}
 							</span>
 						</div>
 						<div className="flex-1 min-w-0">
-							<p className="text-[13px] text-[#2A4466] font-medium truncate">
+							<p className="text-[13px] text-slate-900 font-medium truncate">
 								{userProfile?.ownerName || user?.displayName || "User"}
 							</p>
-							<p className="text-[11px] text-[#2A4466]/55 truncate">
+							<p className="text-[11px] text-slate-500 truncate">
 								{userProfile?.businessName || ""}
 							</p>
 						</div>
 						<Settings
 							size={14}
-							className="text-[#4394BF] group-hover:text-[#2A4466] transition-colors shrink-0"
+							className="text-slate-500 group-hover:text-slate-800 transition-colors shrink-0"
 							strokeWidth={1.5}
 						/>
 					</button>
 
 					<button
 						onClick={handleLogout}
-						className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-[13px] font-medium text-[#2A4466]/65 hover:text-[#2A4466] hover:bg-[#E8F7F7]/80 transition-all"
+						className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-[13px] font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-all"
 					>
 						<LogOut size={15} className="shrink-0" strokeWidth={1.5} />
 						<span>Sign Out</span>
@@ -306,7 +306,7 @@ export default function AppLayout() {
 							activity.type === "prediction" && (
 								<button
 									onClick={() => navigate("/dashboard")}
-									className="ml-auto text-xs px-3 py-1.5 rounded-md border border-[#6CC4CC] bg-[#F7FFFA] text-[#2A4466] hover:bg-[#E8F7F7]"
+									className="ml-auto text-xs px-3 py-1.5 rounded-md border border-slate-300 bg-white text-slate-800 hover:bg-slate-100"
 								>
 									<Sparkles size={12} className="inline mr-1" />
 									View Results

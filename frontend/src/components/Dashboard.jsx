@@ -190,7 +190,7 @@ export default function Dashboard({
 			pdf.setFont("helvetica", "normal");
 			pdf.setFontSize(10);
 			pdf.text(
-				`Generated: ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}  |  ${rowCount} data points analysed  |  Powered by ${aiProvider === "gemini" ? "Gemini AI" : aiProvider === "groq" ? "Groq AI" : aiProvider === "claude" ? "Claude AI" : "Yukti Engine"}`,
+				`Generated: ${new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}  |  ${rowCount} data points analysed`,
 				M,
 				34,
 			);
@@ -597,9 +597,6 @@ export default function Dashboard({
 					previousReportDate={previousReportDate}
 				/>
 
-				{/* AI Provider Badge */}
-				<AIProviderBadge provider={aiProvider} />
-
 				{/* Tabs */}
 				<div className="flex md:flex-wrap items-center gap-1 mb-6 p-1 bg-surface-100 rounded-xl border border-surface-300 overflow-x-auto md:overflow-visible">
 					{TABS.map((tab) => {
@@ -816,32 +813,6 @@ function WhatChangedStrip({ summary, previousReportDate }) {
 					);
 				})}
 			</div>
-		</div>
-	);
-}
-
-/* ================================================================
-   AI PROVIDER BADGE
-   ================================================================ */
-
-function AIProviderBadge({ provider }) {
-	if (!provider || provider === "rule_based") return null;
-
-	const providerLabel =
-		provider === "gemini"
-			? "Gemini AI"
-			: provider === "groq"
-				? "Groq AI"
-				: provider === "claude"
-					? "Claude AI"
-					: "AI";
-
-	return (
-		<div className="flex items-center gap-2 mb-5">
-			<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-linear-to-r from-indigo-50 to-purple-50 border border-indigo-200 text-indigo-600 text-[10px] font-semibold uppercase tracking-wider">
-				<Sparkles size={10} />
-				Powered by {providerLabel}
-			</span>
 		</div>
 	);
 }
@@ -1839,13 +1810,7 @@ function StrategySection() {
 					<div className="flex items-center justify-between">
 						<span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-linear-to-r from-indigo-50 to-purple-50 border border-indigo-200 text-indigo-600 text-[10px] font-semibold uppercase tracking-wider">
 							<Sparkles size={10} />
-							{strategy.generated_by === "gemini_ai"
-								? "Powered by Gemini AI"
-								: strategy.generated_by === "groq_ai"
-									? "Powered by Groq AI"
-									: strategy.generated_by === "claude_ai"
-										? "Powered by Claude AI"
-										: "Data-Driven Analysis"}
+							Data-Driven Analysis
 						</span>
 						<button
 							onClick={generateStrategy}

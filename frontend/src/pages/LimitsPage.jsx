@@ -169,6 +169,11 @@ export default function LimitsPage() {
 	);
 	const overallPct =
 		totalLimit > 0 ? Math.round((totalUsed / totalLimit) * 100) : 0;
+	const getProgressBarClass = (pct) => {
+		if (pct >= 90) return "bg-red-500";
+		if (pct >= 75) return "bg-amber-500";
+		return "bg-green-500";
+	};
 
 	return (
 		<div className="app-page">
@@ -250,7 +255,7 @@ export default function LimitsPage() {
 						</p>
 						<div className="w-full h-1.5 bg-surface-100 rounded-full mt-2 overflow-hidden">
 							<div
-								className={`h-full rounded-full transition-all duration-500 ${overallPct > 80 ? "bg-red-500" : overallPct > 50 ? "bg-amber-500" : "bg-green-500"}`}
+								className={`h-full rounded-full transition-all duration-500 ${getProgressBarClass(overallPct)}`}
 								style={{ width: `${Math.min(overallPct, 100)}%` }}
 							/>
 						</div>
@@ -333,7 +338,7 @@ export default function LimitsPage() {
 									{/* Progress bar */}
 									<div className="w-full h-2 bg-surface-100 rounded-full overflow-hidden">
 										<div
-											className={`h-full rounded-full transition-all duration-500 ${isAtLimit ? "bg-red-500" : isNearLimit ? "bg-amber-400" : colors.bar}`}
+											className={`h-full rounded-full transition-all duration-500 ${getProgressBarClass(pct)}`}
 											style={{ width: `${Math.min(pct, 100)}%` }}
 										/>
 									</div>
