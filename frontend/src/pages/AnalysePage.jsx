@@ -89,8 +89,8 @@ export default function AnalysePage() {
 		const file = e.target.files?.[0];
 		if (!file) return;
 		const ext = file.name.split(".").pop().toLowerCase();
-		if (!["csv", "xlsx", "xls"].includes(ext)) {
-			setError("Please select a CSV or Excel file.");
+		if (!["csv", "xlsx"].includes(ext)) {
+			setError("Please select a CSV or Excel (.xlsx) file.");
 			return;
 		}
 		setCsvFile(file);
@@ -432,7 +432,7 @@ export default function AnalysePage() {
 												Browse Files
 												<input
 													type="file"
-													accept=".csv,.xlsx,.xls"
+													accept=".csv,.xlsx"
 													onChange={handleCsvSelect}
 													className="hidden"
 													onClick={(e) => e.stopPropagation()}

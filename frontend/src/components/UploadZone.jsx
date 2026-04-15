@@ -15,8 +15,8 @@ export default function UploadZone({ onFileSelect, onDemoLoad }) {
 	const validateAndSelect = (file) => {
 		setError(null);
 		const ext = file.name.split(".").pop().toLowerCase();
-		if (!["csv", "xlsx", "xls"].includes(ext)) {
-			setError("Please upload a CSV or Excel file (.csv, .xlsx, .xls)");
+		if (!["csv", "xlsx"].includes(ext)) {
+			setError("Please upload a CSV or Excel (.xlsx) file");
 			return;
 		}
 		if (file.size > 50 * 1024 * 1024) {
@@ -79,7 +79,7 @@ export default function UploadZone({ onFileSelect, onDemoLoad }) {
 					<input
 						id="file-input"
 						type="file"
-						accept=".csv,.xlsx,.xls"
+						accept=".csv,.xlsx"
 						className="hidden"
 						onChange={handleFileInput}
 					/>

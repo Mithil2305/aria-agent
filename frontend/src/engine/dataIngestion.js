@@ -2,7 +2,7 @@
 // Parses CSV and Excel files into normalized data structures
 
 import Papa from "papaparse";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 export function parseFile(file) {
 	return new Promise((resolve, reject) => {
@@ -23,20 +23,54 @@ export function parseFile(file) {
 				},
 				error: (err) => reject(err),
 			});
-		} else if (["xlsx", "xls"].includes(ext)) {
+		} else if (ext === "xlsx") {
 			const reader = new FileReader();
-			reader.onload = (e) => {
+			reader.onload = async (e) => {
 				try {
-					const wb = XLSX.read(e.target.result, { type: "array" });
-					const sheetName = wb.SheetNames[0];
-					const sheet = wb.Sheets[sheetName];
-					const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: null });
+					const workbook = new ExcelJS.Workbook();
+					await workbook.xlsx.load(e.target.result);
+
+					const worksheet = workbook.worksheets[0];
+					if (!worksheet) {
+						reject(new Error("The workbook does not contain any sheets"));
+						return;
+					}
+
+					const headers = [];
+					worksheet.getRow(1).eachCell({ includeEmpty: true }, (cell, col) => {
+						const headerValue = normalizeExcelValue(cell.value);
+						headers[col - 1] =
+							typeof headerValue === "string"
+								? headerValue.trim()
+								: String(headerValue ?? "").trim();
+					});
+
+					const jsonData = [];
+					for (let rowNum = 2; rowNum <= worksheet.rowCount; rowNum += 1) {
+						const row = worksheet.getRow(rowNum);
+						const rowObject = {};
+						let hasNonNullValue = false;
+
+						headers.forEach((header, index) => {
+							if (!header || header === "__EMPTY") return;
+							const rawValue = row.getCell(index + 1).value;
+							const value = normalizeExcelValue(rawValue);
+							rowObject[header] =
+								value === "" || value === undefined ? null : value;
+							if (rowObject[header] !== null) hasNonNullValue = true;
+						});
+
+						if (hasNonNullValue) {
+							jsonData.push(rowObject);
+						}
+					}
+
 					resolve({
 						data: cleanData(jsonData),
 						fileName: file.name,
 						rowCount: jsonData.length,
-						sheetName,
-						totalSheets: wb.SheetNames.length,
+						sheetName: worksheet.name,
+						totalSheets: workbook.worksheets.length,
 					});
 				} catch (err) {
 					reject(err);
@@ -48,6 +82,21 @@ export function parseFile(file) {
 			reject(new Error(`Unsupported file format: .${ext}`));
 		}
 	});
+}
+
+function normalizeExcelValue(value) {
+	if (value === undefined || value === null) return null;
+	if (value instanceof Date) return value.toISOString().split("T")[0];
+	if (typeof value !== "object") return value;
+
+	if ("result" in value) return value.result ?? null;
+	if ("text" in value && typeof value.text === "string") return value.text;
+	if ("richText" in value && Array.isArray(value.richText)) {
+		return value.richText.map((part) => part.text || "").join("");
+	}
+	if ("hyperlink" in value) return value.text || value.hyperlink || null;
+
+	return null;
 }
 
 function cleanData(data) {
