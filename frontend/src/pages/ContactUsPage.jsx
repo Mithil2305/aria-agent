@@ -94,7 +94,7 @@ function StyledSelect({
 				className={`w-full rounded-lg border px-3 py-2 text-left text-sm outline-none transition-colors ${
 					error
 						? "border-red-300 bg-red-50"
-						: "border-slate-300 bg-white hover:border-slate-400"
+						: "border-slate-300 bg-white hover:border-blue-400 focus:border-blue-500"
 				}`}
 				aria-haspopup="listbox"
 				aria-expanded={open}
@@ -105,7 +105,7 @@ function StyledSelect({
 					</span>
 					<ChevronDown
 						size={16}
-						className={`shrink-0 text-slate-500 transition-transform ${open ? "rotate-180" : ""}`}
+						className={`shrink-0 text-blue-600 transition-transform ${open ? "rotate-180" : ""}`}
 					/>
 				</div>
 			</button>
@@ -123,7 +123,7 @@ function StyledSelect({
 						}}
 						className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
 							value === ""
-								? "bg-slate-900 text-white"
+								? "bg-blue-600 text-white"
 								: "text-slate-500 hover:bg-slate-100"
 						}`}
 					>
@@ -142,7 +142,7 @@ function StyledSelect({
 								}}
 								className={`flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors ${
 									selected
-										? "bg-slate-900 text-white"
+										? "bg-blue-600 text-white"
 										: "text-slate-700 hover:bg-slate-100"
 								}`}
 							>
@@ -255,19 +255,23 @@ export default function ContactUsPage() {
 	};
 
 	return (
-		<div className="min-h-screen bg-slate-50 px-6 py-16 lg:px-8">
+		<div className="min-h-screen bg-white px-6 py-16 lg:px-8">
 			<div className="mx-auto max-w-6xl">
-				<div className="rounded-3xl border border-slate-200 bg-white p-8 md:p-12 shadow-sm">
+				<div className="rounded-3xl border border-slate-200 bg-linear-to-b from-white to-slate-50 p-8 shadow-sm md:p-12">
 					<p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
 						Contact Us
 					</p>
-					<h1 className="mt-3 text-4xl font-black tracking-tight text-slate-900 md:text-5xl">
+					<h1 className="mt-3 text-4xl font-black tracking-tight text-slate-950 md:text-5xl">
 						Let's build better decisions together.
 					</h1>
 					<p className="mt-4 max-w-4xl text-base leading-relaxed text-slate-600">
 						If you're evaluating Yukti, exploring a partnership, or want to
 						discuss enterprise rollout, we'd love to hear from you.
 					</p>
+					<div className="mt-6 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
+						<Mail size={14} />
+						Response within one business day
+					</div>
 				</div>
 
 				<div className="mt-8 grid gap-5 md:grid-cols-3">
@@ -276,12 +280,12 @@ export default function ContactUsPage() {
 						return (
 							<div
 								key={channel.title}
-								className="rounded-2xl border border-slate-200 bg-white p-5"
+								className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
 							>
-								<div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+								<div className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
 									<Icon size={16} />
 								</div>
-								<h2 className="text-base font-bold text-slate-900">
+								<h2 className="text-base font-bold text-slate-950">
 									{channel.title}
 								</h2>
 								<p className="mt-2 text-sm text-slate-600">
@@ -289,7 +293,7 @@ export default function ContactUsPage() {
 								</p>
 								<a
 									href={`mailto:${channel.email}`}
-									className="mt-3 inline-block text-sm font-semibold text-slate-900 hover:text-slate-600"
+									className="mt-3 inline-block text-sm font-semibold text-blue-700 transition-colors hover:text-blue-800"
 								>
 									{channel.email}
 								</a>
@@ -304,16 +308,22 @@ export default function ContactUsPage() {
 				</div>
 
 				<div className="mt-8 grid gap-5 lg:grid-cols-2">
-					<div className="rounded-2xl border border-slate-200 bg-white p-6">
-						<h2 className="text-2xl font-bold text-slate-900">Visit our HQ</h2>
+					<div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+						<h2 className="text-2xl font-bold text-slate-950">
+							Our Parent Company
+						</h2>
 						<div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-							<p className="font-semibold text-slate-900">
-								Mud Media Technologies Pvt. Ltd.
-							</p>
-							<p className="mt-1">6th Floor, Orbit Tech Park</p>
-							<p>Outer Ring Road, Bellandur</p>
-							<p>Bengaluru, Karnataka 560103</p>
+							<p className="font-semibold text-slate-900">Mud Media lnc.</p>
+							<p className="mt-1">Coimbatore, Tamil Nadu</p>
 							<p>India</p>
+							<a
+								href="https://mudmedia.vercel.app/"
+								target="_blank"
+								rel="noopener noreferrer"
+								className="mt-2 inline-block text-blue-950 hover:text-blue-800 font-semibold"
+							>
+								Visit our website
+							</a>
 						</div>
 						<div className="mt-4 inline-flex items-center gap-2 text-sm text-slate-600">
 							<Building2 size={15} />
@@ -323,9 +333,9 @@ export default function ContactUsPage() {
 
 					<form
 						onSubmit={handleSubmit}
-						className="rounded-2xl border border-slate-200 bg-white p-6"
+						className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
 					>
-						<h2 className="text-2xl font-bold text-slate-900">
+						<h2 className="text-2xl font-bold text-slate-950">
 							Send us a message
 						</h2>
 						<p className="mt-2 text-sm text-slate-600">
@@ -341,7 +351,7 @@ export default function ContactUsPage() {
 									name="fullName"
 									value={formData.fullName}
 									onChange={handleChange}
-									className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+									className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
 								/>
 								{errors.fullName && (
 									<p className="mt-1 text-xs text-red-600">{errors.fullName}</p>
@@ -357,7 +367,7 @@ export default function ContactUsPage() {
 									name="workEmail"
 									value={formData.workEmail}
 									onChange={handleChange}
-									className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+									className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
 								/>
 								{errors.workEmail && (
 									<p className="mt-1 text-xs text-red-600">
@@ -374,7 +384,7 @@ export default function ContactUsPage() {
 									name="companyName"
 									value={formData.companyName}
 									onChange={handleChange}
-									className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+									className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
 								/>
 								{errors.companyName && (
 									<p className="mt-1 text-xs text-red-600">
@@ -414,7 +424,7 @@ export default function ContactUsPage() {
 									value={formData.teamSize}
 									onChange={handleChange}
 									placeholder="e.g. 10-25"
-									className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+									className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
 								/>
 							</div>
 
@@ -439,7 +449,7 @@ export default function ContactUsPage() {
 									onChange={handleChange}
 									rows={5}
 									placeholder="Tell us what you need help with..."
-									className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-500"
+									className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition-all focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
 								/>
 								{errors.message && (
 									<p className="mt-1 text-xs text-red-600">{errors.message}</p>
@@ -484,7 +494,7 @@ export default function ContactUsPage() {
 						<button
 							type="submit"
 							disabled={submitting}
-							className="mt-5 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+							className="mt-5 inline-flex items-center gap-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
 						>
 							<Send size={14} />
 							{submitting ? "Submitting..." : "Submit Inquiry"}

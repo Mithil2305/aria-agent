@@ -71,16 +71,16 @@ const storyChapters = [
 
 export default function AboutMudMediaPage() {
 	return (
-		<div className="min-h-screen bg-slate-50 px-6 py-16 lg:px-8">
+		<div className="min-h-screen bg-white px-6 py-16 lg:px-8">
 			<div className="mx-auto max-w-6xl">
-				<div className="rounded-3xl border border-slate-200 bg-white p-8 md:p-12 shadow-sm">
+				<div className="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm md:p-12">
 					<p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
 						About Yukti
 					</p>
-					<h1 className="mt-3 text-2xl font-black tracking-tight text-slate-900 md:text-4xl">
+					<h1 className="mt-3 text-3xl font-black tracking-tight text-slate-950 md:text-5xl">
 						Yukti turns everyday business data into clear weekly decisions.
 					</h1>
-					<p className="mt-5 max-w-5xl text-base leading-relaxed text-slate-600 md:text-md">
+					<p className="mt-5 max-w-5xl text-base leading-relaxed text-slate-600 md:text-lg">
 						Built for Indian SMB operators, Yukti analyzes sales, inventory, and
 						operational data through a 6-layer intelligence pipeline to answer
 						the only question that matters: what should I do next? From demand
@@ -88,6 +88,10 @@ export default function AboutMudMediaPage() {
 						recommendations, Yukti helps teams reduce guesswork, protect margin,
 						and make faster, higher-confidence decisions every week.
 					</p>
+					<div className="mt-7 inline-flex items-center gap-2 rounded-full border border-blue-100 bg-blue-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
+						<Rocket size={14} />
+						Actionable intelligence, not dashboard noise
+					</div>
 				</div>
 
 				<div className="mt-8 grid gap-5 md:grid-cols-2">
@@ -96,12 +100,12 @@ export default function AboutMudMediaPage() {
 						return (
 							<div
 								key={item.title}
-								className="rounded-2xl border border-slate-200 bg-white p-6"
+								className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
 							>
-								<div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+								<div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
 									<Icon size={18} />
 								</div>
-								<h2 className="text-2xl font-bold text-slate-900">
+								<h2 className="text-2xl font-bold text-slate-950">
 									{item.title}
 								</h2>
 								<p className="mt-3 text-sm leading-relaxed text-slate-600">
@@ -112,8 +116,8 @@ export default function AboutMudMediaPage() {
 					})}
 				</div>
 
-				<div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 md:p-8">
-					<h2 className="text-2xl font-bold text-slate-900">
+				<div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+					<h2 className="text-2xl font-bold text-slate-950">
 						The Story Behind Yukti
 					</h2>
 					<div className="mt-5 grid gap-4 md:grid-cols-3">
@@ -122,10 +126,10 @@ export default function AboutMudMediaPage() {
 								key={chapter.step}
 								className="rounded-xl border border-slate-200 bg-slate-50 p-4"
 							>
-								<p className="text-xs font-bold tracking-wider text-slate-500">
+								<p className="text-xs font-bold tracking-wider text-blue-700">
 									{chapter.step}
 								</p>
-								<h3 className="mt-2 text-base font-bold text-slate-900">
+								<h3 className="mt-2 text-base font-bold text-slate-950">
 									{chapter.title}
 								</h3>
 								<p className="mt-2 text-sm leading-relaxed text-slate-600">
@@ -136,11 +140,11 @@ export default function AboutMudMediaPage() {
 					</div>
 				</div>
 
-				<div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 md:p-8">
+				<div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
 					<p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
 						About Mud Media
 					</p>
-					<h2 className="mt-2 text-2xl font-bold text-slate-900">
+					<h2 className="mt-2 text-2xl font-bold text-slate-950">
 						The parent company building brands, products, and growth systems.
 					</h2>
 					<p className="mt-3 text-sm leading-relaxed text-slate-600 md:text-base">
@@ -152,19 +156,19 @@ export default function AboutMudMediaPage() {
 					</p>
 					<div className="mt-5 grid gap-4 sm:grid-cols-3">
 						<div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-							<h3 className="text-sm font-bold text-slate-900">Strategy</h3>
+							<h3 className="text-sm font-bold text-slate-950">Strategy</h3>
 							<p className="mt-1 text-xs text-slate-600">
 								Brand positioning, growth roadmaps, and campaign architecture.
 							</p>
 						</div>
 						<div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-							<h3 className="text-sm font-bold text-slate-900">Execution</h3>
+							<h3 className="text-sm font-bold text-slate-950">Execution</h3>
 							<p className="mt-1 text-xs text-slate-600">
 								Web experiences, content systems, and conversion-led design.
 							</p>
 						</div>
 						<div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-							<h3 className="text-sm font-bold text-slate-900">Intelligence</h3>
+							<h3 className="text-sm font-bold text-slate-950">Intelligence</h3>
 							<p className="mt-1 text-xs text-slate-600">
 								AI products like Yukti that turn data into weekly decisions.
 							</p>
@@ -173,22 +177,22 @@ export default function AboutMudMediaPage() {
 				</div>
 
 				<div className="mt-8 grid gap-5 md:grid-cols-2">
-					<div className="rounded-2xl border border-slate-200 bg-white p-6">
-						<div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+					<div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+						<div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
 							<Target size={18} />
 						</div>
-						<h2 className="text-2xl font-bold text-slate-900">Our Mission</h2>
+						<h2 className="text-2xl font-bold text-slate-950">Our Mission</h2>
 						<p className="mt-3 text-sm leading-relaxed text-slate-600">
 							Help Indian businesses move from reactive reporting to proactive,
 							weekly decision execution through accessible AI and practical
 							creative-growth systems.
 						</p>
 					</div>
-					<div className="rounded-2xl border border-slate-200 bg-white p-6">
-						<div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+					<div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+						<div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
 							<Eye size={18} />
 						</div>
-						<h2 className="text-2xl font-bold text-slate-900">Our Vision</h2>
+						<h2 className="text-2xl font-bold text-slate-950">Our Vision</h2>
 						<p className="mt-3 text-sm leading-relaxed text-slate-600">
 							Build an ecosystem where every ambitious SMB can access the same
 							quality of intelligence, strategy, and execution that large
@@ -198,19 +202,19 @@ export default function AboutMudMediaPage() {
 				</div>
 
 				<div className="mt-8">
-					<h2 className="text-2xl font-bold text-slate-900">Core Values</h2>
+					<h2 className="text-2xl font-bold text-slate-950">Core Values</h2>
 					<div className="mt-4 grid gap-4 md:grid-cols-2">
 						{values.map((value) => {
 							const Icon = value.icon;
 							return (
 								<div
 									key={value.title}
-									className="rounded-2xl border border-slate-200 bg-white p-5"
+									className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
 								>
-									<div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-700">
+									<div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
 										<Icon size={16} />
 									</div>
-									<h3 className="text-base font-bold text-slate-900">
+									<h3 className="text-base font-bold text-slate-950">
 										{value.title}
 									</h3>
 									<p className="mt-2 text-sm leading-relaxed text-slate-600">
@@ -222,23 +226,23 @@ export default function AboutMudMediaPage() {
 					</div>
 				</div>
 
-				<div className="mt-10 rounded-2xl border border-slate-200 bg-slate-900 p-6 text-white md:p-8">
-					<h2 className="text-2xl font-bold whitecol">Build with us</h2>
-					<p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-300">
+				<div className="mt-10 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:p-8">
+					<h2 className="text-2xl font-bold text-slate-950">Build with us</h2>
+					<p className="mt-2 max-w-3xl text-sm leading-relaxed text-slate-600">
 						If you believe AI should improve real business outcomes, not just
 						reporting aesthetics, we'd love to connect.
 					</p>
 					<div className="mt-4 flex flex-wrap gap-3">
 						<Link
 							to="/careers"
-							className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold text-slate-900 hover:bg-slate-100"
+							className="inline-flex items-center gap-2 rounded-lg bg-slate-950 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-slate-800"
 						>
 							View Careers
 							<ArrowRight size={14} />
 						</Link>
 						<Link
 							to="/contact-us"
-							className="inline-flex items-center gap-2 rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-100 hover:bg-slate-800"
+							className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-semibold text-blue-700 transition-all hover:bg-blue-100"
 						>
 							Contact Us
 						</Link>

@@ -74,7 +74,7 @@ export default function PricingPage() {
 				<div className="absolute bottom-0 right-0 h-[36vw] w-[36vw] rounded-full bg-slate-200/60 blur-[110px]" />
 			</div>
 
-			<div className="relative z-10 px-6 py-16 lg:px-8">
+			<div className="relative z-10 px-6 pt-5 pb-15 lg:px-8">
 				<div className="mx-auto max-w-6xl">
 					<section className="rounded-4xl  p-8 md:p-10 ">
 						<div className="text-center">
