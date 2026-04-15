@@ -1,10 +1,6 @@
 import { useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-	motion,
-	useInView,
-	useReducedMotion,
-} from "framer-motion";
+import { motion, useInView, useReducedMotion } from "framer-motion";
 import {
 	ArrowRight,
 	BarChart3,
@@ -212,11 +208,7 @@ const SUPERPOWERS = [
 ];
 
 // ── useInView usage — animate pipeline steps in on scroll ─────────────────
-function PipelineSection({
-	staggerContainer,
-	fadeInUp,
-	PIPELINE,
-}) {
+function PipelineSection({ staggerContainer, fadeInUp, PIPELINE }) {
 	const ref = useRef(null);
 	const isInView = useInView(ref, { once: true, margin: "-80px" });
 
