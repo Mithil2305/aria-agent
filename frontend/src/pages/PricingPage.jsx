@@ -69,7 +69,7 @@ const plans = [
 export default function PricingPage() {
 	return (
 		<div className="min-h-screen bg-[#fafafa] text-slate-900 selection:bg-black selection:text-white relative overflow-x-hidden">
-			<div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+			<div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
 				<div className="absolute -top-24 -left-24 h-[40vw] w-[40vw] rounded-full bg-slate-300/40 blur-[100px]" />
 				<div className="absolute bottom-0 right-0 h-[36vw] w-[36vw] rounded-full bg-slate-200/60 blur-[110px]" />
 			</div>

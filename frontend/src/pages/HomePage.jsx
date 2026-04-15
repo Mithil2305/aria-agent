@@ -2,10 +2,8 @@ import { useMemo, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
 	motion,
-	useScroll,
-	useTransform,
-	useSpring,
 	useInView,
+	useReducedMotion,
 } from "framer-motion";
 import {
 	ArrowRight,
@@ -44,15 +42,33 @@ import {
 const trackLandingCtaClick = (data) => console.log("Analytics Event:", data);
 
 // Complex Background Node Component
-const AnimatedOrb = ({ delay, duration, color, size, start, end }) => {
+const AnimatedOrb = ({
+	delay,
+	duration,
+	color,
+	size,
+	start,
+	end,
+	shouldAnimate,
+}) => {
+	const baseClass = `absolute rounded-full mix-blend-multiply filter blur-[80px] opacity-35 pointer-events-none ${color} ${size}`;
+
+	if (!shouldAnimate) {
+		return (
+			<div
+				className={baseClass}
+				style={{ transform: `translate3d(${start.x}, ${start.y}, 0)` }}
+			/>
+		);
+	}
+
 	return (
 		<motion.div
-			className={`absolute rounded-full mix-blend-multiply filter blur-[80px] opacity-40 pointer-events-none ${color} ${size}`}
+			className={baseClass}
 			animate={{
 				x: [start.x, end.x, start.x],
 				y: [start.y, end.y, start.y],
-				scale: [1, 1.2, 1],
-				rotate: [0, 90, 0],
+				scale: [1, 1.12, 1],
 			}}
 			transition={{
 				duration: duration,
@@ -197,7 +213,6 @@ const SUPERPOWERS = [
 
 // ── useInView usage — animate pipeline steps in on scroll ─────────────────
 function PipelineSection({
-	yParallaxFast,
 	staggerContainer,
 	fadeInUp,
 	PIPELINE,
@@ -210,10 +225,7 @@ function PipelineSection({
 			ref={ref}
 			className="py-32 bg-[#0a0a0a] text-white relative z-10 rounded-t-[3rem]"
 		>
-			<motion.div
-				style={{ y: yParallaxFast }}
-				className="absolute -top-64 right-10 w-96 h-96 bg-white/5 filter blur-[100px] rounded-full pointer-events-none"
-			/>
+			<div className="absolute -top-64 right-10 w-96 h-96 bg-white/5 filter blur-[90px] rounded-full pointer-events-none" />
 			<div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
 				<div className="grid lg:grid-cols-2 gap-20 items-center">
 					<motion.div
@@ -502,18 +514,7 @@ function buildPath(values, width = 420, height = 210, padding = 22) {
 
 export default function HomePage() {
 	const navigate = useNavigate();
-	const { scrollYProgress } = useScroll();
-
-	const smoothProgress = useSpring(scrollYProgress, {
-		stiffness: 100,
-		damping: 30,
-		restDelta: 0.001,
-	});
-
-	const yParallaxFast = useTransform(smoothProgress, [0, 1], [0, -300]);
-	const yParallaxSlow = useTransform(smoothProgress, [0, 1], [0, -150]);
-	const rotateHeroCard = useTransform(smoothProgress, [0, 0.2], [0, 5]);
-	const scaleHeroCard = useTransform(smoothProgress, [0, 0.2], [1, 0.95]);
+	const prefersReducedMotion = useReducedMotion();
 
 	const [ctaVariantKey] = useState(() => {
 		const saved = localStorage.getItem("yukti_cta_variant");
@@ -538,7 +539,7 @@ export default function HomePage() {
 	return (
 		<div className="min-h-screen bg-[#fafafa] text-slate-900 selection:bg-black selection:text-white font-sans relative overflow-x-hidden">
 			{/* Ambient Background */}
-			<div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+			<div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
 				<AnimatedOrb
 					color="bg-slate-200"
 					size="w-[80vw] h-[80vw] md:w-[40vw] md:h-[40vw]"
@@ -546,6 +547,7 @@ export default function HomePage() {
 					end={{ x: "20vw", y: "20vh" }}
 					duration={25}
 					delay={0}
+					shouldAnimate={!prefersReducedMotion}
 				/>
 				<AnimatedOrb
 					color="bg-gray-200"
@@ -554,6 +556,7 @@ export default function HomePage() {
 					end={{ x: "20vw", y: "10vh" }}
 					duration={30}
 					delay={5}
+					shouldAnimate={!prefersReducedMotion}
 				/>
 				<AnimatedOrb
 					color="bg-slate-300"
@@ -562,6 +565,7 @@ export default function HomePage() {
 					end={{ x: "60vw", y: "40vh" }}
 					duration={35}
 					delay={2}
+					shouldAnimate={!prefersReducedMotion}
 				/>
 				<div
 					className="absolute inset-0 opacity-[0.03]"
@@ -672,14 +676,7 @@ export default function HomePage() {
 				</motion.div>
 
 				{/* 3D Transformed UI Mockup */}
-				<motion.div
-					style={{
-						y: yParallaxSlow,
-						rotateX: rotateHeroCard,
-						scale: scaleHeroCard,
-					}}
-					className="mt-24 w-full relative perspective-1000 z-20"
-				>
+				<div className="mt-24 w-full relative perspective-1000 z-20">
 					<div className="absolute inset-0 bg-gradient-to-t from-[#fafafa] via-transparent to-transparent z-30 pointer-events-none" />
 					<div className="aspect-[16/9] md:aspect-[21/9] bg-white rounded-3xl border border-slate-200 shadow-2xl overflow-hidden flex flex-col relative transform-style-3d">
 						<div className="h-12 border-b border-slate-100 bg-slate-50/80 flex items-center px-5 gap-3">
@@ -851,15 +848,19 @@ export default function HomePage() {
 							</div>
 						</div>
 					</div>
-				</motion.div>
+				</div>
 			</section>
 
 			{/* Ticker */}
 			<section className="py-12 border-y border-slate-200 bg-white z-10 relative overflow-hidden">
 				<motion.div
-					animate={{ x: [0, -1000] }}
-					transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
-					className="flex items-center gap-10 opacity-60 grayscale whitespace-nowrap min-w-max px-6"
+					animate={prefersReducedMotion ? undefined : { x: [0, -1000] }}
+					transition={
+						prefersReducedMotion
+							? undefined
+							: { duration: 40, repeat: Infinity, ease: "linear" }
+					}
+					className="flex items-center gap-10 opacity-60 grayscale whitespace-nowrap min-w-max px-6 will-change-transform"
 				>
 					{[...Array(3)].map((_, j) => (
 						<div
@@ -1177,7 +1178,6 @@ export default function HomePage() {
 
 			{/* Pipeline Section — uses useInView via PipelineSection component */}
 			<PipelineSection
-				yParallaxFast={yParallaxFast}
 				staggerContainer={staggerContainer}
 				fadeInUp={fadeInUp}
 				PIPELINE={PIPELINE}

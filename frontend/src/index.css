@@ -198,6 +198,7 @@
 html {
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
+	scroll-behavior: smooth;
 }
 
 body {
@@ -1125,6 +1126,10 @@ tbody tr:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
+	}
+
 	.reveal-on-scroll,
 	.reveal-on-scroll.revealed {
 		opacity: 1;
