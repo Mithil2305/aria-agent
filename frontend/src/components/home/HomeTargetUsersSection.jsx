@@ -5,7 +5,13 @@ import { TARGET_USERS } from "./constants";
 export default function HomeTargetUsersSection() {
 	return (
 		<section className=" lg:px-8 max-w-7xl mx-auto z-10 relative">
-			<div className="text-center mb-20">
+			<Motion.div
+				initial={{ opacity: 0, y: 24 }}
+				whileInView={{ opacity: 1, y: 0 }}
+				viewport={{ once: true, margin: "-60px" }}
+				transition={{ duration: 0.6, ease: "easeOut" }}
+				className="text-center mb-20"
+			>
 				<h2 className="text-4xl lg:text-5xl font-extrabold tracking-tight text-black mb-6">
 					Real owners, real problems, real results
 				</h2>
@@ -13,7 +19,7 @@ export default function HomeTargetUsersSection() {
 					Most data platforms are built for engineers. Yukti is built for the 63
 					million Indian SMB owners who need answers, not dashboards.
 				</p>
-			</div>
+			</Motion.div>
 			<div className="grid sm:grid-cols-2 gap-8">
 				{TARGET_USERS.map((userType, i) => (
 					<Motion.div
@@ -38,12 +44,19 @@ export default function HomeTargetUsersSection() {
 						</blockquote>
 						<div className="space-y-3">
 							{userType.points.map((point, idx) => (
-								<div key={idx} className="flex items-start gap-3">
+								<Motion.div
+									key={idx}
+									initial={{ opacity: 0, x: -12 }}
+									whileInView={{ opacity: 1, x: 0 }}
+									viewport={{ once: true }}
+									transition={{ duration: 0.35, delay: idx * 0.05 }}
+									className="flex items-start gap-3"
+								>
 									<div className="mt-1 w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
 										<CheckCircle2 size={12} className="text-slate-600" />
 									</div>
 									<span className="text-slate-700 font-medium">{point}</span>
-								</div>
+								</Motion.div>
 							))}
 						</div>
 					</Motion.div>

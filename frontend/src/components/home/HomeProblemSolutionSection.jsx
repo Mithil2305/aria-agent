@@ -4,7 +4,13 @@ import { PROBLEM_SIGNALS } from "./constants";
 export default function HomeProblemSolutionSection({ beforePath, afterPath }) {
 	return (
 		<section className="py-28 px-6 lg:px-8 max-w-7xl mx-auto relative z-10">
-			<div className="mb-14 text-center">
+			<Motion.div
+				initial={{ opacity: 0, y: 24 }}
+				whileInView={{ opacity: 1, y: 0 }}
+				viewport={{ once: true, margin: "-60px" }}
+				transition={{ duration: 0.65, ease: "easeOut" }}
+				className="mb-14 text-center"
+			>
 				<h2 className="text-4xl lg:text-5xl font-extrabold tracking-tight text-black mb-5">
 					The real problem is not data. It is decision delay.
 				</h2>
@@ -12,9 +18,15 @@ export default function HomeProblemSolutionSection({ beforePath, afterPath }) {
 					Most SMBs collect numbers every day but still react too late. Yukti
 					turns those numbers into immediate, prioritized actions.
 				</p>
-			</div>
+			</Motion.div>
 			<div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-				<div className="lg:col-span-7 rounded-4xl bg-white border border-slate-200 p-8 shadow-sm">
+				<Motion.div
+					initial={{ opacity: 0, x: -24 }}
+					whileInView={{ opacity: 1, x: 0 }}
+					viewport={{ once: true, margin: "-80px" }}
+					transition={{ duration: 0.7, ease: "easeOut" }}
+					className="lg:col-span-7 rounded-4xl bg-white border border-slate-200 p-8 shadow-sm"
+				>
 					<div className="flex items-center justify-between mb-6">
 						<div>
 							<p className="text-xs uppercase tracking-wider text-slate-500 font-semibold">
@@ -103,9 +115,13 @@ export default function HomeProblemSolutionSection({ beforePath, afterPath }) {
 								value: "-63%",
 								tone: "text-emerald-700",
 							},
-						].map((metric) => (
-							<div
+						].map((metric, metricIdx) => (
+							<Motion.div
 								key={metric.label}
+								initial={{ opacity: 0, y: 14 }}
+								whileInView={{ opacity: 1, y: 0 }}
+								viewport={{ once: true }}
+								transition={{ duration: 0.45, delay: metricIdx * 0.08 }}
 								className="rounded-xl border border-slate-200 bg-white p-3"
 							>
 								<p className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">
@@ -114,10 +130,10 @@ export default function HomeProblemSolutionSection({ beforePath, afterPath }) {
 								<p className={`text-lg font-bold mt-1 ${metric.tone}`}>
 									{metric.value}
 								</p>
-							</div>
+							</Motion.div>
 						))}
 					</div>
-				</div>
+				</Motion.div>
 				<div className="lg:col-span-5 grid grid-cols-1 gap-4">
 					{PROBLEM_SIGNALS.map((signal, idx) => (
 						<Motion.div

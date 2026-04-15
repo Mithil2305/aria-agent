@@ -6,7 +6,13 @@ export default function HomeValueDecisionSection() {
 	return (
 		<section className="py-28 lg:px-8 max-w-7xl mx-auto z-10 relative">
 			<div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-				<div className="lg:col-span-7 rounded-4xl bg-white border border-slate-200 p-8">
+				<Motion.div
+					initial={{ opacity: 0, y: 24 }}
+					whileInView={{ opacity: 1, y: 0 }}
+					viewport={{ once: true, margin: "-70px" }}
+					transition={{ duration: 0.65, ease: "easeOut" }}
+					className="lg:col-span-7 rounded-4xl bg-white border border-slate-200 p-8"
+				>
 					<h3 className="text-3xl font-extrabold tracking-tight text-black mb-4">
 						What value looks like in practice
 					</h3>
@@ -32,8 +38,14 @@ export default function HomeValueDecisionSection() {
 							</Motion.div>
 						))}
 					</div>
-				</div>
-				<div className="lg:col-span-5 rounded-4xl border border-slate-200 bg-black text-white p-7">
+				</Motion.div>
+				<Motion.div
+					initial={{ opacity: 0, y: 24 }}
+					whileInView={{ opacity: 1, y: 0 }}
+					viewport={{ once: true, margin: "-70px" }}
+					transition={{ duration: 0.65, delay: 0.08, ease: "easeOut" }}
+					className="lg:col-span-5 rounded-4xl border border-slate-200 bg-black text-white p-7"
+				>
 					<div className="flex items-center gap-2 mb-5">
 						<Workflow size={16} className="text-slate-300" />
 						<p className="text-xs uppercase tracking-wide text-slate-400 font-semibold">
@@ -64,12 +76,18 @@ export default function HomeValueDecisionSection() {
 							</Motion.div>
 						))}
 					</div>
-					<div className="mt-5 rounded-xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-xs text-amber-100 flex items-start gap-2">
+					<Motion.div
+						initial={{ opacity: 0, y: 10 }}
+						whileInView={{ opacity: 1, y: 0 }}
+						viewport={{ once: true }}
+						transition={{ duration: 0.45, delay: 0.3 }}
+						className="mt-5 rounded-xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-xs text-amber-100 flex items-start gap-2"
+					>
 						<AlertTriangle size={14} className="mt-0.5 shrink-0" />
 						Without this loop, businesses review data monthly. With Yukti, they
 						react weekly.
-					</div>
-				</div>
+					</Motion.div>
+				</Motion.div>
 			</div>
 		</section>
 	);

@@ -1,17 +1,22 @@
 import { motion as Motion } from "framer-motion";
 import { TICKER_ITEMS } from "./constants";
 
-export default function HomeTickerSection({ prefersReducedMotion }) {
+export default function HomeTickerSection({
+	prefersReducedMotion,
+	enableMotionEffects,
+}) {
+	const shouldAnimate = !prefersReducedMotion && enableMotionEffects;
+
 	return (
 		<section className="py-12 border-y border-slate-200 bg-white z-10 relative overflow-hidden">
 			<Motion.div
-				animate={prefersReducedMotion ? undefined : { x: [0, -1000] }}
+				animate={shouldAnimate ? { x: [0, -1000] } : undefined}
 				transition={
-					prefersReducedMotion
-						? undefined
-						: { duration: 40, repeat: Infinity, ease: "linear" }
+					shouldAnimate
+						? { duration: 40, repeat: Infinity, ease: "linear" }
+						: undefined
 				}
-				className="flex items-center gap-10 opacity-60 grayscale whitespace-nowrap min-w-max px-6 will-change-transform"
+				className={`flex items-center gap-10 opacity-60 grayscale whitespace-nowrap min-w-max px-6 ${shouldAnimate ? "will-change-transform" : ""}`}
 			>
 				{[...Array(3)].map((_, j) => (
 					<div

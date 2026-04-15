@@ -41,6 +41,15 @@ export default function HomePage() {
 	const navigate = useNavigate();
 	const prefersReducedMotion = useReducedMotion();
 
+	const enableMotionEffects = useMemo(() => {
+		if (prefersReducedMotion || typeof window === "undefined") return false;
+
+		const desktopViewport = window.matchMedia("(min-width: 1024px)").matches;
+		const cpuCores = navigator.hardwareConcurrency || 4;
+
+		return desktopViewport && cpuCores >= 6;
+	}, [prefersReducedMotion]);
+
 	const [ctaVariantKey] = useState(() => {
 		const saved = localStorage.getItem("yukti_cta_variant");
 
@@ -85,7 +94,10 @@ export default function HomePage() {
 
 	return (
 		<div className="min-h-screen bg-[#fafafa] text-slate-900 selection:bg-black selection:text-white font-sans relative overflow-x-hidden">
-			<HomeAmbientBackground prefersReducedMotion={prefersReducedMotion} />
+			<HomeAmbientBackground
+				prefersReducedMotion={prefersReducedMotion}
+				enableMotionEffects={enableMotionEffects}
+			/>
 
 			<HomeHeroSection
 				activeVariant={activeVariant}
@@ -94,7 +106,10 @@ export default function HomePage() {
 			/>
 
 			<Suspense fallback={<SectionFallback />}>
-				<HomeTickerSection prefersReducedMotion={prefersReducedMotion} />
+				<HomeTickerSection
+					prefersReducedMotion={prefersReducedMotion}
+					enableMotionEffects={enableMotionEffects}
+				/>
 				<HomeProblemSolutionSection
 					beforePath={beforePath}
 					afterPath={afterPath}
