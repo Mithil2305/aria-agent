@@ -24,6 +24,7 @@ import {
 	ArrowRight,
 	Database,
 	Sparkles,
+	Newspaper,
 } from "lucide-react";
 
 function toFirestoreErrorMessage(err, fallback) {
@@ -533,8 +534,9 @@ export default function AnalysePage() {
 									Run Analysis
 								</h3>
 								<p className="text-xs text-slate-500 mb-4">
-									Start the model and continue using other pages while it
-									processes.
+									Run the core model plus live Market Intelligence so your
+									analysis includes external demand, pricing, and supply-chain
+									signals.
 								</p>
 								<button
 									onClick={handleStartAnalysis}
@@ -554,7 +556,7 @@ export default function AnalysePage() {
 									) : (
 										<Sparkles size={18} className="text-indigo-300" />
 									)}
-									{isRunning ? "Analysis Running..." : "Start Analysis"}
+									{isRunning ? "Analysis Running..." : "Run Analysis"}
 									{!isRunning && (
 										<ArrowRight
 											size={16}
@@ -615,6 +617,11 @@ export default function AnalysePage() {
 											icon: Sparkles,
 											label: "Insights",
 											desc: "AI-powered recommendations",
+										},
+										{
+											icon: Newspaper,
+											label: "Market Signals",
+											desc: "News-driven external context",
 										},
 									].map((feature, idx) => (
 										<div

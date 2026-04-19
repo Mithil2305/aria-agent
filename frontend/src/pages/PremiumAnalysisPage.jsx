@@ -50,6 +50,15 @@ const PREMIUM_JOB_KEY = "yukti_premium_job";
 const MAX_PREMIUM_HISTORY = 20;
 const PREMIUM_RELOAD_MAX_WAIT_MS = 45 * 1000;
 
+function getMarketRecommendationText(rec) {
+	if (!rec) return "";
+	if (typeof rec === "string") return rec;
+	const action = String(rec.action || "").trim();
+	const rationale = String(rec.rationale || "").trim();
+	if (action && rationale) return `${action} - ${rationale}`;
+	return action || rationale;
+}
+
 export default function PremiumAnalysisPage() {
 	const { user, userProfile } = useAuth();
 	const { startActivity, completeActivity } = useAnalysisJob();
@@ -67,6 +76,15 @@ export default function PremiumAnalysisPage() {
 	const [progressIdx, setProgressIdx] = useState(0);
 	const [history, setHistory] = useState([]);
 	const [historyLoading, setHistoryLoading] = useState(false);
+	const marketIntelligence = result?.market_intelligence || null;
+	const marketHeadlines = Array.isArray(marketIntelligence?.top_headlines)
+		? marketIntelligence.top_headlines
+		: [];
+	const marketRecommendations = Array.isArray(
+		marketIntelligence?.recommendations,
+	)
+		? marketIntelligence.recommendations
+		: [];
 
 	useEffect(() => {
 		mountedRef.current = true;
@@ -618,6 +636,67 @@ export default function PremiumAnalysisPage() {
 				{/* ── Analysis Result ─────────────────────── */}
 				{result && !loading && (
 					<div className="space-y-4">
+						{result.combined_reasoning && (
+							<div className="rounded-xl border border-amber-200 bg-amber-50/40 p-5">
+								<div className="flex items-center gap-2 mb-2">
+									<Lightbulb size={14} className="text-amber-700" />
+									<h2 className="text-sm font-semibold text-surface-900">
+										Combined Business + Market Reasoning
+									</h2>
+								</div>
+								<p className="text-xs text-surface-700 leading-relaxed whitespace-pre-line">
+									{result.combined_reasoning}
+								</p>
+							</div>
+						)}
+
+						{marketIntelligence && (
+							<div className="rounded-xl border border-surface-200 bg-white p-5">
+								<div className="flex items-center gap-2 mb-3">
+									<Zap size={14} className="text-amber-600" />
+									<h2 className="text-sm font-semibold text-surface-900">
+										Live Market Intelligence
+									</h2>
+									<span className="ml-auto text-[10px] uppercase tracking-wider px-2 py-1 rounded-full border border-surface-200 bg-surface-50 text-surface-600">
+										{String(marketIntelligence.market_sentiment || "neutral")}
+									</span>
+								</div>
+
+								{marketHeadlines.length > 0 && (
+									<div className="mb-3">
+										<p className="text-[11px] font-semibold text-surface-700 mb-1">
+											Top Headlines
+										</p>
+										<ul className="space-y-1.5">
+											{marketHeadlines.slice(0, 3).map((headline, idx) => (
+												<li
+													key={`${headline}-${idx}`}
+													className="text-xs text-surface-600"
+												>
+													• {headline}
+												</li>
+											))}
+										</ul>
+									</div>
+								)}
+
+								{marketRecommendations.length > 0 && (
+									<div>
+										<p className="text-[11px] font-semibold text-surface-700 mb-1">
+											Market Actions
+										</p>
+										<ul className="space-y-1.5">
+											{marketRecommendations.slice(0, 3).map((rec, idx) => (
+												<li key={idx} className="text-xs text-surface-600">
+													• {getMarketRecommendationText(rec)}
+												</li>
+											))}
+										</ul>
+									</div>
+								)}
+							</div>
+						)}
+
 						{/* Meta bar */}
 						<div className="flex items-center justify-between bg-white rounded-xl border border-surface-200 px-5 py-3">
 							<div className="flex items-center gap-3">

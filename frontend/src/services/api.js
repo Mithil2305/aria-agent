@@ -444,10 +444,17 @@ function normalizeAnalysis(raw) {
 		anomalies: (raw.anomalies || []).map(normalizeAnomaly),
 		correlations: raw.correlations || [],
 		featureImportance: raw.feature_importance || [],
+		feature_importance: raw.feature_importance || [],
 		riskScores: raw.risk_scores || [],
+		risk_scores: raw.risk_scores || [],
 		insights: (raw.insights || []).map(normalizeInsight),
 		narrative: raw.narrative || "",
 		severitySummary: raw.severity_summary || {},
+		trend_lock: raw.trend_lock || {},
+		data_sufficiency: raw.data_sufficiency || "full",
+		ai_provider: raw.ai_provider || "rule_based",
+		market_intelligence: raw.market_intelligence || null,
+		marketIntelligence: raw.market_intelligence || null,
 	};
 }
 

@@ -43,6 +43,8 @@ import pandas as pd
 from pathlib import Path
 from datetime import datetime, date
 from setup_route import router as setup_router
+from routers import news, alerts
+from services.news_service import NewsService
 
 DEFAULT_ADMIN_EMAIL = "admin@yukti.com"
 DEFAULT_ADMIN_PASSWORD = "Admin@2026/"
@@ -236,6 +238,8 @@ app = FastAPI(
 )
 
 app.include_router(setup_router)
+app.include_router(news.router, prefix="/api/news", tags=["news"])
+app.include_router(alerts.router, prefix="/api/alerts", tags=["alerts"])
 
 
 def _env_csv(name: str) -> list[str]:
@@ -254,19 +258,25 @@ default_origins = [
 ]
 
 allowed_origins = _env_csv("YUKTI_CORS_ALLOW_ORIGINS") or default_origins
-allowed_hosts = _env_csv("YUKTI_ALLOWED_HOSTS") or ["*"]
+configured_hosts = _env_csv("YUKTI_ALLOWED_HOSTS")
+if configured_hosts:
+    # Always include local dev hosts to avoid local proxy/runtime mismatches.
+    allowed_hosts = list(dict.fromkeys(configured_hosts + ["localhost", "127.0.0.1"]))
+else:
+    allowed_hosts = ["*"]
+
+# Trusted host checks should run before endpoint logic but still allow CORS to decorate
+# error responses. Add TrustedHost first and CORS second so CORS is outermost.
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-
-    
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
 
 @app.exception_handler(Exception)
@@ -731,6 +741,294 @@ def _save_generated_report(uid: Optional[str], section: str, payload: dict[str, 
     except Exception:
         # Best-effort persistence should never break the API response
         pass
+
+
+def _get_user_market_profile(uid: Optional[str]) -> dict[str, str]:
+    """Load user business profile fields to improve market keyword relevance."""
+    if not uid:
+        return {}
+
+    user_ref = _firestore_user_doc(uid)
+    if user_ref is None:
+        return {}
+
+    try:
+        snap = user_ref.get()
+        if not snap.exists:
+            return {}
+        data = snap.to_dict() or {}
+        return {
+            "business_type": str(data.get("businessType") or "").strip(),
+            "business_category": str(data.get("businessCategory") or "").strip(),
+            "business_name": str(data.get("businessName") or "").strip(),
+        }
+    except Exception:
+        return {}
+
+
+def _derive_market_keywords(
+    schema: dict,
+    analytics: dict,
+    raw_data: Any,
+    user_profile: Optional[dict[str, str]] = None,
+) -> list[str]:
+    """Infer relevant market-news keywords from current dataset context."""
+    candidates: list[str] = []
+
+    columns = [str(col).lower() for col in (schema.get("columns") or [])]
+    kpi_names = [
+        str(kpi.get("name") or kpi.get("metric") or "").lower()
+        for kpi in (analytics.get("kpis") or [])
+    ]
+
+    business_signals: list[str] = []
+    try:
+        if isinstance(raw_data, list):
+            for row in raw_data[:30]:
+                if isinstance(row, dict):
+                    for field in ("business_type", "businessType", "business_category", "businessCategory"):
+                        value = row.get(field)
+                        if value:
+                            business_signals.append(str(value).lower())
+    except Exception:
+        pass
+
+    if user_profile:
+        for field in ("business_type", "business_category", "business_name"):
+            value = str(user_profile.get(field, "")).strip().lower()
+            if value:
+                business_signals.append(value)
+
+        profile_blob = " ".join(business_signals)
+        profile_keyword_hints = [
+            (["grocery", "kirana", "supermarket", "retail", "fashion", "clothing"], ["consumer spending", "inflation", "supply chain"]),
+            (["restaurant", "cafe", "bakery", "food"], ["consumer spending", "energy prices", "supply chain"]),
+            (["pharma", "pharmacy", "medical", "clinic"], ["supply chain", "inflation", "currency"]),
+            (["manufacturing", "factory", "industrial"], ["supply chain", "energy prices", "currency"]),
+            (["electronics", "tech", "software", "saas"], ["tech sector", "consumer spending", "interest rates"]),
+            (["export", "import", "logistics", "distribution"], ["currency", "logistics", "supply chain"]),
+        ]
+        for markers, hints in profile_keyword_hints:
+            if any(marker in profile_blob for marker in markers):
+                candidates.extend(hints)
+
+    context_blob = " ".join(columns + kpi_names + business_signals)
+    mapping = [
+        (["inventory", "supplier", "stock", "logistics", "purchase"], "supply chain"),
+        (["price", "cogs", "expense", "margin", "cost"], "inflation"),
+        (["cash", "loan", "credit", "interest"], "interest rates"),
+        (["sales", "revenue", "customer", "orders", "demand"], "consumer spending"),
+        (["import", "export", "currency", "fx"], "currency"),
+        (["fuel", "power", "electricity", "transport"], "energy prices"),
+        (["technology", "software", "digital"], "tech sector"),
+    ]
+
+    for markers, keyword in mapping:
+        if any(marker in context_blob for marker in markers):
+            candidates.append(keyword)
+
+    if not candidates:
+        candidates = ["consumer spending", "inflation", "supply chain"]
+
+    deduped = []
+    seen = set()
+    for item in candidates:
+        key = item.strip().lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        deduped.append(item)
+    return deduped[:5]
+
+
+async def _build_market_intelligence(uid: Optional[str], schema: dict, analytics: dict, raw_data: Any) -> dict:
+    """Fetch market intelligence and keep failures non-fatal for core analysis."""
+    try:
+        user_profile = _get_user_market_profile(uid)
+        keywords = _derive_market_keywords(
+            schema,
+            analytics,
+            raw_data,
+            user_profile=user_profile,
+        )
+        service = NewsService()
+        payload = await service.get_curated_feed(uid=uid or "anonymous", keywords=keywords)
+        return {
+            "market_sentiment": payload.get("market_sentiment", "neutral"),
+            "keywords_used": payload.get("keywords_used", keywords),
+            "profile_context": {
+                "business_type": user_profile.get("business_type", ""),
+                "business_category": user_profile.get("business_category", ""),
+            },
+            "article_count": len(payload.get("articles", [])),
+            "top_headlines": [a.get("title") for a in payload.get("articles", [])[:3] if a.get("title")],
+            "predictions": payload.get("predictions", [])[:3],
+            "recommendations": payload.get("recommendations", [])[:3],
+            "fetched_at": payload.get("fetched_at"),
+        }
+    except Exception as exc:
+        return {
+            "market_sentiment": "neutral",
+            "keywords_used": [],
+            "article_count": 0,
+            "top_headlines": [],
+            "predictions": [],
+            "recommendations": [],
+            "error": str(exc),
+        }
+
+
+async def _build_market_intelligence_from_business_data(
+    uid: Optional[str],
+    business_type: str,
+    business_category: str,
+    logs: list[dict],
+    stock_entries: list[dict],
+    stats: dict[str, Any],
+) -> dict:
+    """Build market context for strategy/premium endpoints from business snapshots."""
+    all_rows = [*(logs or []), *(stock_entries or [])]
+
+    columns: set[str] = set()
+    for row in all_rows[:80]:
+        if isinstance(row, dict):
+            columns.update(str(key) for key in row.keys())
+
+    pseudo_schema = {"columns": sorted(columns)}
+    pseudo_analytics = {
+        "kpis": [
+            {"name": "revenue", "current": stats.get("avg_daily_revenue", 0)},
+            {"name": "customers", "current": stats.get("avg_daily_customers", 0)},
+            {"name": "orders", "current": stats.get("avg_daily_orders", 0)},
+        ]
+    }
+
+    profile = _get_user_market_profile(uid)
+    if business_type and not profile.get("business_type"):
+        profile["business_type"] = business_type
+    if business_category and not profile.get("business_category"):
+        profile["business_category"] = business_category
+
+    keywords = _derive_market_keywords(
+        pseudo_schema,
+        pseudo_analytics,
+        all_rows,
+        user_profile=profile,
+    )
+
+    try:
+        service = NewsService()
+        payload = await service.get_curated_feed(uid=uid or "anonymous", keywords=keywords)
+        return {
+            "market_sentiment": payload.get("market_sentiment", "neutral"),
+            "keywords_used": payload.get("keywords_used", keywords),
+            "article_count": len(payload.get("articles", [])),
+            "top_headlines": [a.get("title") for a in payload.get("articles", [])[:3] if a.get("title")],
+            "predictions": payload.get("predictions", [])[:3],
+            "recommendations": payload.get("recommendations", [])[:3],
+            "fetched_at": payload.get("fetched_at"),
+        }
+    except Exception as exc:
+        return {
+            "market_sentiment": "neutral",
+            "keywords_used": keywords,
+            "article_count": 0,
+            "top_headlines": [],
+            "predictions": [],
+            "recommendations": [],
+            "error": str(exc),
+        }
+
+
+def _build_combined_market_reasoning(
+    base_reasoning: str,
+    market_context: dict[str, Any],
+    stats: dict[str, Any],
+    label: str,
+) -> str:
+    """Compose a concise combined reasoning that merges internal performance and market context."""
+    sentiment = str(market_context.get("market_sentiment") or "neutral").lower()
+    top_headline = ""
+    if market_context.get("top_headlines"):
+        top_headline = str(market_context["top_headlines"][0])
+
+    top_prediction = (market_context.get("predictions") or [{}])[0]
+    prediction_title = str(top_prediction.get("title") or "").strip()
+
+    top_recommendation = (market_context.get("recommendations") or [{}])[0]
+    recommendation_action = str(top_recommendation.get("action") or "").strip()
+    recommendation_rationale = str(top_recommendation.get("rationale") or "").strip()
+
+    avg_revenue = float(stats.get("avg_daily_revenue") or 0)
+    avg_customers = float(stats.get("avg_daily_customers") or 0)
+
+    lines = []
+    if base_reasoning:
+        lines.append(base_reasoning.strip())
+
+    lines.append(
+        f"Combined {label} reasoning: your internal performance (avg revenue {avg_revenue:,.0f}/day, avg customers {avg_customers:,.0f}/day) is being interpreted alongside live market sentiment ({sentiment})."
+    )
+
+    if top_headline:
+        lines.append(f"Top live signal: {top_headline}.")
+    if prediction_title:
+        lines.append(f"Likely near-term market impact: {prediction_title}.")
+    if recommendation_action:
+        lines.append(f"Recommended move now: {recommendation_action}.")
+    if recommendation_rationale:
+        lines.append(f"Why this is reasonable now: {recommendation_rationale}")
+
+    return " ".join(part for part in lines if part).strip()
+
+
+def _merge_market_context_into_insights(insights_payload: dict, market_context: dict) -> dict:
+    """Add market-driven insights so analysis returns immediate external context actions."""
+    if not market_context or not market_context.get("recommendations"):
+        return insights_payload
+
+    insights_list = list(insights_payload.get("insights", []))
+    urgency_to_severity = {
+        "immediate": "high",
+        "this_week": "moderate",
+        "this_month": "low",
+    }
+
+    for recommendation in market_context.get("recommendations", [])[:2]:
+        action = str(recommendation.get("action", "")).strip()
+        if not action:
+            continue
+        severity = urgency_to_severity.get(
+            str(recommendation.get("urgency", "")).strip().lower(),
+            "moderate",
+        )
+        insights_list.append(
+            {
+                "title": f"Market Action: {action}",
+                "description": recommendation.get("rationale", "Based on current market developments."),
+                "recommendation": action,
+                "severity": severity,
+                "category": "market",
+                "section": "market_intelligence",
+                "source": "news_intelligence",
+            }
+        )
+
+    sentiment = market_context.get("market_sentiment", "neutral")
+    keywords_text = ", ".join(market_context.get("keywords_used", [])[:3])
+    headline = ""
+    if market_context.get("top_headlines"):
+        headline = market_context["top_headlines"][0]
+    market_line = (
+        f" External market signal is {sentiment}."
+        + (f" Themes tracked: {keywords_text}." if keywords_text else "")
+        + (f" Top development: {headline}." if headline else "")
+    )
+
+    narrative = insights_payload.get("narrative", "")
+    insights_payload["narrative"] = (narrative + market_line).strip()
+    insights_payload["insights"] = insights_list
+    return insights_payload
 
 
 def _coerce_usage_value(value: Any) -> int:
@@ -1540,6 +1838,14 @@ async def run_full_analysis(uid: str = Depends(get_current_user)):
             decisions=decisions,
             history_context=history_context,
         )
+
+        market_intelligence = await _build_market_intelligence(
+            uid=uid,
+            schema=schema,
+            analytics=analytics,
+            raw_data=data,
+        )
+        insights = _merge_market_context_into_insights(insights, market_intelligence)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Analysis pipeline error: {str(e)}")
 
@@ -1550,6 +1856,7 @@ async def run_full_analysis(uid: str = Depends(get_current_user)):
         "predictions": predictions,
         "decisions": decisions,
         "insights": insights,
+        "market_intelligence": market_intelligence,
     }
     _save_session(session_store)
 
@@ -1592,6 +1899,7 @@ async def run_full_analysis(uid: str = Depends(get_current_user)):
         "trend_lock": insights.get("trend_lock", {}),
         "data_sufficiency": insights.get("data_sufficiency", "full"),
         "ai_provider": insights.get("ai_provider", "rule_based"),
+        "market_intelligence": market_intelligence,
     }))
 
 
@@ -3086,11 +3394,41 @@ async def generate_strategy(
         stats = {"total_entries": len(logs)}
         log.warning("   ⚠  Stats computation failed: %s", e)
 
+    market_context = await _build_market_intelligence_from_business_data(
+        uid=uid,
+        business_type=biz_type,
+        business_category=biz_cat,
+        logs=log_summary,
+        stock_entries=stock_summary,
+        stats=stats,
+    )
+
     # ── If no AI provider is available, return rule-based fallback ──
     if not is_any_ai_available():
         log.info("🔧 [STRATEGY] No AI provider available → rule-based fallback")
         fallback = _build_rule_based_strategy(stats, biz_type, biz_cat, region, log_summary, stock_summary)
         fallback["stats"] = stats
+        fallback["market_intelligence"] = market_context
+        fallback["combined_reasoning"] = _build_combined_market_reasoning(
+            "",
+            market_context,
+            stats,
+            "strategy",
+        )
+
+        recommendation = (market_context.get("recommendations") or [{}])[0]
+        action = str(recommendation.get("action") or "").strip()
+        rationale = str(recommendation.get("rationale") or "").strip()
+        urgency = str(recommendation.get("urgency") or "this_week").lower()
+        priority = "high" if urgency == "immediate" else "medium"
+        if action:
+            fallback.setdefault("salesTips", []).append(
+                {
+                    "title": f"Market Signal: {action}",
+                    "description": rationale or "Recommended from live market conditions.",
+                    "priority": priority,
+                }
+            )
         log.info("✅ [STRATEGY] Rule-based response ready (%.2fs)", _time.time() - t_start)
         return JSONResponse(content=_sanitize(fallback))
 
@@ -3109,6 +3447,15 @@ Stock Entries:
 
 Computed Stats:
 {json.dumps(stats, indent=2)}
+
+Live Market News Context (latest headlines + predictions + recommendations):
+{json.dumps({
+    "market_sentiment": market_context.get("market_sentiment"),
+    "keywords_used": market_context.get("keywords_used", []),
+    "top_headlines": market_context.get("top_headlines", []),
+    "predictions": market_context.get("predictions", []),
+    "recommendations": market_context.get("recommendations", []),
+}, indent=2)}
 
 Based on this data, generate a comprehensive strategy report in JSON format with these exact keys:
 
@@ -3132,6 +3479,27 @@ Return ONLY valid JSON with the 5 keys above. No markdown, no explanation, no co
         result = json.loads(text)
         log.info("✅ [STRATEGY] JSON parsed — %d sales tips, %d customer strategies",
                  len(result.get("salesTips", [])), len(result.get("customerStrategies", [])))
+
+        recommendation = (market_context.get("recommendations") or [{}])[0]
+        action = str(recommendation.get("action") or "").strip()
+        rationale = str(recommendation.get("rationale") or "").strip()
+        urgency = str(recommendation.get("urgency") or "this_week").lower()
+        priority = "high" if urgency == "immediate" else "medium"
+        if action:
+            result.setdefault("salesTips", []).append(
+                {
+                    "title": f"Market Signal: {action}",
+                    "description": rationale or "Recommended from live market conditions.",
+                    "priority": priority,
+                }
+            )
+
+        combined_reasoning = _build_combined_market_reasoning(
+            "",
+            market_context,
+            stats,
+            "strategy",
+        )
         log.info("   ⏱  Total time: %.2fs", _time.time() - t_start)
 
         return JSONResponse(content=_sanitize({
@@ -3143,6 +3511,8 @@ Return ONLY valid JSON with the 5 keys above. No markdown, no explanation, no co
             "purchaseSuggestions": result.get("purchaseSuggestions", []),
             "roadmap": result.get("roadmap", []),
             "stats": stats,
+            "market_intelligence": market_context,
+            "combined_reasoning": combined_reasoning,
         }))
     except Exception as e:
         # On ANY AI failure (both Gemini & Groq exhausted, parse error, etc.)
@@ -3152,6 +3522,28 @@ Return ONLY valid JSON with the 5 keys above. No markdown, no explanation, no co
         fallback = _build_rule_based_strategy(stats, biz_type, biz_cat, region, log_summary, stock_summary)
         fallback["stats"] = stats
         fallback["fallback_reason"] = str(e)
+        fallback["market_intelligence"] = market_context
+        fallback["combined_reasoning"] = _build_combined_market_reasoning(
+            "",
+            market_context,
+            stats,
+            "strategy",
+        )
+
+        recommendation = (market_context.get("recommendations") or [{}])[0]
+        action = str(recommendation.get("action") or "").strip()
+        rationale = str(recommendation.get("rationale") or "").strip()
+        urgency = str(recommendation.get("urgency") or "this_week").lower()
+        priority = "high" if urgency == "immediate" else "medium"
+        if action:
+            fallback.setdefault("salesTips", []).append(
+                {
+                    "title": f"Market Signal: {action}",
+                    "description": rationale or "Recommended from live market conditions.",
+                    "priority": priority,
+                }
+            )
+
         log.info("✅ [STRATEGY] Rule-based response ready (%.2fs)", _time.time() - t_start)
         return JSONResponse(content=_sanitize(fallback))
 
@@ -3207,6 +3599,31 @@ async def premium_analysis(
             existing = pa_ref.get()
             if existing.exists:
                 cached = existing.to_dict()
+                market_context = cached.get("market_intelligence") if isinstance(cached, dict) else None
+                if not market_context:
+                    market_context = await _build_market_intelligence_from_business_data(
+                        uid=uid,
+                        business_type=biz_type,
+                        business_category=biz_cat,
+                        logs=logs,
+                        stock_entries=stocks,
+                        stats={
+                            "avg_daily_revenue": 0,
+                            "avg_daily_customers": 0,
+                            "avg_daily_orders": 0,
+                        },
+                    )
+                    cached["market_intelligence"] = market_context
+                    cached["combined_reasoning"] = _build_combined_market_reasoning(
+                        str(cached.get("analysis") or ""),
+                        market_context,
+                        {
+                            "avg_daily_revenue": 0,
+                            "avg_daily_customers": 0,
+                            "avg_daily_orders": 0,
+                        },
+                        "premium",
+                    )
                 log.info("📦 [PREMIUM] Returning cached analysis for %s", month_key)
                 return JSONResponse(content={
                     "status": "success",
@@ -3248,6 +3665,15 @@ async def premium_analysis(
         "min_revenue_day": min(revenues) if revenues else 0,
     }
 
+    market_context = await _build_market_intelligence_from_business_data(
+        uid=uid,
+        business_type=biz_type,
+        business_category=biz_cat,
+        logs=log_summary,
+        stock_entries=stock_summary,
+        stats=stats,
+    )
+
     # ── Run inference ──
     log.info("🤖 [PREMIUM] Running inference…")
     try:
@@ -3261,6 +3687,7 @@ async def premium_analysis(
             "logSummary": log_summary,
             "stockSummary": stock_summary,
             "historyContext": _build_history_context(uid),
+            "marketIntelligence": market_context,
         }
 
         result = generate_premium_analysis(business_data)
@@ -3276,7 +3703,38 @@ async def premium_analysis(
         "generation_time": result.get("generation_time", 0),
         "generated_at": now.isoformat(),
         "stats": stats,
+        "market_intelligence": market_context,
     }
+
+    recommendation = (market_context.get("recommendations") or [{}])[0]
+    action = str(recommendation.get("action") or "").strip()
+    rationale = str(recommendation.get("rationale") or "").strip()
+    top_headline = ""
+    if market_context.get("top_headlines"):
+        top_headline = str(market_context["top_headlines"][0])
+
+    market_overlay_lines = ["Market Intelligence Overlay:"]
+    market_overlay_lines.append(
+        f"- Sentiment: {market_context.get('market_sentiment', 'neutral')}"
+    )
+    if top_headline:
+        market_overlay_lines.append(f"- Top headline: {top_headline}")
+    if action:
+        market_overlay_lines.append(f"- Suggested action: {action}")
+    if rationale:
+        market_overlay_lines.append(f"- Rationale: {rationale}")
+
+    response_data["analysis"] = (
+        str(response_data.get("analysis") or "").strip()
+        + "\n\n"
+        + "\n".join(market_overlay_lines)
+    ).strip()
+    response_data["combined_reasoning"] = _build_combined_market_reasoning(
+        str(result.get("analysis") or ""),
+        market_context,
+        stats,
+        "premium",
+    )
 
     if _firebase_available and uid:
         try:
@@ -3783,7 +4241,14 @@ async def business_chat(payload: ChatRequest, uid: str = Depends(get_current_use
         )
         return JSONResponse(content=_sanitize(result))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.getLogger("yukti.chat").warning("Business chat fallback due to error: %s", e)
+        fallback = {
+            "answer": "I could not complete the chat analysis right now, but your data is available. Please try once again.",
+            "highlight": "Temporary analysis issue",
+            "action": "Retry chat in a moment and ensure recent logs are loaded.",
+            "confidence": "low",
+        }
+        return JSONResponse(content=_sanitize(fallback))
 
 
 @app.post("/api/weekly-digest")

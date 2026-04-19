@@ -73,6 +73,15 @@ const STRATEGY_PROGRESS_STEPS = [
 const STRATEGY_JOB_KEY = "yukti_strategy_job";
 const MAX_STRATEGY_HISTORY = 20;
 
+function getMarketRecommendationText(rec) {
+	if (!rec) return "";
+	if (typeof rec === "string") return rec;
+	const action = String(rec.action || "").trim();
+	const rationale = String(rec.rationale || "").trim();
+	if (action && rationale) return `${action} - ${rationale}`;
+	return action || rationale;
+}
+
 export default function StrategyAdvisorPage() {
 	const { user, userProfile, getIdToken } = useAuth();
 	const currencyCode = userProfile?.currency || "INR";
@@ -90,6 +99,15 @@ export default function StrategyAdvisorPage() {
 	const [progressIdx, setProgressIdx] = useState(0);
 	const [history, setHistory] = useState([]);
 	const [historyLoading, setHistoryLoading] = useState(false);
+	const marketIntelligence = strategy?.market_intelligence || null;
+	const marketRecommendations = Array.isArray(
+		marketIntelligence?.recommendations,
+	)
+		? marketIntelligence.recommendations
+		: [];
+	const marketHeadlines = Array.isArray(marketIntelligence?.top_headlines)
+		? marketIntelligence.top_headlines
+		: [];
 
 	useEffect(() => {
 		mountedRef.current = true;
@@ -555,6 +573,67 @@ export default function StrategyAdvisorPage() {
 								Data-Driven Analysis
 							</span>
 						</div>
+
+						{strategy.combined_reasoning && (
+							<div className="mb-6 rounded-xl border border-slate-200 bg-white p-5">
+								<div className="flex items-center gap-2 mb-2">
+									<Sparkles size={14} className="text-slate-700" />
+									<h2 className="text-sm font-semibold text-surface-900">
+										Combined Business + Market Reasoning
+									</h2>
+								</div>
+								<p className="text-xs text-surface-600 leading-relaxed whitespace-pre-line">
+									{strategy.combined_reasoning}
+								</p>
+							</div>
+						)}
+
+						{marketIntelligence && (
+							<div className="mb-6 rounded-xl border border-slate-200 bg-slate-50 p-5">
+								<div className="flex items-center gap-2 mb-4">
+									<Zap size={14} className="text-slate-700" />
+									<h2 className="text-sm font-semibold text-surface-900">
+										Market Intelligence Overlay
+									</h2>
+									<span className="ml-auto text-[10px] uppercase tracking-wider px-2 py-1 rounded-full border border-slate-300 text-slate-700 bg-white">
+										{String(marketIntelligence.market_sentiment || "neutral")}
+									</span>
+								</div>
+
+								{marketHeadlines.length > 0 && (
+									<div className="mb-3">
+										<p className="text-[11px] font-semibold text-surface-700 mb-1">
+											Top Headlines
+										</p>
+										<ul className="space-y-1.5">
+											{marketHeadlines.slice(0, 3).map((headline, idx) => (
+												<li
+													key={`${headline}-${idx}`}
+													className="text-xs text-surface-600"
+												>
+													• {headline}
+												</li>
+											))}
+										</ul>
+									</div>
+								)}
+
+								{marketRecommendations.length > 0 && (
+									<div>
+										<p className="text-[11px] font-semibold text-surface-700 mb-1">
+											Market Actions
+										</p>
+										<ul className="space-y-1.5">
+											{marketRecommendations.slice(0, 3).map((rec, idx) => (
+												<li key={idx} className="text-xs text-surface-600">
+													• {getMarketRecommendationText(rec)}
+												</li>
+											))}
+										</ul>
+									</div>
+								)}
+							</div>
+						)}
 
 						{/* Tab navigation */}
 						<div className="flex gap-1 bg-surface-100 rounded-xl p-1 mb-6 overflow-x-auto">

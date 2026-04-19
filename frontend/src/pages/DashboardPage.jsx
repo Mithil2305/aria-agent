@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Dashboard from "../components/Dashboard";
 import ReportHistory from "../components/ReportHistory";
-import SmartAlerts from "../components/SmartAlerts";
+import AlertsPanel from "../features/early-warning/AlertsPanel";
 import BusinessChat from "../components/BusinessChat";
 import WeeklyDigest from "../components/WeeklyDigest";
 import MarketBenchmark from "../components/MarketBenchmark";
@@ -158,6 +158,7 @@ export default function DashboardPage() {
 
 	const category = getBusinessCategory(userProfile?.businessType || "");
 	const analysisReady = !!analysis;
+	const alertsRefreshKey = `${job.completedAt || "none"}:${rowCount}`;
 
 	const ADVISOR_TABS = [
 		{ key: "alerts", label: "Smart Alerts", icon: Bell },
@@ -222,7 +223,7 @@ export default function DashboardPage() {
 
 				<div className="animate-fade-in-up">
 					{advisorTab === "alerts" && (
-						<SmartAlerts token={token} analysisReady={analysisReady} />
+						<AlertsPanel refreshKey={alertsRefreshKey} />
 					)}
 					{advisorTab === "chat" && (
 						<BusinessChat

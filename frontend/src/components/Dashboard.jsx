@@ -44,6 +44,7 @@ import {
 	RefreshCw,
 	MapPin,
 	Database,
+	Newspaper,
 } from "lucide-react";
 import TrendCharts from "./TrendCharts";
 import ForecastPanel from "./ForecastPanel";
@@ -97,6 +98,7 @@ export default function Dashboard({
 		trend_lock: trendLock = {},
 		data_sufficiency: dataSufficiency = "full",
 		ai_provider: aiProvider = "rule_based",
+		market_intelligence: marketIntelligence = null,
 	} = analysis;
 
 	const healthScore = computeHealthScore(kpis, anomalies, insights, schema);
@@ -532,6 +534,9 @@ export default function Dashboard({
 							<p className="text-sm text-surface-600 leading-relaxed max-w-2xl">
 								{analysis.narrative}
 							</p>
+							<MarketIntelligenceBrief
+								marketIntelligence={marketIntelligence}
+							/>
 						</div>
 						<div className="lg:col-span-4 flex items-start lg:justify-end">
 							<div className="flex flex-wrap lg:justify-end items-center gap-2 w-full">
@@ -742,6 +747,68 @@ function QuickStatsBar({
 					</div>
 				);
 			})}
+		</div>
+	);
+}
+
+function MarketIntelligenceBrief({ marketIntelligence }) {
+	if (!marketIntelligence) return null;
+
+	const sentiment = String(marketIntelligence.market_sentiment || "neutral");
+	const sentimentTone =
+		sentiment === "bullish"
+			? "text-emerald-700 bg-emerald-50 border-emerald-200"
+			: sentiment === "bearish"
+				? "text-red-700 bg-red-50 border-red-200"
+				: "text-slate-700 bg-slate-50 border-slate-200";
+
+	const topPrediction = (marketIntelligence.predictions || [])[0];
+	const topRecommendation = (marketIntelligence.recommendations || [])[0];
+	const keywords = (marketIntelligence.keywords_used || []).slice(0, 4);
+
+	if (!topPrediction && !topRecommendation && keywords.length === 0) {
+		return null;
+	}
+
+	return (
+		<div className="mt-4 rounded-xl border border-sky-100 bg-linear-to-r from-sky-50/80 to-indigo-50/70 p-3.5 space-y-2.5">
+			<div className="flex items-center gap-2 flex-wrap">
+				<div className="inline-flex items-center gap-1.5 text-sky-700 text-xs font-semibold">
+					<Newspaper size={14} />
+					Market Intelligence Overlay
+				</div>
+				<span
+					className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border uppercase ${sentimentTone}`}
+				>
+					{sentiment}
+				</span>
+			</div>
+
+			{topPrediction && (
+				<p className="text-xs text-surface-700">
+					<span className="font-semibold">Signal:</span> {topPrediction.title}
+				</p>
+			)}
+
+			{topRecommendation && (
+				<p className="text-xs text-surface-700">
+					<span className="font-semibold">Action:</span>{" "}
+					{topRecommendation.action}
+				</p>
+			)}
+
+			{keywords.length > 0 && (
+				<div className="flex flex-wrap gap-1.5">
+					{keywords.map((keyword) => (
+						<span
+							key={keyword}
+							className="px-2 py-0.5 rounded-full bg-white border border-sky-200 text-sky-700 text-[10px]"
+						>
+							{keyword}
+						</span>
+					))}
+				</div>
+			)}
 		</div>
 	);
 }

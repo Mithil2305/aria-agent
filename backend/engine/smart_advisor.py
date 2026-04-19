@@ -410,7 +410,15 @@ Return JSON: {{"answer": "...", "highlight": "key number or stat", "action": "sp
             answer_data["action"] = "Add 'expenses' to your daily log to unlock profit tracking."
 
     else:
-        answer_data["answer"] = f"Based on your data, revenue is ₹{_fmt_inr(revenue_kpi.get('current', 0)) if revenue_kpi else 'unknown'}/day with {customer_kpi.get('current', 0):.0f if customer_kpi else 'unknown'} customers."
+        revenue_text = f"₹{_fmt_inr(revenue_kpi.get('current', 0))}/day" if revenue_kpi else "unknown"
+        customer_text = (
+            f"{float(customer_kpi.get('current', 0) or 0):.0f}"
+            if customer_kpi
+            else "unknown"
+        )
+        answer_data["answer"] = (
+            f"Based on your data, revenue is {revenue_text} with {customer_text} customers."
+        )
         answer_data["action"] = "Log more specific data to answer this question better."
 
     return answer_data

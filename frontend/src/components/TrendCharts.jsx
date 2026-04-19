@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
 	AreaChart,
 	Area,
@@ -21,11 +21,28 @@ const COLORS = [
 
 export default function TrendCharts({ trends, expanded }) {
 	const [selectedTrend, setSelectedTrend] = useState(0);
+	const containerRef = useRef(null);
+	const [chartReady, setChartReady] = useState(false);
 
 	if (!trends || trends.length === 0) return null;
 
 	const current = trends[selectedTrend];
 	const color = COLORS[selectedTrend % COLORS.length];
+
+	useEffect(() => {
+		const el = containerRef.current;
+		if (!el) return;
+
+		const checkSize = () => {
+			const rect = el.getBoundingClientRect();
+			setChartReady(rect.width > 0 && rect.height > 0);
+		};
+
+		checkSize();
+		const observer = new ResizeObserver(checkSize);
+		observer.observe(el);
+		return () => observer.disconnect();
+	}, [expanded, selectedTrend]);
 
 	return (
 		<div className={`card p-5 ${expanded ? "col-span-full" : ""}`}>
@@ -56,6 +73,7 @@ export default function TrendCharts({ trends, expanded }) {
 			</div>
 
 			<div
+				ref={containerRef}
 				style={{
 					width: "100%",
 					minWidth: 0,
@@ -63,76 +81,80 @@ export default function TrendCharts({ trends, expanded }) {
 					height: expanded ? 320 : 256,
 				}}
 			>
-				<ResponsiveContainer
-					width="100%"
-					height="100%"
-					minWidth={0}
-					minHeight={expanded ? 320 : 256}
-				>
-					<AreaChart
-						data={current.data}
-						margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+				{chartReady ? (
+					<ResponsiveContainer
+						width="100%"
+						height="100%"
+						minWidth={0}
+						minHeight={expanded ? 320 : 256}
 					>
-						<defs>
-							<linearGradient
-								id={`trendGrad-${selectedTrend}`}
-								x1="0"
-								y1="0"
-								x2="0"
-								y2="1"
-							>
-								<stop offset="5%" stopColor={color} stopOpacity={0.25} />
-								<stop offset="95%" stopColor={color} stopOpacity={0} />
-							</linearGradient>
-						</defs>
-						<CartesianGrid
-							strokeDasharray="3 3"
-							stroke="rgba(229,231,235,0.6)"
-						/>
-						<XAxis
-							dataKey="x"
-							tick={{ fontSize: 10, fill: "#9ca3af" }}
-							axisLine={{ stroke: "#e5e7eb" }}
-							tickLine={false}
-							interval="preserveStartEnd"
-						/>
-						<YAxis
-							tick={{ fontSize: 10, fill: "#9ca3af" }}
-							axisLine={false}
-							tickLine={false}
-							width={55}
-							tickFormatter={(v) => formatYAxis(v)}
-						/>
-						<Tooltip
-							content={<CustomTooltip label={current.label} color={color} />}
-						/>
-						<Area
-							type="monotone"
-							dataKey="y"
-							stroke={color}
-							strokeWidth={2}
-							fill={`url(#trendGrad-${selectedTrend})`}
-							dot={false}
-							activeDot={{
-								r: 4,
-								stroke: color,
-								strokeWidth: 2,
-								fill: "#ffffff",
-							}}
-						/>
-						{/* Moving average line */}
-						<Line
-							type="monotone"
-							dataKey="ma"
-							stroke={color}
-							strokeWidth={1.5}
-							strokeDasharray="4 4"
-							strokeOpacity={0.5}
-							dot={false}
-							connectNulls
-						/>
-					</AreaChart>
-				</ResponsiveContainer>
+						<AreaChart
+							data={current.data}
+							margin={{ top: 5, right: 10, left: 0, bottom: 5 }}
+						>
+							<defs>
+								<linearGradient
+									id={`trendGrad-${selectedTrend}`}
+									x1="0"
+									y1="0"
+									x2="0"
+									y2="1"
+								>
+									<stop offset="5%" stopColor={color} stopOpacity={0.25} />
+									<stop offset="95%" stopColor={color} stopOpacity={0} />
+								</linearGradient>
+							</defs>
+							<CartesianGrid
+								strokeDasharray="3 3"
+								stroke="rgba(229,231,235,0.6)"
+							/>
+							<XAxis
+								dataKey="x"
+								tick={{ fontSize: 10, fill: "#9ca3af" }}
+								axisLine={{ stroke: "#e5e7eb" }}
+								tickLine={false}
+								interval="preserveStartEnd"
+							/>
+							<YAxis
+								tick={{ fontSize: 10, fill: "#9ca3af" }}
+								axisLine={false}
+								tickLine={false}
+								width={55}
+								tickFormatter={(v) => formatYAxis(v)}
+							/>
+							<Tooltip
+								content={<CustomTooltip label={current.label} color={color} />}
+							/>
+							<Area
+								type="monotone"
+								dataKey="y"
+								stroke={color}
+								strokeWidth={2}
+								fill={`url(#trendGrad-${selectedTrend})`}
+								dot={false}
+								activeDot={{
+									r: 4,
+									stroke: color,
+									strokeWidth: 2,
+									fill: "#ffffff",
+								}}
+							/>
+							{/* Moving average line */}
+							<Line
+								type="monotone"
+								dataKey="ma"
+								stroke={color}
+								strokeWidth={1.5}
+								strokeDasharray="4 4"
+								strokeOpacity={0.5}
+								dot={false}
+								connectNulls
+							/>
+						</AreaChart>
+					</ResponsiveContainer>
+				) : (
+					<div className="w-full h-full rounded-md bg-surface-100 animate-pulse" />
+				)}
 			</div>
 
 			{/* Legend */}

@@ -7,7 +7,6 @@ import {
 	useLocation,
 } from "react-router-dom";
 import { useEffect } from "react";
-import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./components/AppLayout";
 import HomePage from "./pages/HomePage";
@@ -65,67 +64,62 @@ function App() {
 	return (
 		<BrowserRouter>
 			<ScrollToTop />
-			<AuthProvider>
-				<AnalysisJobProvider>
-					<Routes>
-						{/* Public routes */}
-						<Route element={<PublicLayout />}>
-							<Route path="/" element={<HomePage />} />
-							<Route path="/setup" element={<SetupPage />} />
-							<Route path="/login" element={<LoginPage />} />
-							<Route path="/register" element={<RegisterPage />} />
-							<Route path="/documentation" element={<DocumentationPage />} />
-							<Route path="/case-studies" element={<CaseStudiesPage />} />
-							<Route path="/help-center" element={<HelpCenterPage />} />
-							<Route path="/api-reference" element={<ApiReferencePage />} />
-							<Route path="/about" element={<AboutMudMediaPage />} />
-							<Route path="/careers" element={<CareersPage />} />
-							<Route path="/contact-us" element={<ContactUsPage />} />
-							<Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
-							<Route path="/pricing" element={<PricingPage />} />
-							<Route path="/blogs" element={<BlogsPage />} />
-							<Route
-								path="/terms-of-service"
-								element={<TermsOfServicePage />}
-							/>
-						</Route>
+			<AnalysisJobProvider>
+				<Routes>
+					{/* Public routes */}
+					<Route element={<PublicLayout />}>
+						<Route path="/" element={<HomePage />} />
+						<Route path="/setup" element={<SetupPage />} />
+						<Route path="/login" element={<LoginPage />} />
+						<Route path="/register" element={<RegisterPage />} />
+						<Route path="/documentation" element={<DocumentationPage />} />
+						<Route path="/case-studies" element={<CaseStudiesPage />} />
+						<Route path="/help-center" element={<HelpCenterPage />} />
+						<Route path="/api-reference" element={<ApiReferencePage />} />
+						<Route path="/about" element={<AboutMudMediaPage />} />
+						<Route path="/careers" element={<CareersPage />} />
+						<Route path="/contact-us" element={<ContactUsPage />} />
+						<Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+						<Route path="/pricing" element={<PricingPage />} />
+						<Route path="/blogs" element={<BlogsPage />} />
+						<Route path="/terms-of-service" element={<TermsOfServicePage />} />
+					</Route>
 
-						{/* Trial expired — protected but outside AppLayout */}
-						<Route
-							path="/trial-expired"
-							element={
-								<ProtectedRoute>
-									<TrialExpiredPage />
-								</ProtectedRoute>
-							}
-						/>
+					{/* Trial expired — protected but outside AppLayout */}
+					<Route
+						path="/trial-expired"
+						element={
+							<ProtectedRoute>
+								<TrialExpiredPage />
+							</ProtectedRoute>
+						}
+					/>
 
-						{/* Protected routes — wrapped in SaaS sidebar layout */}
-						<Route
-							element={
-								<ProtectedRoute>
-									<AppLayout />
-								</ProtectedRoute>
-							}
-						>
-							<Route path="/dashboard" element={<DashboardPage />} />
-							<Route path="/upload" element={<UploadPage />} />
-							<Route path="/daily-log" element={<DailyLogPage />} />
-							<Route path="/profile" element={<ProfilePage />} />
-							<Route path="/analyse" element={<AnalysePage />} />
-							<Route path="/stock" element={<StockManagementPage />} />
-							<Route path="/integrations" element={<IntegrationsPage />} />
-							<Route path="/strategy" element={<StrategyAdvisorPage />} />
-							<Route path="/premium" element={<PremiumAnalysisPage />} />
-							<Route path="/limits" element={<LimitsPage />} />
-							<Route path="/admin" element={<AdminPage />} />
-						</Route>
+					{/* Protected routes — wrapped in SaaS sidebar layout */}
+					<Route
+						element={
+							<ProtectedRoute>
+								<AppLayout />
+							</ProtectedRoute>
+						}
+					>
+						<Route path="/dashboard" element={<DashboardPage />} />
+						<Route path="/upload" element={<UploadPage />} />
+						<Route path="/daily-log" element={<DailyLogPage />} />
+						<Route path="/profile" element={<ProfilePage />} />
+						<Route path="/analyse" element={<AnalysePage />} />
+						<Route path="/stock" element={<StockManagementPage />} />
+						<Route path="/integrations" element={<IntegrationsPage />} />
+						<Route path="/strategy" element={<StrategyAdvisorPage />} />
+						<Route path="/premium" element={<PremiumAnalysisPage />} />
+						<Route path="/limits" element={<LimitsPage />} />
+						<Route path="/admin" element={<AdminPage />} />
+					</Route>
 
-						{/* Catch-all */}
-						<Route path="*" element={<Navigate to="/" replace />} />
-					</Routes>
-				</AnalysisJobProvider>
-			</AuthProvider>
+					{/* Catch-all */}
+					<Route path="*" element={<Navigate to="/" replace />} />
+				</Routes>
+			</AnalysisJobProvider>
 		</BrowserRouter>
 	);
 }

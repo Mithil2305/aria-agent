@@ -23,6 +23,7 @@ export let auth = null;
 export let db = null;
 let app = null;
 let initPromise = null;
+const FIREBASE_CONFIG_TIMEOUT_MS = 8000;
 
 function hasRequiredFirebaseKeys(config) {
 	return Boolean(config?.apiKey) && Boolean(config?.projectId);
@@ -30,36 +31,54 @@ function hasRequiredFirebaseKeys(config) {
 
 async function getBackendFirebaseConfig() {
 	const candidates = [];
+	const seen = new Set();
+
+	const addCandidate = (url) => {
+		if (!url || seen.has(url)) return;
+		seen.add(url);
+		candidates.push(url);
+	};
 
 	if (typeof window !== "undefined") {
 		const { protocol, hostname, host, port } = window.location;
 		const originBase = `${protocol}//${host}`;
 		const backendBase = `${window.location.protocol}//${window.location.hostname}:8000`;
+		const envApiBase = import.meta.env.VITE_API_URL || "";
+
+		if (envApiBase) {
+			addCandidate(
+				`${envApiBase.replace(/\/$/, "")}/api/public/firebase-config`,
+			);
+		}
 
 		// In Vite/dev ports, skip same-origin call to avoid HTML 404 responses.
 		if (port && port !== "8000") {
-			candidates.push(`${backendBase}/api/public/firebase-config`);
+			addCandidate(`${backendBase}/api/public/firebase-config`);
 			if (hostname === "localhost") {
-				candidates.push(
-					`${protocol}//127.0.0.1:8000/api/public/firebase-config`,
-				);
+				addCandidate(`${protocol}//127.0.0.1:8000/api/public/firebase-config`);
 			}
 		} else {
-			candidates.push(`${originBase}/api/public/firebase-config`);
+			addCandidate(`${originBase}/api/public/firebase-config`);
 			if (backendBase !== originBase) {
-				candidates.push(`${backendBase}/api/public/firebase-config`);
+				addCandidate(`${backendBase}/api/public/firebase-config`);
 			}
 		}
 	} else {
-		candidates.push("http://localhost:8000/api/public/firebase-config");
+		addCandidate("http://localhost:8000/api/public/firebase-config");
 	}
 
 	let lastError = null;
 	for (const url of candidates) {
+		const controller = new AbortController();
+		const timeoutId = setTimeout(
+			() => controller.abort(),
+			FIREBASE_CONFIG_TIMEOUT_MS,
+		);
 		try {
 			const response = await fetch(url, {
 				method: "GET",
 				headers: { Accept: "application/json" },
+				signal: controller.signal,
 			});
 
 			if (!response.ok) {
@@ -88,7 +107,15 @@ async function getBackendFirebaseConfig() {
 				"Firebase configuration unavailable on backend. Set FIREBASE_API_KEY and FIREBASE_PROJECT_ID (plus other FIREBASE_* values).",
 			);
 		} catch (err) {
-			lastError = err;
+			if (err?.name === "AbortError") {
+				lastError = new Error(
+					`Firebase config request timed out after ${Math.round(FIREBASE_CONFIG_TIMEOUT_MS / 1000)}s (${url})`,
+				);
+			} else {
+				lastError = err;
+			}
+		} finally {
+			clearTimeout(timeoutId);
 		}
 	}
 
