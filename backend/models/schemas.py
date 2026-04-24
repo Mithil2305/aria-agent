@@ -53,6 +53,11 @@ class NewsKeywordInput(BaseModel):
             raise ValueError("At least one keyword is required")
         if len(deduped) > 10:
             raise ValueError("Maximum 10 keywords are allowed")
+        for keyword in deduped:
+            if len(keyword) > 64:
+                raise ValueError("Each keyword must be 64 characters or fewer")
+            if not all(ch.isalnum() or ch in {" ", "-", "_", "/", "&"} for ch in keyword):
+                raise ValueError("Keywords may only contain letters, numbers, spaces, and - _ / &")
         return deduped
 
 

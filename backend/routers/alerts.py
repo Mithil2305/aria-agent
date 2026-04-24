@@ -4,6 +4,7 @@ import logging
 from models.schemas import MetricsPayload
 from services.ews_service import EWSService
 from utils.auth import verify_firebase_token
+from utils.rate_limit import enforce_rate_limit
 
 router = APIRouter()
 log = logging.getLogger("yukti.alerts")
@@ -15,6 +16,7 @@ async def evaluate_warnings(
     user: dict = Depends(verify_firebase_token),
 ):
     """Evaluate warnings using Firestore history, with optional caller-provided metrics override."""
+    await enforce_rate_limit("alerts_evaluate", user["uid"], limit=20, window_seconds=60)
     service = EWSService()
     alerts = await service.evaluate(
         uid=user["uid"],
@@ -29,6 +31,7 @@ async def evaluate_warnings(
 @router.get("/active")
 async def get_active_alerts(user: dict = Depends(verify_firebase_token)):
     """Return unresolved alerts for the current user."""
+    await enforce_rate_limit("alerts_active", user["uid"], limit=60, window_seconds=60)
     service = EWSService()
     try:
         alerts = await service.get_active_alerts(uid=user["uid"])
@@ -40,6 +43,7 @@ async def get_active_alerts(user: dict = Depends(verify_firebase_token)):
 
 @router.post("/dismiss/{alert_id}")
 async def dismiss_alert(alert_id: str, user: dict = Depends(verify_firebase_token)):
+    await enforce_rate_limit("alerts_dismiss", user["uid"], limit=30, window_seconds=60)
     service = EWSService()
     await service.dismiss_alert(uid=user["uid"], alert_id=alert_id)
     return {"status": "dismissed"}

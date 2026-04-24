@@ -45,6 +45,7 @@ from datetime import datetime, date
 from setup_route import router as setup_router
 from routers import news, alerts
 from services.news_service import NewsService
+from utils.rate_limit import enforce_rate_limit
 
 DEFAULT_ADMIN_EMAIL = "admin@yukti.com"
 DEFAULT_ADMIN_PASSWORD = "Admin@2026/"
@@ -4185,6 +4186,7 @@ def _require_data():
 @app.post("/api/smart-alerts")
 async def smart_alerts(uid: str = Depends(get_current_user)):
     """Generate proactive smart alerts from the current session data."""
+    await enforce_rate_limit("smart_alerts", uid, limit=15, window_seconds=60)
     _assert_service_allowed(uid, "ai_strategy")
     _require_data()
     try:
@@ -4216,6 +4218,7 @@ async def smart_alerts(uid: str = Depends(get_current_user)):
 @app.post("/api/chat")
 async def business_chat(payload: ChatRequest, uid: str = Depends(get_current_user)):
     """Answer a natural-language business question about the loaded data."""
+    await enforce_rate_limit("business_chat", uid, limit=20, window_seconds=60)
     _assert_service_allowed(uid, "ai_strategy")
     _require_data()
     try:
@@ -4254,6 +4257,7 @@ async def business_chat(payload: ChatRequest, uid: str = Depends(get_current_use
 @app.post("/api/weekly-digest")
 async def weekly_digest(uid: str = Depends(get_current_user)):
     """Generate a week-over-week digest with top 3 prioritised actions."""
+    await enforce_rate_limit("weekly_digest", uid, limit=10, window_seconds=60)
     _assert_service_allowed(uid, "ai_strategy")
     _require_data()
     try:

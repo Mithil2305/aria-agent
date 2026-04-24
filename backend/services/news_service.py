@@ -2,8 +2,9 @@ import asyncio
 import hashlib
 import json
 import os
-from urllib.parse import quote_plus
+from urllib.parse import quote_plus, urlparse
 from datetime import datetime
+from ipaddress import ip_address
 from typing import Any, Dict, List
 
 import feedparser
@@ -19,6 +20,37 @@ BBC_RSS_FEEDS = {
     "technology": "https://feeds.bbci.co.uk/news/technology/rss.xml",
     "world": "https://feeds.bbci.co.uk/news/world/rss.xml",
 }
+
+ALLOWED_SCHEMES = {"http", "https"}
+BLOCKED_DOMAINS = {"localhost", "127.0.0.1", "0.0.0.0", "169.254.169.254"}
+
+
+def is_safe_url(url: str) -> bool:
+    try:
+        parsed = urlparse(url)
+        scheme = (parsed.scheme or "").lower()
+        host = (parsed.hostname or "").lower()
+        if scheme not in ALLOWED_SCHEMES or not host:
+            return False
+        if host in BLOCKED_DOMAINS:
+            return False
+
+        # Block private and loopback IP ranges to reduce SSRF risk.
+        try:
+            ip = ip_address(host)
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                return False
+        except ValueError:
+            if host.startswith("10.") or host.startswith("192.168."):
+                return False
+            if host.startswith("172."):
+                parts = host.split(".")
+                if len(parts) > 1 and parts[1].isdigit() and 16 <= int(parts[1]) <= 31:
+                    return False
+
+        return True
+    except Exception:
+        return False
 
 
 class NewsService:
@@ -81,13 +113,16 @@ class NewsService:
                     response = await client.get(url)
                     feed = feedparser.parse(response.text)
                     for entry in feed.entries[:8]:
+                        entry_url = str(entry.get("link", "") or "").strip()
+                        if not is_safe_url(entry_url):
+                            continue
                         source = "Google News"
                         if entry.get("source"):
                             source = entry.get("source", {}).get("title", source)
                         articles.append(
                             {
                                 "title": entry.get("title", ""),
-                                "url": entry.get("link", ""),
+                                "url": entry_url,
                                 "source": source,
                                 "published": entry.get("published", ""),
                                 "summary": BeautifulSoup(
@@ -110,10 +145,13 @@ class NewsService:
                     response = await client.get(url)
                     feed = feedparser.parse(response.text)
                     for entry in feed.entries[:10]:
+                        entry_url = str(entry.get("link", "") or "").strip()
+                        if not is_safe_url(entry_url):
+                            continue
                         results.append(
                             {
                                 "title": entry.get("title", ""),
-                                "url": entry.get("link", ""),
+                                "url": entry_url,
                                 "source": f"BBC News ({topic})",
                                 "published": entry.get("published", ""),
                                 "summary": BeautifulSoup(
@@ -130,7 +168,7 @@ class NewsService:
 
     async def _enrich_articles(self, articles: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         async def enrich(article: Dict[str, Any]) -> Dict[str, Any]:
-            if not article.get("url"):
+            if not article.get("url") or not is_safe_url(str(article.get("url", ""))):
                 article["full_text"] = article.get("summary", "")
                 return article
 
