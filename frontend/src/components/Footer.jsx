@@ -76,7 +76,7 @@ export default function Footer() {
 			{ label: "API Reference", to: "/api-reference" },
 		],
 		company: [
-			{ label: "About Mud Media", to: "/about-mud-media" },
+			{ label: "About", to: "/about" },
 			{ label: "Careers", to: "/careers" },
 			{ label: "Contact Us", to: "/contact-us" },
 			{ label: "Privacy Policy", to: "/privacy-policy" },
