@@ -23,13 +23,12 @@ export default function TrendCharts({ trends, expanded }) {
 	const [selectedTrend, setSelectedTrend] = useState(0);
 	const containerRef = useRef(null);
 	const [chartReady, setChartReady] = useState(false);
-
-	if (!trends || trends.length === 0) return null;
-
-	const current = trends[selectedTrend];
+	const hasTrends = !!trends?.length;
+	const current = hasTrends ? trends[selectedTrend] : null;
 	const color = COLORS[selectedTrend % COLORS.length];
 
 	useEffect(() => {
+		if (!hasTrends) return;
 		const el = containerRef.current;
 		if (!el) return;
 
@@ -42,7 +41,9 @@ export default function TrendCharts({ trends, expanded }) {
 		const observer = new ResizeObserver(checkSize);
 		observer.observe(el);
 		return () => observer.disconnect();
-	}, [expanded, selectedTrend]);
+	}, [expanded, selectedTrend, hasTrends]);
+
+	if (!hasTrends) return null;
 
 	return (
 		<div className={`card p-5 ${expanded ? "col-span-full" : ""}`}>

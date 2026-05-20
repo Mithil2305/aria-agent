@@ -22,7 +22,7 @@ import {
 	X,
 } from "lucide-react";
 import { needsStockManagement } from "../config/businessTypes";
-import { useAnalysisJob } from "../contexts/AnalysisJobContext";
+import { useAnalysisJob } from "../contexts/useAnalysisJob";
 import BrandLogo from "./BrandLogo";
 
 const NAV_ITEMS = [

@@ -41,7 +41,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { scanBillImage } from "../services/api";
 import { formatCurrency, getCurrencySymbol } from "../utils/currency";
-import { useAnalysisJob } from "../contexts/AnalysisJobContext";
+import { useAnalysisJob } from "../contexts/useAnalysisJob";
 
 function getCurrentMonth() {
 	const d = new Date();

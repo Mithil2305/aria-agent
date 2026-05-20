@@ -35,7 +35,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { formatCurrency } from "../utils/currency";
-import { useAnalysisJob } from "../contexts/AnalysisJobContext";
+import { useAnalysisJob } from "../contexts/useAnalysisJob";
 import { getLimitsDashboard } from "../services/usageLimits";
 
 /* ── Loading animation steps ─────────────────────── */

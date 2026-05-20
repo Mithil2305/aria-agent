@@ -93,7 +93,7 @@ export default function ProcessingView({ onComplete, fileName, rowCount }) {
 			clearTimeout(stageTimeout);
 			clearInterval(progressInterval);
 		};
-	}, []);
+	}, [onComplete]);
 
 	return (
 		<div className="min-h-[calc(100vh-60px)] flex items-center justify-center bg-surface-100">

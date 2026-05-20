@@ -5,7 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { uploadFile, loadDemo } from "../services/api";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../firebase";
-import { useAnalysisJob } from "../contexts/AnalysisJobContext";
+import { useAnalysisJob } from "../contexts/useAnalysisJob";
 
 export default function UploadPage() {
 	const [error, setError] = useState(null);

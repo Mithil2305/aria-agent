@@ -12,7 +12,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { collection, getDocs, query, orderBy, limit } from "firebase/firestore";
 import { db } from "../firebase";
 import { getBusinessCategory } from "../config/businessTypes";
-import { useAnalysisJob } from "../contexts/AnalysisJobContext";
+import { useAnalysisJob } from "../contexts/useAnalysisJob";
 import {
 	TrendingUp,
 	Target,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
 	TrendingUp,
 	TrendingDown,
@@ -139,7 +139,7 @@ export default function ActionableForecast({ token, analysisReady }) {
 	const [forecasts, setForecasts] = useState([]);
 	const [loading, setLoading] = useState(false);
 
-	const fetchForecasts = async () => {
+	const fetchForecasts = useCallback(async () => {
 		if (!analysisReady) return;
 		setLoading(true);
 		try {
@@ -166,11 +166,11 @@ export default function ActionableForecast({ token, analysisReady }) {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [analysisReady, currencyCode, token, user]);
 
 	useEffect(() => {
-		if (analysisReady) fetchForecasts();
-	}, [analysisReady, currencyCode]);
+		fetchForecasts();
+	}, [fetchForecasts]);
 
 	if (!analysisReady) return null;
 

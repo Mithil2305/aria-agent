@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
 	IndianRupee,
 	TrendingUp,
@@ -40,7 +40,7 @@ export default function PricingInsights({ token, analysisReady }) {
 	const [insights, setInsights] = useState([]);
 	const [loading, setLoading] = useState(false);
 
-	const fetchInsights = async () => {
+	const fetchInsights = useCallback(async () => {
 		if (!analysisReady) return;
 		setLoading(true);
 		try {
@@ -62,11 +62,11 @@ export default function PricingInsights({ token, analysisReady }) {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [analysisReady, token, user]);
 
 	useEffect(() => {
-		if (analysisReady) fetchInsights();
-	}, [analysisReady]);
+		fetchInsights();
+	}, [fetchInsights]);
 
 	if (!analysisReady || loading) {
 		if (loading) {

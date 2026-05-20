@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
 	Calendar,
 	TrendingUp,
@@ -80,7 +80,7 @@ export default function WeeklyDigest({ token, analysisReady }) {
 	const [digest, setDigest] = useState(null);
 	const [loading, setLoading] = useState(false);
 
-	const fetchDigest = async () => {
+	const fetchDigest = useCallback(async () => {
 		if (!analysisReady) return;
 		setLoading(true);
 		try {
@@ -107,11 +107,11 @@ export default function WeeklyDigest({ token, analysisReady }) {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [analysisReady, token, user]);
 
 	useEffect(() => {
-		if (analysisReady) fetchDigest();
-	}, [analysisReady]);
+		fetchDigest();
+	}, [fetchDigest]);
 
 	if (!analysisReady) return null;
 

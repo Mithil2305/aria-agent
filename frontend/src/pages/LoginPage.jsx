@@ -188,7 +188,7 @@ export default function LoginPage() {
 					<div className="flex flex-col w-full justify-between gap-8">
 						<div>
 							<p className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-600">
-								<Sparkles size={13} /> Yukti Intelligence Platform
+								Yukti Intelligence Platform
 							</p>
 							<h1 className="mt-5 text-4xl font-extrabold leading-tight tracking-tight text-black">
 								Welcome back to your

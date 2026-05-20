@@ -48,6 +48,7 @@ function StyledSelect({
 	onChange,
 	getOptionLabel,
 }) {
+	const IconComponent = Icon;
 	const [open, setOpen] = useState(false);
 	const containerRef = useRef(null);
 
@@ -79,7 +80,7 @@ function StyledSelect({
 	return (
 		<div className="relative" ref={containerRef}>
 			<label className="flex items-center gap-1.5 text-xs font-medium text-surface-500 mb-1.5">
-				<Icon size={12} strokeWidth={1.5} />
+				<IconComponent size={12} strokeWidth={1.5} />
 				{label}
 			</label>
 			<button
@@ -350,7 +351,7 @@ export default function ProfilePage() {
 							{saving ? (
 								<Loader2 size={14} className="animate-spin" />
 							) : (
-								<Save size={14} />
+								<Save size={14} className="text-white" />
 							)}
 							{saving ? "Saving…" : "Save Changes"}
 						</button>

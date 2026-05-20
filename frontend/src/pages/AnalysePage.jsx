@@ -11,7 +11,7 @@ import {
 	serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
-import { useAnalysisJob } from "../contexts/AnalysisJobContext";
+import { useAnalysisJob } from "../contexts/useAnalysisJob";
 import { formatCurrency } from "../utils/currency";
 import {
 	BarChart3,
@@ -549,18 +549,15 @@ export default function AnalysePage() {
 									className="group relative flex items-center justify-center gap-2.5 w-full px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-semibold text-sm shadow-md shadow-slate-900/20 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
 								>
 									{isRunning ? (
-										<Loader2
-											size={18}
-											className="animate-spin text-indigo-300"
-										/>
+										<Loader2 size={18} className="animate-spin text-white" />
 									) : (
-										<Sparkles size={18} className="text-indigo-300" />
+										<Sparkles size={18} className="text-white" />
 									)}
 									{isRunning ? "Analysis Running..." : "Run Analysis"}
 									{!isRunning && (
 										<ArrowRight
 											size={16}
-											className="opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all"
+											className="opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-white"
 										/>
 									)}
 								</button>

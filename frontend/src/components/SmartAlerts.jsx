@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
 	AlertTriangle,
 	TrendingUp,
@@ -65,7 +65,7 @@ export default function SmartAlerts({ token, analysisReady }) {
 	const [loading, setLoading] = useState(false);
 	const [expanded, setExpanded] = useState(null);
 
-	const fetchAlerts = async () => {
+	const fetchAlerts = useCallback(async () => {
 		if (!analysisReady) return;
 		setLoading(true);
 		try {
@@ -87,11 +87,11 @@ export default function SmartAlerts({ token, analysisReady }) {
 		} finally {
 			setLoading(false);
 		}
-	};
+	}, [analysisReady, token, user]);
 
 	useEffect(() => {
-		if (analysisReady) fetchAlerts();
-	}, [analysisReady]);
+		fetchAlerts();
+	}, [fetchAlerts]);
 
 	if (!analysisReady) return null;
 

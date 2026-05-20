@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
 	BrainCircuit,
 	Bell,
@@ -89,7 +89,7 @@ export default function YuktiAdvisorPanel({
 		...(insights.opportunity || []),
 	];
 
-	const fetchAlerts = async () => {
+	const fetchAlerts = useCallback(async () => {
 		if (!analysisReady) return;
 		setLoadingAlerts(true);
 		try {
@@ -104,11 +104,11 @@ export default function YuktiAdvisorPanel({
 		} finally {
 			setLoadingAlerts(false);
 		}
-	};
+	}, [analysisReady, token]);
 
 	useEffect(() => {
-		if (analysisReady) fetchAlerts();
-	}, [analysisReady]);
+		fetchAlerts();
+	}, [fetchAlerts]);
 
 	if (!analysisReady) return null;
 

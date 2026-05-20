@@ -75,8 +75,6 @@ export default function Dashboard({
 	analysis,
 	rowCount,
 	onReset,
-	token,
-	analysisReady,
 	businessType = "",
 	previousAnalysis = null,
 	previousReportDate = null,
@@ -97,7 +95,6 @@ export default function Dashboard({
 		insights = [],
 		trend_lock: trendLock = {},
 		data_sufficiency: dataSufficiency = "full",
-		ai_provider: aiProvider = "rule_based",
 		market_intelligence: marketIntelligence = null,
 	} = analysis;
 

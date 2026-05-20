@@ -91,7 +91,6 @@ export default function PricingPage() {
 					<section className="rounded-4xl border border-slate-200/80 bg-white/90 p-8 shadow-[0_18px_40px_-28px_rgba(15,23,42,0.28)] backdrop-blur-sm md:p-10">
 						<div className="text-center">
 							<p className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
-								<Zap size={13} />
 								Yukti's Pricing
 							</p>
 							<h1 className="mt-4 text-2xl md:text-4xl font-extrabold tracking-tight text-black">
@@ -122,12 +121,7 @@ export default function PricingPage() {
 										Most Popular
 									</span>
 								)}
-								<div
-									className={`mb-3 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold ${plan.accentClass}`}
-								>
-									<Zap size={12} />
-									{plan.name} Plan
-								</div>
+
 								<p className="text-sm font-bold uppercase tracking-wide text-slate-900">
 									{plan.name}
 								</p>

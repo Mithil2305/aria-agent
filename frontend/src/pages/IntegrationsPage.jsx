@@ -337,7 +337,7 @@ export default function IntegrationsPage() {
 								}}
 								className="btn-primary text-xs"
 							>
-								<Plug size={14} className="inline mr-1.5" />
+								<Plug size={14} className="inline mr-1.5 text-white" />
 								Connect Your First Platform
 							</button>
 						</div>

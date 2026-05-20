@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Loader } from "lucide-react";
@@ -14,13 +14,14 @@ export default function ProtectedRoute({ children }) {
 		initAuthIfNeeded,
 	} = useAuth();
 	const location = useLocation();
-	const [signingOut, setSigningOut] = useState(false);
+	const signingOutRef = useRef(false);
 	const isAdminEmail =
 		String(user?.email || "")
 			.trim()
 			.toLowerCase() === "admin@yukti.com";
 	const isAdmin = userProfile?.role === "admin" || isAdminEmail;
 	const isSuspended = !!userProfile?.managed?.suspended;
+	const shouldSignOut = !loading && user && !isAdmin && isSuspended;
 
 	useEffect(() => {
 		initAuthIfNeeded().catch(() => {
@@ -29,23 +30,18 @@ export default function ProtectedRoute({ children }) {
 	}, [initAuthIfNeeded]);
 
 	useEffect(() => {
-		let cancelled = false;
-		if (!loading && user && !isAdmin && isSuspended) {
-			setSigningOut(true);
-			logout()
-				.catch(() => {
-					// Best effort sign-out; route guard will still redirect on auth change.
-				})
-				.finally(() => {
-					if (!cancelled) setSigningOut(false);
-				});
-		}
-		return () => {
-			cancelled = true;
-		};
-	}, [loading, user, isAdmin, isSuspended, logout]);
+		if (!shouldSignOut || signingOutRef.current) return;
+		signingOutRef.current = true;
+		logout()
+			.catch(() => {
+				// Best effort sign-out; route guard will still redirect on auth change.
+			})
+			.finally(() => {
+				signingOutRef.current = false;
+			});
+	}, [shouldSignOut, logout]);
 
-	if (!authInitialized || loading || signingOut) {
+	if (!authInitialized || loading || shouldSignOut) {
 		return (
 			<div className="min-h-screen bg-surface-100 flex items-center justify-center">
 				<Loader size={24} className="text-gold-600 animate-spin" />

@@ -1,13 +1,12 @@
 import {
-	createContext,
 	useCallback,
-	useContext,
 	useEffect,
 	useMemo,
 	useRef,
 	useState,
 } from "react";
 import { runAnalysis } from "../services/api";
+import { AnalysisJobContext } from "./analysisJobContextBase";
 
 const STORAGE_KEY = "yukti_analysis_job";
 const ACTIVITY_STORAGE_KEY = "yukti_background_activity";
@@ -39,8 +38,6 @@ const DEFAULT_ACTIVITY = {
 	hideAt: null,
 	error: null,
 };
-
-const AnalysisJobContext = createContext(null);
 
 function loadStoredJob() {
 	try {
@@ -396,10 +393,3 @@ export function AnalysisJobProvider({ children }) {
 	);
 }
 
-export function useAnalysisJob() {
-	const ctx = useContext(AnalysisJobContext);
-	if (!ctx) {
-		throw new Error("useAnalysisJob must be used inside AnalysisJobProvider");
-	}
-	return ctx;
-}

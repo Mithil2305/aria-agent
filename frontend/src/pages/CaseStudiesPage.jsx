@@ -183,7 +183,7 @@ export default function CaseStudiesPage() {
 
 			{/* Case Studies Container */}
 			<div className="mx-auto max-w-7xl px-6 lg:px-8 mt-16 space-y-16">
-				{CASE_STUDIES.map((study, index) => {
+				{CASE_STUDIES.map((study) => {
 					const Icon = study.icon;
 					return (
 						<div

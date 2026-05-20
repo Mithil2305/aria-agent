@@ -44,7 +44,7 @@ import {
 	getCategoryLabel,
 } from "../config/businessTypes";
 import { applyCurrencyPrefix, formatCurrency } from "../utils/currency";
-import { useAnalysisJob } from "../contexts/AnalysisJobContext";
+import { useAnalysisJob } from "../contexts/useAnalysisJob";
 
 // Icon name string → Lucide component map
 const ICON_MAP = {
@@ -676,7 +676,7 @@ export default function DailyLogPage() {
 									{saving ? (
 										<Loader2 size={15} className="animate-spin" />
 									) : (
-										<Save size={15} />
+										<Save size={15} className="text-white" />
 									)}
 									{saving
 										? editingLogId
