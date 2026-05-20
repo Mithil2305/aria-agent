@@ -1,10 +1,4 @@
-import {
-	useCallback,
-	useEffect,
-	useMemo,
-	useRef,
-	useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { runAnalysis } from "../services/api";
 import { AnalysisJobContext } from "./analysisJobContextBase";
 
@@ -392,4 +386,3 @@ export function AnalysisJobProvider({ children }) {
 		</AnalysisJobContext.Provider>
 	);
 }
-
